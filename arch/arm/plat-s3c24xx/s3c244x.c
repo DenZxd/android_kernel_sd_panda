@@ -71,6 +71,7 @@ void __init s3c244x_map_io(struct map_desc *mach_desc, int size)
 	s3c_device_usbgadget.name = "s3c2440-usbgadget";
 }
 
+extern int __init s3c2410_baseclk_add(void);	// by mhfan
 void __init s3c244x_init_clocks(int xtal)
 {
 	unsigned long clkdiv;
