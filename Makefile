@@ -1121,9 +1121,9 @@ _modinst_:
 	fi
 	@cp -f $(objtree)/modules.order $(MODLIB)/
 	$(Q)$(MAKE) -f $(srctree)/scripts/Makefile.modinst
-	-if [ -d $(MODLIB)/../misc ]; then ln -sf ../misc $(MODLIB)/; fi
-	-rm -f $(MODLIB)/../2.6*-*;     # XXX: mhfan
-	-ln -sf $(KERNELVERSION) $(MODLIB)/../$(KERNELRELEASE)
+	$(Q)rm -rf $(MODLIB)/../2.6*-*     # XXX: mhfan
+	$(Q)if [ -d $(MODLIB)/../misc ]; then ln -sf ../misc $(MODLIB)/; fi
+	$(Q)ln -sf $(KERNELVERSION) $(MODLIB)/../$(KERNELRELEASE)
 
 # This depmod is only for convenience to give the initial
 # boot a modules.dep even before / is mounted read-write.  However the
