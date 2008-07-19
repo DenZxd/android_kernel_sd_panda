@@ -597,7 +597,7 @@ export	INSTALL_PATH ?= /boot
 # makefile but the argument can be passed to make if needed.
 #
 
-MODLIB	= $(INSTALL_MOD_PATH)/lib/modules/$(KERNELRELEASE)
+MODLIB	= $(INSTALL_MOD_PATH)/lib/modules/$(KERNELVERSION)
 export MODLIB
 
 #
@@ -1121,6 +1121,9 @@ _modinst_:
 	fi
 	@cp -f $(objtree)/modules.order $(MODLIB)/
 	$(Q)$(MAKE) -f $(srctree)/scripts/Makefile.modinst
+	-if [ -d $(MODLIB)/../misc ]; then ln -sf ../misc $(MODLIB)/; fi
+	-rm -f $(MODLIB)/../2.6*-*;     # XXX: mhfan
+	-ln -sf $(KERNELVERSION) $(MODLIB)/../$(KERNELRELEASE)
 
 # This depmod is only for convenience to give the initial
 # boot a modules.dep even before / is mounted read-write.  However the
