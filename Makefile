@@ -628,7 +628,7 @@ export	INSTALL_PATH ?= /boot
 # makefile but the argument can be passed to make if needed.
 #
 
-MODLIB	= $(INSTALL_MOD_PATH)/lib/modules/$(KERNELRELEASE)
+MODLIB	= $(INSTALL_MOD_PATH)/lib/modules/$(KERNELVERSION)
 export MODLIB
 
 #
@@ -1061,6 +1061,10 @@ _modinst_:
 		rm -f $(MODLIB)/build ; \
 		ln -s $(objtree) $(MODLIB)/build ; \
 	fi
+	$(Q)rm -rf  $(MODLIB)/../$(KERNELVERSION)-*     # XXX: mhfan
+	$(Q)[ $(KERNELVERSION) = $(KERNELRELEASE) ] || \
+		ln -sf $(KERNELVERSION) $(MODLIB)/../$(KERNELRELEASE)
+	$(Q)if [ -d $(MODLIB)/../misc ]; then ln -sf ../misc $(MODLIB)/; fi
 	@cp -f $(objtree)/modules.order $(MODLIB)/
 	@cp -f $(objtree)/modules.builtin $(MODLIB)/
 	$(Q)$(MAKE) -f $(srctree)/scripts/Makefile.modinst
@@ -1458,12 +1462,12 @@ quiet_cmd_rmfiles = $(if $(wildcard $(rm-files)),CLEAN   $(wildcard $(rm-files))
       cmd_rmfiles = rm -f $(rm-files)
 
 # Run depmod only if we have System.map and depmod is executable
-quiet_cmd_depmod = DEPMOD  $(KERNELRELEASE)
+quiet_cmd_depmod = DEPMOD  $(KERNELVERSION) 	# XXX: mhfan
       cmd_depmod = \
 	if [ -r System.map -a -x $(DEPMOD) ]; then                              \
 		$(DEPMOD) -ae -F System.map                                     \
 		$(if $(strip $(INSTALL_MOD_PATH)), -b $(INSTALL_MOD_PATH) )     \
-		$(KERNELRELEASE);                                               \
+		$(KERNELVERSION);                                               \
 	fi
 
 # Create temporary dir for module support files
