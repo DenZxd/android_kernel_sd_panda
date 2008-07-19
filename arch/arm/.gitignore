@@ -1,0 +1,2 @@
+boot/compressed/vmlinux.lds
+kernel/vmlinux.lds
