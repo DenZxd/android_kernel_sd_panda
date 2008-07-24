@@ -2231,7 +2231,7 @@ static noinline struct module *load_module(void __user *umod,
 		printk(KERN_ERR "%s: version magic '%s' should be '%s'\n",
 		       mod->name, modmagic, vermagic);
 		err = -ENOEXEC;
-		goto free_hdr;
+		//goto free_hdr;	// XXX: by mhfan
 	}
 
 	staging = get_modinfo(sechdrs, infoindex, "staging");
