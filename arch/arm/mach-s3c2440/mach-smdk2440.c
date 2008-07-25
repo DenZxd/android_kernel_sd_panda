@@ -148,12 +148,47 @@ static struct s3c2410fb_mach_info smdk2440_fb_info __initdata = {
 	.lpcsel		= ((0xCE6) & ~7) | 1<<4,
 };
 
+/* DM9000AEP 10/100 ethernet controller */
+
+static struct resource hh_dm9k_resource[] = {
+	[0] = {
+		.start = S3C2410_CS3,
+		.end   = S3C2410_CS3 + 3,
+		.flags = IORESOURCE_MEM
+	},
+	[1] = {
+		.start = S3C2410_CS3 + 4,
+		.end   = S3C2410_CS3 + 7,
+		.flags = IORESOURCE_MEM
+	},
+	[2] = {
+		.start = IRQ_EINT7,
+		.end   = IRQ_EINT7,
+		.flags = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
+	}
+};
+
+static struct dm9000_plat_data hh_dm9k_pdata = {
+	.flags		= (DM9000_PLATF_16BITONLY | DM9000_PLATF_NO_EEPROM),
+};
+
+static struct platform_device hhs3c_device_eth = {
+	.name		= "dm9000",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(hh_dm9k_resource),
+	.resource	= hh_dm9k_resource,
+	.dev		= {
+		.platform_data	= &hh_dm9k_pdata,
+	},
+};
+
 static struct platform_device *smdk2440_devices[] __initdata = {
 	&s3c_device_usb,
 	&s3c_device_lcd,
 	&s3c_device_wdt,
 	&s3c_device_i2c,
 	&s3c_device_iis,
+	&hh_device_eth,
 };
 
 static void __init smdk2440_map_io(void)
