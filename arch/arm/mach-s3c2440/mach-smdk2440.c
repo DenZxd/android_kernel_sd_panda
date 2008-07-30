@@ -16,6 +16,7 @@
 #include <linux/kernel.h>
 #include <linux/types.h>
 #include <linux/interrupt.h>
+#include <linux/dm9000.h>
 #include <linux/list.h>
 #include <linux/timer.h>
 #include <linux/init.h>
@@ -188,7 +189,7 @@ static struct platform_device *smdk2440_devices[] __initdata = {
 	&s3c_device_wdt,
 	&s3c_device_i2c,
 	&s3c_device_iis,
-	&hh_device_eth,
+	&hhs3c_device_eth,
 };
 
 static void __init smdk2440_map_io(void)
