@@ -118,6 +118,7 @@ endif
  machine-$(CONFIG_ARCH_IXP23XX)    := ixp23xx
  machine-$(CONFIG_ARCH_OMAP1)	   := omap1
  machine-$(CONFIG_ARCH_OMAP2)	   := omap2
+  incdir-$(CONFIG_ARCH_OMAP)	   := omap
     plat-$(CONFIG_ARCH_OMAP)	   := omap
  machine-$(CONFIG_ARCH_S3C2410)	   := s3c2410 s3c2400 s3c2412 s3c2440 s3c2442 s3c2443
     plat-$(CONFIG_PLAT_S3C24XX)	   := s3c24xx
@@ -135,6 +136,7 @@ endif
  machine-$(CONFIG_ARCH_DAVINCI)	   := davinci
  machine-$(CONFIG_ARCH_KIRKWOOD)   := kirkwood
  machine-$(CONFIG_ARCH_KS8695)     := ks8695
+  incdir-$(CONFIG_ARCH_MXC)	   := mxc
     plat-$(CONFIG_ARCH_MXC)	   := mxc
  machine-$(CONFIG_ARCH_MX2)	   := mx2
  machine-$(CONFIG_ARCH_MX3)	   := mx3
@@ -153,6 +155,11 @@ endif
 
 # The byte offset of the kernel image in RAM from the start of RAM.
 TEXT_OFFSET := $(textofs-y)
+
+ifeq ($(incdir-y),)
+incdir-y := $(word 1,$(machine-y))
+endif
+INCDIR   := arch-$(incdir-y)
 
 # The first directory contains additional information for the boot setup code
 ifneq ($(machine-y),)
