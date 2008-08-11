@@ -1121,7 +1121,7 @@ _modinst_:
 	fi
 	@cp -f $(objtree)/modules.order $(MODLIB)/
 	$(Q)$(MAKE) -f $(srctree)/scripts/Makefile.modinst
-	$(Q)rm -rf $(MODLIB)/../2.6*-*     # XXX: mhfan
+	$(Q)rm -rf $(MODLIB)/../$(KERNELVERSION)-*     # XXX: mhfan
 	$(Q)if [ -d $(MODLIB)/../misc ]; then ln -sf ../misc $(MODLIB)/; fi
 	$(Q)ln -sf $(KERNELVERSION) $(MODLIB)/../$(KERNELRELEASE)
 
