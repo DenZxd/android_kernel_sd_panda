@@ -15,4 +15,8 @@
 #define gpio_set_value	__gpio_set_value
 #define gpio_cansleep	__gpio_cansleep
 
+#include <mach/hardware.h>
+#define irq_to_gpio	s3c2410_gpio_getirq
+#define gpio_to_irq	s3c2410_gpio_irq2pin
+
 #include <asm-generic/gpio.h>
