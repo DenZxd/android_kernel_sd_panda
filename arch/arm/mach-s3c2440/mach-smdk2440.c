@@ -20,8 +20,13 @@
 #include <linux/list.h>
 #include <linux/timer.h>
 #include <linux/init.h>
+#include <linux/gpio_keys.h>
 #include <linux/serial_core.h>
 #include <linux/platform_device.h>
+#include <linux/can/mcp251x.h>
+#include <linux/spi/spi.h>
+#include <linux/input.h>
+#include <linux/leds.h>
 #include <linux/io.h>
 
 #include <asm/mach/arch.h>
@@ -33,6 +38,7 @@
 #include <asm/mach-types.h>
 
 #include <asm/plat-s3c/regs-serial.h>
+#include <mach/leds-gpio.h>
 #include <mach/regs-gpio.h>
 #include <mach/regs-lcd.h>
 
@@ -106,6 +112,7 @@ static struct s3c2410_uartcfg smdk2440_uartcfgs[] __initdata = {
 
 static struct s3c2410fb_display smdk2440_lcd_cfg __initdata = {
 
+	// FIXME: for hhlcd
 	.lcdcon5	= S3C2410_LCDCON5_FRM565 |
 			  S3C2410_LCDCON5_INVVLINE |
 			  S3C2410_LCDCON5_INVVFRAME |
@@ -151,7 +158,7 @@ static struct s3c2410fb_mach_info smdk2440_fb_info __initdata = {
 
 /* DM9000AEP 10/100 ethernet controller */
 
-static struct resource hh_dm9k_resource[] = {
+static struct resource hhs3c_dm9k_resource[] = {
 	[0] = {
 		.start = S3C2410_CS3,
 		.end   = S3C2410_CS3 + 3,
@@ -169,17 +176,139 @@ static struct resource hh_dm9k_resource[] = {
 	}
 };
 
-static struct dm9000_plat_data hh_dm9k_pdata = {
+static struct dm9000_plat_data hhtech_dm9k_pdata = {
 	.flags		= (DM9000_PLATF_16BITONLY | DM9000_PLATF_NO_EEPROM),
 };
 
-static struct platform_device hhs3c_device_eth = {
+static struct platform_device hhtech_dm9k_dev = {
 	.name		= "dm9000",
 	.id		= -1,
-	.num_resources	= ARRAY_SIZE(hh_dm9k_resource),
-	.resource	= hh_dm9k_resource,
+	.num_resources	= ARRAY_SIZE(hhs3c_dm9k_resource),
+	.resource	= hhs3c_dm9k_resource,
 	.dev		= {
-		.platform_data	= &hh_dm9k_pdata,
+		.platform_data	= &hhtech_dm9k_pdata,
+	},
+};
+
+/* Micorchip mcp251x series CAN over spi controller */
+
+static struct mcp251x_platform_data mcp251x_info = {
+	.oscillator_frequency = 19000000,
+	//.board_specific_setup = hhtech_mcp251x_initfunc,
+	//.device_reset = hhtech_mcp251x_reset,
+	//.transceiver_enable = NULL,
+};
+
+static struct spi_board_info hhs3c_spi_devs[] __initdata = {
+	{
+		.modalias	= "mcp251x",
+		.platform_data	= &mcp251x_info,
+		.max_speed_hz	= 8000000,
+		.bus_num	= 0,
+		//.irq		= 10,
+		.chip_select	= 0,
+	},
+
+};
+
+static struct gpio_keys_button hhs3c_gpio_keys[] = {
+	{
+		.gpio		= S3C2410_GPF3,
+		.code		= BTN_0,
+		.desc		= "SW-PB/ICK1",
+		.active_low	= 1,
+	},
+	{
+		.gpio		= S3C2410_GPF2,
+		.code		= BTN_1,
+		.desc		= "SW-PB/ICK2",
+		.active_low	= 1,
+	},
+	{
+		.gpio		= S3C2410_GPB10,
+		.code		= BTN_2,
+		.desc		= "SW-PB/ICK3",
+		.active_low	= 1,
+	},
+	{
+		.gpio		= S3C2410_GPF1,
+		.code		= BTN_3,
+		.desc		= "SW-PB/ICK4",
+		.active_low	= 1,
+	},
+	{
+		.gpio		= S3C2410_GPB9,
+		.code		= BTN_4,
+		.desc		= "SW-PB/ICK5",
+		.active_low	= 1,
+	},
+};
+
+static struct gpio_keys_platform_data hhtech_gpio_keys_data = {
+	.buttons	= hhs3c_gpio_keys,
+	.nbuttons	= ARRAY_SIZE(hhs3c_gpio_keys),
+};
+
+static struct platform_device hhtech_gpio_keys_dev = {
+	.name		= "gpio-keys",
+	.id		= -1,
+	.num_resources	= 0,
+	.dev		= {
+		.platform_data	= &hhtech_gpio_keys_data,
+	}
+};
+
+static struct s3c24xx_led_platdata hhs3c_led1 = {
+        .gpio           = S3C2410_GPB0,
+        .flags          = S3C24XX_LEDF_ACTLOW | S3C24XX_LEDF_TRISTATE,
+        .name           = "led1/red",
+};
+
+static struct s3c24xx_led_platdata hhs3c_led2 = {
+        .gpio           = S3C2410_GPB1,
+        .flags          = S3C24XX_LEDF_ACTLOW | S3C24XX_LEDF_TRISTATE,
+        .name           = "led2/green",
+};
+
+static struct platform_device hhs3c_led1_dev = {
+        .name           = "s3c24xx_led",
+        .id             = 0,
+        .dev            = {
+                .platform_data = &hhs3c_led1,
+        },
+};
+
+static struct platform_device hhs3c_led2_dev = {
+        .name           = "s3c24xx_led",
+        .id             = 1,
+        .dev            = {
+                .platform_data = &hhs3c_led2,
+        },
+};
+
+static struct gpio_led hhs3c_leds[] = {
+	[0] = {
+		.name = "led1:red",
+		.gpio = S3C2410_GPB0,
+		.active_low = 1,
+	},
+	[1] = {
+		.name = "led1:green",
+		.gpio = S3C2410_GPB1,
+		.active_low = 1,
+	},
+};
+
+static struct gpio_led_platform_data hhtech_leds_pdata = {
+	.num_leds = ARRAY_SIZE(hhs3c_leds),
+	.leds = hhs3c_leds,
+};
+
+static struct platform_device hhtech_leds_dev = {
+	.name		= "leds-gpio",
+	.id		= -1,
+	.dev		= {
+		.platform_data = &hhtech_leds_pdata,
 	},
 };
 
@@ -189,7 +318,14 @@ static struct platform_device *smdk2440_devices[] __initdata = {
 	&s3c_device_wdt,
 	&s3c_device_i2c,
 	&s3c_device_iis,
-	&hhs3c_device_eth,
+	&s3c_device_sdi,
+	&s3c_device_spi0,
+	&hhtech_dm9k_dev,
+	&hhtech_leds_dev,
+	&hhtech_gpio_keys_dev,
+	//&hhtech_leds_dev,
+	&hhs3c_led1_dev,
+	&hhs3c_led2_dev,
 };
 
 static void __init smdk2440_map_io(void)
@@ -202,6 +338,7 @@ static void __init smdk2440_map_io(void)
 static void __init smdk2440_machine_init(void)
 {
 	s3c24xx_fb_set_platdata(&smdk2440_fb_info);
+	spi_register_board_info(hhs3c_spi_devs, ARRAY_SIZE(hhs3c_spi_devs));
 
 	platform_add_devices(smdk2440_devices, ARRAY_SIZE(smdk2440_devices));
 	smdk_machine_init();
