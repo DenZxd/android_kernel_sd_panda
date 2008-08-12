@@ -72,13 +72,13 @@
 #include <linux/spi/spi.h>
 #include <linux/can/dev.h>
 #include <linux/can/core.h>
+#include <linux/can/mcp251x.h>
 #include <linux/if_arp.h>
 #include <linux/dma-mapping.h>
 #include <linux/delay.h>
 #include <linux/completion.h>
 #include <asm/uaccess.h>
 #include <asm/io.h>
-#include "mcp251x.h"
 
 /* SPI interface instruction set */
 #define INSTRUCTION_WRITE		0x02
@@ -550,7 +550,7 @@ static int mcp251x_do_set_bit_time(struct net_device *net, struct can_bittime *b
 	state = mcp251x_read_reg(spi, CANSTAT) & CANCTRL_REQOP_MASK;
 	mcp251x_write_bits(spi, CANCTRL, CANCTRL_REQOP_MASK, CANCTRL_REQOP_CONF);
 
-	mcp251x_write_reg(spi, CNF1, ((bt->std.sjw - 1) << 6) | bt->std.brp);
+	mcp251x_write_reg(spi, CNF1, ((bt->std.sjw - 1) << 6) | (bt->std.brp - 1));
 	mcp251x_write_reg(spi, CNF2, CNF2_BTLMODE | ((bt->std.phase_seg1 - 1) << 3) | (bt->std.prop_seg - 1));
 	mcp251x_write_bits(spi, CNF3, CNF3_PHSEG2_MASK, (bt->std.phase_seg2 - 1));
 
@@ -708,10 +708,10 @@ static void mcp251x_irq_work_handler(struct work_struct *ws)
 			mcp251x_hw_rx(spi, 1);
 
 		/* Clear everything except RX bits, don't want to miss any */
-		mcp251x_write_bits(spi, CANINTF, intf & ~(CANINTF_RX1IF | CANINTF_RX1IF), 0x00);
+		mcp251x_write_bits(spi, CANINTF, intf & ~(CANINTF_RX0IF | CANINTF_RX1IF), 0x00);
 	}
 
-	mcp251x_read_reg(spi, CANSTAT);
+	//mcp251x_read_reg(spi, CANSTAT);
 
 	dev_dbg(&spi->dev, "interrupt ended\n");
 }
@@ -799,8 +799,7 @@ static int __devinit mcp251x_can_probe(struct spi_device *spi)
 	priv->spi = spi;
 	init_MUTEX(&priv->spi_lock);
 
-	/* Not sure why / 4... mcp251x pre-divides by 2 */
-	priv->can.can_sys_clock = pdata->oscillator_frequency / 4;
+	priv->can.can_sys_clock = pdata->oscillator_frequency / 2;
 
 	/* If requested, allocate DMA buffers */
 	if (enable_dma) {
@@ -862,7 +861,7 @@ static int __devinit mcp251x_can_probe(struct spi_device *spi)
 	init_completion(&priv->awake);
 
 	/* Configure the SPI bus */
-	spi->mode = SPI_MODE_2;
+	spi->mode = SPI_MODE_0;
 	spi->bits_per_word = 8;
 	spi_setup(spi);
 
