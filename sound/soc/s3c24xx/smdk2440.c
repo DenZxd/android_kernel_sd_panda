@@ -23,24 +23,26 @@
 
 #include <linux/module.h>
 #include <linux/moduleparam.h>
-#include <linux/timer.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
-#include <sound/driver.h>
+#include <linux/io.h>
+
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
+#include <sound/tlv.h>
 
 #include <asm/mach-types.h>
 #include <asm/hardware/scoop.h>
-#include <asm/arch/regs-iis.h>
-#include <asm/arch/regs-clock.h>
-#include <asm/arch/regs-gpio.h>
-#include <asm/hardware.h>
-#include <asm/arch/audio.h>
-#include <asm/io.h>
-#include <asm/arch/spi-gpio.h>
+#include <asm/plat-s3c24xx/regs-iis.h>
+
+#include <mach/regs-clock.h>
+#include <mach/regs-gpio.h>
+#include <mach/spi-gpio.h>
+#include <mach/hardware.h>
+#include <mach/audio.h>
+
 #include "../codecs/uda1380.h"
 #include "s3c24xx-pcm.h"
 #include "s3c24xx-i2s.h"
@@ -53,8 +55,8 @@
 #endif
 
 /* audio clock in Hz */
-#define SMDK_CLOCK_SOURCE S3C24XX_CLKSRC_MPLL
-#define SMDK_CRYSTAL_CLOCK 16934400
+//#define SMDK_CLOCK_SOURCE S3C24XX_CLKSRC_MPLL
+//#define SMDK_CRYSTAL_CLOCK 12000000	// XXX: 16934400
 
 static int smdk2440_startup(struct snd_pcm_substream *substream)
 {
@@ -66,22 +68,20 @@ static int smdk2440_startup(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static int smdk2440_shutdown(struct snd_pcm_substream *substream)
+static void smdk2440_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_codec *codec = rtd->socdev->codec;
 
 	DBG("Entered smdk2440_shutdown\n");
-
-	return 0;
 }
 
 static int smdk2440_hw_params(struct snd_pcm_substream *substream,
 				struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_cpu_dai *cpu_dai = rtd->dai->cpu_dai;
-	struct snd_soc_codec_dai *codec_dai = rtd->dai->codec_dai;
+	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
+	struct snd_soc_dai *codec_dai = rtd->dai->codec_dai;
 	unsigned long iis_clkrate;
 	int div, div256, div384, diff256, diff384, bclk, mclk;
 	int ret;
@@ -171,18 +171,38 @@ static struct snd_soc_ops smdk2440_ops = {
 /* smdk2440 machine dapm widgets */
 static const struct snd_soc_dapm_widget smdk2440_dapm_widgets[] = {
 SND_SOC_DAPM_HP("Headphone Jack", NULL),
+SND_SOC_DAPM_SPK("Speaker", NULL),
+SND_SOC_DAPM_MIC("Call Mic", NULL),
+SND_SOC_DAPM_MIC("Headset Mic", NULL),
 SND_SOC_DAPM_MIC("Mic Jack", NULL),
 SND_SOC_DAPM_LINE("Line Jack", NULL),
 };
 
-/* smdk2440 machine audio map (connections to the codec pins) */
-static const char* audio_map[][3] = {
+/* smdk2440 machine audio routes (connections to the codec pins) */
+static const struct snd_soc_dapm_route dapm_routes[] = {
+#if 0 	/* comment by mhfan */
 	/* headphone connected to  HPOUT */
 	{"Headphone Jack", NULL, "HPOUT"},
 
 	/* mic is connected to MICIN (via right channel of headphone jack) */
 	{"MICIN", NULL, "Mic Jack"},
 	{"MICIN", NULL, "Line Jack"},
+#else// XXX:
+	/* Headphone connected to VOUTL, VOUTR */
+	{"Headphone Jack", NULL, "VOUTL"},
+	{"Headphone Jack", NULL, "VOUTR"},
+
+	/* Speaker connected to VOUTL, VOUTR */
+	{"Speaker", NULL, "VOUTL"},
+	{"Speaker", NULL, "VOUTR"},
+
+	/* Mics are connected to VINM */
+	{"VINM", NULL, "Headset Mic"},
+	{"VINM", NULL, "Call Mic"},
+
+	{"VINM", NULL, "Mic Jack"},
+	{"VINM", NULL, "Line Jack"},
+#endif	/* comment by mhfan */
 
 	{NULL, NULL, NULL},
 };
@@ -196,15 +216,23 @@ static int smdk2440_uda1341_init(struct snd_soc_codec *codec)
 
 	DBG("Staring smdk2440 init\n");
 
+#if 0 	/* comment by mhfan */
+	/* NC codec pins */
+	snd_soc_dapm_disable_pin(codec, "VOUTLHP");
+	snd_soc_dapm_disable_pin(codec, "VOUTRHP");
+
+	/* FIXME: is anything connected here? */
+	snd_soc_dapm_disable_pin(codec, "VINL");
+	snd_soc_dapm_disable_pin(codec, "VINR");
+#endif	/* comment by mhfan */
+
 	/* Add smdk2440 specific widgets */
 	snd_soc_dapm_new_controls(codec, smdk2440_dapm_widgets,
 				  ARRAY_SIZE(smdk2440_dapm_widgets));
 
-	/* Set up smdk2440 specific audio path audio_mapnects */
-	for(i = 0; audio_map[i][0] != NULL; i++) {
-		snd_soc_dapm_connect_input(codec, audio_map[i][0],
-			audio_map[i][1], audio_map[i][2]);
-	}
+	/* Set up smdk2440 specific audio routes */
+	err = snd_soc_dapm_add_routes(codec, dapm_routes,
+				      ARRAY_SIZE(dapm_routes));
 
 	snd_soc_dapm_sync(codec);
 
@@ -218,7 +246,7 @@ static struct snd_soc_dai_link s3c24xx_dai = {
 	.name = "WM8731",
 	.stream_name = "WM8731",
 	.cpu_dai = &s3c24xx_i2s_dai,
-	.codec_dai = &uda1380_dai,
+	.codec_dai = &uda1380_dai[UDA1380_DAI_PLAYBACK],
 	.init = smdk2440_uda1341_init,
 	.ops = &smdk2440_ops,
 };
@@ -231,7 +259,8 @@ static struct snd_soc_machine snd_soc_machine_smdk2440 = {
 };
 
 static struct uda1380_setup_data smdk2440_uda1380_setup = {
-	.i2c_address = 0x00,
+	.i2c_address = 0x18,	// XXX: 0x1a
+	//.dac_clk = UDA1380_DAC_CLK_WSPLL,
 };
 
 /* s3c24xx audio subsystem */
@@ -244,6 +273,7 @@ static struct snd_soc_device s3c24xx_snd_devdata = {
 
 static struct platform_device *s3c24xx_snd_device;
 
+#if 0 	/* comment by mhfan */
 struct smdk2440_spi_device {
 	struct device *dev;
 };
@@ -261,6 +291,7 @@ struct s3c2410_spigpio_info smdk2440_spi_devinfo = {
 };
 
 static struct platform_device *smdk2440_spi_device;
+#endif	/* comment by mhfan */
 
 static int __init smdk2440_init(void)
 {
@@ -285,8 +316,8 @@ static int __init smdk2440_init(void)
 	if (ret)
 		platform_device_put(s3c24xx_snd_device);
 
+#if 0 	/* comment by mhfan */
 	// Create a bitbanged SPI device
-
 	smdk2440_spi_device = platform_device_alloc("s3c24xx-spi-gpio",-1);
 	if (!smdk2440_spi_device) {
 		DBG("smdk2440_spi_device : platform_dev_alloc failed\n");
@@ -301,6 +332,7 @@ static int __init smdk2440_init(void)
 
 	if (ret)
 		platform_device_put(smdk2440_spi_device);
+#endif	/* comment by mhfan */
 
 	return ret;
 }
