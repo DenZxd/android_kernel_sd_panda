@@ -27,6 +27,7 @@
 #include <linux/spi/spi.h>
 #include <linux/input.h>
 #include <linux/leds.h>
+#include <linux/i2c.h>
 #include <linux/io.h>
 
 #include <asm/mach/arch.h>
@@ -50,6 +51,8 @@
 #include <asm/plat-s3c24xx/clock.h>
 #include <asm/plat-s3c24xx/devs.h>
 #include <asm/plat-s3c24xx/cpu.h>
+#include <asm/plat-s3c24xx/udc.h>
+#include <asm/plat-s3c24xx/pm.h>
 
 #include <asm/plat-s3c24xx/common-smdk.h>
 
@@ -312,20 +315,30 @@ static struct platform_device hhtech_leds_dev = {
 	},
 };
 
+static struct s3c2410_udc_mach_info hhs3c_udc_cfg = {
+};
+
+static struct i2c_board_info hhs3c_i2c_devs[] __initdata = {
+	//{ I2C_BOARD_INFO("UDA1380", 0x1a), },	// XXX:
+};
+
 static struct platform_device *smdk2440_devices[] __initdata = {
-	&s3c_device_usb,
+	//&s3c_device_usb,
 	&s3c_device_lcd,
 	&s3c_device_wdt,
 	&s3c_device_i2c,
 	&s3c_device_iis,
 	&s3c_device_sdi,
+	//&s3c_device_rtc,
+	&s3c_device_adc,
 	&s3c_device_spi0,
 	&hhtech_dm9k_dev,
-	&hhtech_leds_dev,
+	&s3c_device_camif,
+	&s3c_device_usbgadget,
 	&hhtech_gpio_keys_dev,
-	//&hhtech_leds_dev,
-	&hhs3c_led1_dev,
-	&hhs3c_led2_dev,
+	&hhtech_leds_dev,
+	//&hhs3c_led1_dev,
+	//&hhs3c_led2_dev,
 };
 
 static void __init smdk2440_map_io(void)
@@ -337,11 +350,16 @@ static void __init smdk2440_map_io(void)
 
 static void __init smdk2440_machine_init(void)
 {
+	s3c24xx_udc_set_platdata(&hhs3c_udc_cfg);
 	s3c24xx_fb_set_platdata(&smdk2440_fb_info);
+
 	spi_register_board_info(hhs3c_spi_devs, ARRAY_SIZE(hhs3c_spi_devs));
+	i2c_register_board_info(0, hhs3c_i2c_devs, ARRAY_SIZE(hhs3c_i2c_devs));
 
 	platform_add_devices(smdk2440_devices, ARRAY_SIZE(smdk2440_devices));
-	smdk_machine_init();
+
+	//smdk_machine_init();		// XXX: mhfan
+	s3c2410_pm_init();
 }
 
 MACHINE_START(S3C2440, "SMDK2440")
