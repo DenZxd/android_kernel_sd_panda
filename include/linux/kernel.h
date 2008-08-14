@@ -447,6 +447,42 @@ static inline char *pack_hex_byte(char *buf, u8 byte)
 struct sysinfo;
 extern int do_sysinfo(struct sysinfo *info);
 
+#if 1   /* defined by mhfan */
+#define dtrace do { printk("\033[36mTRACE"		  \
+			"\033[1;34m==>\033[33m%16s"       \
+			"\033[36m: \033[32m%4d\033[36m: " \
+			"\033[35m%-24s \033[34m"          \
+			"[\033[0;37m%s\033[1;34m,"        \
+			" \033[0;36m%s\033[1;34m]"        \
+			"\033[0m\n", __FILE__, __LINE__,  \
+			__func__, __TIME__, __DATE__);    \
+		} while (0)
+
+#define dprintp(a, n) do { int i_, m_ = sizeof((a)[0]);	  \
+	printk( "\033[33m" #a ": \033[36m"		  \
+		"%p\033[0m ==> (%lx)\n", a, n);		  \
+	    m_ = (m_ < 2 ? 24 : (m_ < 4 ? 16 : 8));	  \
+	    for (i_ = 0; i_ < n; ) {			  \
+		int j = (i_ + m_ > n ? n - i_ : m_);	  \
+		for (; j--; ++i_)			  \
+		    if (m_ > 16) printk("%02x "		  \
+			    , (a)[i_]); else		  \
+		    if (m_ > 8)  printk("%04x "		  \
+			    , (a)[i_]); else		  \
+		    printk("%08lx ", (a)[i_]);		  \
+		printk("\n"); }				  \
+	} while (0)
+
+#define dprintn(a) do { printk("\033[33m" #a		  \
+			": \033[36m%#lx, %d\033[0m\n"	  \
+			, a, a);			  \
+		} while (0)
+
+#define dprints(a) do { printk("\033[33m" #a		  \
+			": \033[36m%s\033[0m\n", a);      \
+		} while (0)
+#endif/* defined by mhfan */
+
 #endif /* __KERNEL__ */
 
 #define SI_LOAD_SHIFT	16
