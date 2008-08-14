@@ -70,6 +70,7 @@
 #include <linux/netdevice.h>
 #include <linux/can.h>
 #include <linux/spi/spi.h>
+#include <linux/can/error.h>
 #include <linux/can/dev.h>
 #include <linux/can/core.h>
 #include <linux/can/mcp251x.h>
@@ -466,7 +467,7 @@ static int mcp251x_hard_start_xmit(struct sk_buff *skb, struct net_device *net)
 }
 
 
-static int mcp251x_do_set_mode(struct net_device *net, can_mode_t mode)
+static int mcp251x_do_set_mode(struct net_device *net, enum can_mode mode)
 {
 	struct mcp251x_priv *priv = netdev_priv(net);
 	struct spi_device *spi = priv->spi;
@@ -561,7 +562,7 @@ static int mcp251x_do_set_bit_time(struct net_device *net, struct can_bittime *b
 }
 
 
-static int mcp251x_do_get_state(struct net_device *net, can_state_t *state)
+static int mcp251x_do_get_state(struct net_device *net, enum can_state *state)
 {
 	struct mcp251x_priv *priv = netdev_priv(net);
 	struct spi_device *spi = priv->spi;
@@ -762,8 +763,8 @@ static struct net_device *alloc_mcp251x_netdev(int sizeof_priv)
 	net->stop		= mcp251x_stop;
 	net->hard_start_xmit	= mcp251x_hard_start_xmit;
 
-	priv->can.baudrate	  = 250000;
-	priv->can.do_set_bit_time = mcp251x_do_set_bit_time;
+	priv->can.bitrate	  = 250000;	// XXX:
+	priv->can.do_set_bittime  = mcp251x_do_set_bit_time;
 	priv->can.do_get_state    = mcp251x_do_get_state;
 	priv->can.do_set_mode     = mcp251x_do_set_mode;
 
@@ -868,12 +869,12 @@ static int __devinit mcp251x_can_probe(struct spi_device *spi)
 	mcp251x_hw_reset(spi);
 
 	/* Set initial baudrate */
-	ret = can_calc_bit_time(&priv->can, priv->can.baudrate, &bit_time.std);
+	ret = can_calc_bittime(&priv->can, priv->can.bitrate, &bit_time.std);
 	if (ret != 0)
 		dev_err(&spi->dev, "unable to calculate initial baudrate!\n");
 	else {
 		bit_time.type = CAN_BITTIME_STD;
-		ret = priv->can.do_set_bit_time(net, &bit_time);
+		ret = priv->can.do_set_bittime(net, &bit_time);
 		if (ret)
 			dev_err(&spi->dev, "unable to set initial baudrate!\n");
 	}
