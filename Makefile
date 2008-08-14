@@ -1621,12 +1621,12 @@ quiet_cmd_rmfiles = $(if $(wildcard $(rm-files)),CLEAN   $(wildcard $(rm-files))
       cmd_rmfiles = rm -f $(rm-files)
 
 # Run depmod only if we have System.map and depmod is executable
-quiet_cmd_depmod = DEPMOD  $(KERNELRELEASE)
+quiet_cmd_depmod = DEPMOD  $(KERNELVERSION) 	# XXX: mhfan
       cmd_depmod = \
 	if [ -r System.map -a -x $(DEPMOD) ]; then                              \
 		$(DEPMOD) -ae -F System.map                                     \
 		$(if $(strip $(INSTALL_MOD_PATH)), -b $(INSTALL_MOD_PATH) -r)   \
-		$(KERNELRELEASE);                                               \
+		$(KERNELVERSION);                                               \
 	fi
 
 # Create temporary dir for module support files
