@@ -662,6 +662,48 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
 struct sysinfo;
 extern int do_sysinfo(struct sysinfo *info);
 
+#if 1   /* defined by mhfan */
+#if	defined(__KERNEL__)
+//#define errno 0 // XXX:
+#define fprintf(_, ...) printk(KERN_WARNING __VA_ARGS__)
+#elif	defined(LIBBB_H)
+#define fprintf(_, ...) fdprintf(STDERR_FILENO, __VA_ARGS__)
+#elif	defined(AVUTIL_LOG_H)
+#define fprintf(_, ...) av_log(NULL, AV_LOG_INFO, __VA_ARGS__)
+#elif	defined(MPLAYER_MP_MSG_H)
+#define fprintf(_, ...) mp_msg(MSGT_GLOBAL, MSGL_INFO, __VA_ARGS__)
+#endif// XXX:
+
+#define dtrace	do { fprintf(stderr, \
+	    "\033[36mTRACE\033[1;34m==>\033[33m%16s" \
+	    "\033[36m: \033[32m%4d\033[36m: \033[35m%-24s \033[34m" \
+	    "[\033[0;37m%s\033[1;34m, \033[0;36m%s\033[1;34m]\033[0m\n", \
+	    __FILE__, __LINE__, __func__, __TIME__, __DATE__); \
+	} while (0)
+//	    if (errno < 0) fprintf(stderr, "Errmsg: %s (%d)\n",
+//		    strerror(errno), errno);
+
+#define dprintp(a, n) do { unsigned short i_, m_ = sizeof((a)[0]); \
+	fprintf(stderr, "\033[33m" #a ": \033[36m" \
+		"%p\033[0m ==> %x\n", a, (n)); \
+	m_ = (m_ < 2 ? 24 : (m_ < 4 ? 16 : 8)); \
+	for (i_ = 0; i_ < (n); ) { \
+	    unsigned short j_ = ((n) < i_ + m_ ? (n) - i_ : m_); \
+	    for ( ; j_--; ++i_) \
+		if (16 < m_) fprintf(stderr, "%02x ", (a)[i_]); else \
+		if ( 8 < m_) fprintf(stderr, "%04x ", (a)[i_]); else \
+			     fprintf(stderr, "%08x ", (a)[i_]); \
+	    fprintf(stderr, "\n"); } \
+	} while (0)
+
+#define dprintn(a) do { fprintf(stderr, "\033[33m" #a \
+		": \033[36m%#x, %d\033[0m\n", a, a); \
+	} while (0)	// XXX:
+
+#define dprints(a) do { fprintf(stderr, "\033[33m" #a \
+		": \033[36m%s\033[0m\n", a); } while (0)
+#endif/* defined by mhfan */
+
 #endif /* __KERNEL__ */
 
 #define SI_LOAD_SHIFT	16
