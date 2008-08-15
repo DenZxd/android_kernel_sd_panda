@@ -203,8 +203,6 @@ static const struct snd_soc_dapm_route dapm_routes[] = {
 	{"VINM", NULL, "Mic Jack"},
 	{"VINM", NULL, "Line Jack"},
 #endif	/* comment by mhfan */
-
-	{NULL, NULL, NULL},
 };
 
 /*
