@@ -73,7 +73,6 @@ static struct clk		*usb_bus_clock;
 static void __iomem		*base_addr;
 static u64			rsrc_start;
 static u64			rsrc_len;
-static struct dentry		*s3c2410_udc_debugfs_root;
 
 static inline u32 udc_read(u32 reg)
 {
@@ -134,6 +133,10 @@ static int dprintk(int level, const char *fmt, ...)
 	return 0;
 }
 #endif
+
+#ifdef	CONFIG_DEBUG_FS
+static struct dentry		*s3c2410_udc_debugfs_root;
+
 static int s3c2410_udc_debugfs_seq_show(struct seq_file *m, void *p)
 {
 	u32 addr_reg,pwr_reg,ep_int_reg,usb_int_reg;
@@ -197,6 +200,7 @@ static const struct file_operations s3c2410_udc_debugfs_fops = {
 	.release	= single_release,
 	.owner		= THIS_MODULE,
 };
+#endif
 
 /* io macros */
 
@@ -1651,7 +1655,7 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 		return -EBUSY;
 
 	if (!driver->bind || !driver->setup
-			|| driver->speed != USB_SPEED_FULL) {
+			/*|| driver->speed != USB_SPEED_FULL*/) {
 		printk(KERN_ERR "Invalid driver: bind %p setup %p speed %d\n",
 			driver->bind, driver->setup, driver->speed);
 		return -EINVAL;
@@ -1890,6 +1894,7 @@ static int s3c2410_udc_probe(struct platform_device *pdev)
 		udc->vbus = 1;
 	}
 
+#ifdef	CONFIG_DEBUG_FS
 	if (s3c2410_udc_debugfs_root) {
 		udc->regs_info = debugfs_create_file("registers", S_IRUGO,
 				s3c2410_udc_debugfs_root,
@@ -1900,6 +1905,7 @@ static int s3c2410_udc_probe(struct platform_device *pdev)
 			udc->regs_info = NULL;
 		}
 	}
+#endif
 
 	dev_dbg(dev, "probe ok\n");
 
@@ -1927,7 +1933,9 @@ static int s3c2410_udc_remove(struct platform_device *pdev)
 	if (udc->driver)
 		return -EBUSY;
 
+#ifdef	CONFIG_DEBUG_FS
 	debugfs_remove(udc->regs_info);
+#endif
 
 	if (udc_info && udc_info->vbus_pin > 0) {
 		irq = s3c2410_gpio_getirq(udc_info->vbus_pin);
@@ -2006,12 +2014,14 @@ static int __init udc_init(void)
 
 	dprintk(DEBUG_NORMAL, "%s: version %s\n", gadget_name, DRIVER_VERSION);
 
+#ifdef	CONFIG_DEBUG_FS
 	s3c2410_udc_debugfs_root = debugfs_create_dir(gadget_name, NULL);
 	if (IS_ERR(s3c2410_udc_debugfs_root)) {
 		printk(KERN_ERR "%s: debugfs dir creation failed %ld\n",
 			gadget_name, PTR_ERR(s3c2410_udc_debugfs_root));
 		s3c2410_udc_debugfs_root = NULL;
 	}
+#endif
 
 	retval = platform_driver_register(&udc_driver_2410);
 	if (retval)
@@ -2024,7 +2034,9 @@ static int __init udc_init(void)
 	return 0;
 
 err:
+#ifdef	CONFIG_DEBUG_FS
 	debugfs_remove(s3c2410_udc_debugfs_root);
+#endif
 	return retval;
 }
 
@@ -2032,7 +2044,9 @@ static void __exit udc_exit(void)
 {
 	platform_driver_unregister(&udc_driver_2410);
 	platform_driver_unregister(&udc_driver_2440);
+#ifdef	CONFIG_DEBUG_FS
 	debugfs_remove(s3c2410_udc_debugfs_root);
+#endif
 }
 
 EXPORT_SYMBOL(usb_gadget_unregister_driver);
