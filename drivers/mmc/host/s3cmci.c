@@ -450,7 +450,7 @@ static irqreturn_t s3cmci_irq(int irq, void *dev_id)
 	}
 
 	if (mci_csta & S3C2410_SDICMDSTAT_CMDTIMEOUT) {
-		dbg(host, dbg_err, "CMDSTAT: error CMDTIMEOUT\n");
+		//dbg(host, dbg_err, "CMDSTAT: error CMDTIMEOUT\n");
 		cmd->error = -ETIMEDOUT;
 		host->status = "error: command timeout";
 		goto fail_transfer;
@@ -1102,7 +1102,7 @@ static void s3cmci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	if ((ios->power_mode == MMC_POWER_ON) ||
 	    (ios->power_mode == MMC_POWER_UP)) {
-		dbg(host, dbg_conf, "running at %lukHz (requested: %ukHz).\n",
+		dbg(host, dbg_debug, "running at %lukHz (requested: %ukHz).\n",
 			host->real_rate/1000, ios->clock/1000);
 	} else {
 		dbg(host, dbg_conf, "powered down.\n");
