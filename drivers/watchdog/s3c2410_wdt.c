@@ -46,7 +46,7 @@
 
 #define PFX "s3c2410-wdt: "
 
-#define CONFIG_S3C2410_WATCHDOG_ATBOOT		(0)
+#define CONFIG_S3C2410_WATCHDOG_ATBOOT		(1)	// XXX: mhfan
 #define CONFIG_S3C2410_WATCHDOG_DEFAULT_TIME	(15)
 
 static int nowayout	= WATCHDOG_NOWAYOUT;
