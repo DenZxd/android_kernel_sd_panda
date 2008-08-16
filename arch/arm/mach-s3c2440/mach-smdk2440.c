@@ -15,6 +15,7 @@
 
 #include <linux/kernel.h>
 #include <linux/types.h>
+#include <linux/sysdev.h>
 #include <linux/interrupt.h>
 #include <linux/dm9000.h>
 #include <linux/list.h>
@@ -34,6 +35,7 @@
 #include <asm/mach/map.h>
 #include <asm/mach/irq.h>
 
+#include <mach/spi.h>
 #include <mach/hardware.h>
 #include <asm/irq.h>
 #include <asm/mach-types.h>
@@ -115,7 +117,6 @@ static struct s3c2410_uartcfg smdk2440_uartcfgs[] __initdata = {
 
 static struct s3c2410fb_display smdk2440_lcd_cfg __initdata = {
 
-	// FIXME: for hhlcd
 	.lcdcon5	= S3C2410_LCDCON5_FRM565 |
 			  S3C2410_LCDCON5_INVVLINE |
 			  S3C2410_LCDCON5_INVVFRAME |
@@ -159,22 +160,53 @@ static struct s3c2410fb_mach_info smdk2440_fb_info __initdata = {
 	.lpcsel		= ((0xCE6) & ~7) | 1<<4,
 };
 
+static struct s3c2410fb_display hhs3c_lcd_cfg __initdata = {
+	// XXX: for hhlcd
+	.lcdcon5	= S3C2410_LCDCON5_FRM565 |
+			  S3C2410_LCDCON5_PWREN |
+			  S3C2410_LCDCON5_HWSWP,
+
+	.type		= S3C2410_LCDCON1_TFT,
+
+	.width		= 240,
+	.height		= 320,
+
+	.pixclock	= 125000, /* HCLK 64 MHz, divisor 7, 8 MHz */
+	.xres		= 240,
+	.yres		= 320,
+	.bpp		= 16,
+	.left_margin	= 31,
+	.right_margin	= 19,
+	.hsync_len	= 4,
+	.upper_margin	= 1,
+	.lower_margin	= 2,
+	.vsync_len	= 2,
+};
+
+static struct s3c2410fb_mach_info hhs3c_fb_info __initdata = {
+	.displays	= &hhs3c_lcd_cfg,
+	.num_displays	= 1,
+	.default_display = 0,
+
+	.lpcsel		= 0x02,
+};
+
 /* DM9000AEP 10/100 ethernet controller */
 
 static struct resource hhs3c_dm9k_resource[] = {
 	[0] = {
-		.start = S3C2410_CS3,
-		.end   = S3C2410_CS3 + 3,
+		.start = S3C2410_CS1,
+		.end   = S3C2410_CS1 + 3,
 		.flags = IORESOURCE_MEM
 	},
 	[1] = {
-		.start = S3C2410_CS3 + 4,
-		.end   = S3C2410_CS3 + 7,
+		.start = S3C2410_CS1 + 4,
+		.end   = S3C2410_CS1 + 7,
 		.flags = IORESOURCE_MEM
 	},
 	[2] = {
-		.start = IRQ_EINT7,
-		.end   = IRQ_EINT7,
+		.start = IRQ_EINT0,
+		.end   = IRQ_EINT0,
 		.flags = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
 	}
 };
@@ -193,10 +225,16 @@ static struct platform_device hhtech_dm9k_dev = {
 	},
 };
 
+static struct s3c2410_spi_info hhs3c_spi_info = {
+	.bus_num    = 0,
+	.num_cs	    = 1,
+	.pin_cs	    = S3C2410_GPG2,	// XXX:
+};
+
 /* Micorchip mcp251x series CAN over spi controller */
 
 static struct mcp251x_platform_data mcp251x_info = {
-	.oscillator_frequency = 19000000,
+	.oscillator_frequency = 16000000,
 	//.board_specific_setup = hhtech_mcp251x_initfunc,
 	//.device_reset = hhtech_mcp251x_reset,
 	//.transceiver_enable = NULL,
@@ -208,7 +246,7 @@ static struct spi_board_info hhs3c_spi_devs[] __initdata = {
 		.platform_data	= &mcp251x_info,
 		.max_speed_hz	= 8000000,
 		.bus_num	= 0,
-		//.irq		= 10,
+		.irq		= IRQ_EINT4,
 		.chip_select	= 0,
 	},
 
@@ -228,15 +266,16 @@ static struct gpio_keys_button hhs3c_gpio_keys[] = {
 		.active_low	= 1,
 	},
 	{
-		.gpio		= S3C2410_GPB10,
-		.code		= BTN_2,
-		.desc		= "SW-PB/ICK3",
-		.active_low	= 1,
-	},
-	{
 		.gpio		= S3C2410_GPF1,
 		.code		= BTN_3,
 		.desc		= "SW-PB/ICK4",
+		.active_low	= 1,
+	},
+#if 0 	/* no interrupts for these pins */
+	{
+		.gpio		= S3C2410_GPB10,
+		.code		= BTN_2,
+		.desc		= "SW-PB/ICK3",
 		.active_low	= 1,
 	},
 	{
@@ -245,6 +284,7 @@ static struct gpio_keys_button hhs3c_gpio_keys[] = {
 		.desc		= "SW-PB/ICK5",
 		.active_low	= 1,
 	},
+#endif	/* comment by mhfan */
 };
 
 static struct gpio_keys_platform_data hhtech_gpio_keys_data = {
@@ -329,7 +369,7 @@ static struct platform_device *smdk2440_devices[] __initdata = {
 	&s3c_device_i2c,
 	&s3c_device_iis,
 	&s3c_device_sdi,
-	//&s3c_device_rtc,
+	&s3c_device_rtc,
 	&s3c_device_adc,
 	&s3c_device_spi0,
 	&hhtech_dm9k_dev,
@@ -351,8 +391,10 @@ static void __init smdk2440_map_io(void)
 static void __init smdk2440_machine_init(void)
 {
 	s3c24xx_udc_set_platdata(&hhs3c_udc_cfg);
-	s3c24xx_fb_set_platdata(&smdk2440_fb_info);
+	//s3c24xx_fb_set_platdata(&smdk2440_fb_info);
+	s3c24xx_fb_set_platdata(&hhs3c_fb_info);
 
+	s3c_device_spi0.dev.platform_data = &hhs3c_spi_info;
 	spi_register_board_info(hhs3c_spi_devs, ARRAY_SIZE(hhs3c_spi_devs));
 	i2c_register_board_info(0, hhs3c_i2c_devs, ARRAY_SIZE(hhs3c_i2c_devs));
 
