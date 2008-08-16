@@ -269,6 +269,7 @@ static struct pwm_tdiv_clk clk_timer_tdiv[] = {
 			.round_rate	= clk_pwm_tdiv_round_rate,
 		},
 	},
+#if 0 	/* timer4 is for internal */
 	[4]	= {
 		.clk	= {
 			.name		= "pwm-tdiv",
@@ -278,6 +279,7 @@ static struct pwm_tdiv_clk clk_timer_tdiv[] = {
 			.round_rate	= clk_pwm_tdiv_round_rate,
 		},
 	},
+#endif	/* comment by mhfan */
 };
 
 static int __init clk_pwm_tdiv_register(unsigned int id)
@@ -353,11 +355,13 @@ static struct clk clk_tin[] = {
 		.id		= 3,
 		.set_parent	= clk_pwm_tin_set_parent,
 	},
+#if 0 	/* timer4 is for internal */
 	[4]	= {
 		.name		= "pwm-tin",
 		.id		= 4,
 		.set_parent	= clk_pwm_tin_set_parent,
 	},
+#endif	/* comment by mhfan */
 };
 
 static __init int clk_pwm_tin_register(struct clk *pwm)
