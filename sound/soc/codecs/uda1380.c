@@ -790,7 +790,7 @@ static int uda1380_probe(struct platform_device *pdev)
 	struct snd_soc_codec *codec;
 	int ret;
 
-	pr_info("UDA1380 Audio Codec %s", UDA1380_VERSION);
+	pr_info("UDA1380 Audio Codec %s\n", UDA1380_VERSION);
 
 	setup = socdev->codec_data;
 	codec = kzalloc(sizeof(struct snd_soc_codec), GFP_KERNEL);
