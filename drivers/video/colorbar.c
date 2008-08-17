@@ -3,9 +3,9 @@
  *                                                              *
  * Description:                                                 *
  *                                                              *
- * Maintainer:  ∑∂√¿ª‘(Meihui Fan)  <mhfan@hhcn.com>            *
+ * Maintainer:  ∑∂√¿ª‘(MeiHui FAN)  <mhfan@hhcn.com>            *
  *                                                              *
- * Copyright (C)  2007  HHTech                                  *
+ * Copyright (C)  2007~2008  HHTech                             *
  *   www.hhcn.com, www.hhcn.org                                 *
  *   All rights reserved.                                       *
  *                                                              *
