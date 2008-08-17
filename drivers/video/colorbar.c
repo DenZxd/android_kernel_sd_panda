@@ -400,4 +400,4 @@ continue;
 #define draw_colorbar(...)
 #endif//CONFIG_FB_COLORBAR
 
-// vim:sts=4:ts=8: 
+// vim:sts=4:ts=8:
