@@ -171,7 +171,8 @@ static struct s3c2410fb_display hhs3c_lcd_cfg __initdata = {
 	.width		= 240,
 	.height		= 320,
 
-	.pixclock	= 125000, /* HCLK 64 MHz, divisor 7, 8 MHz */
+	//.pixclock	= 125000, /* HCLK 64 MHz, divisor 7, 8 MHz */
+	.pixclock	= 166667,
 	.xres		= 240,
 	.yres		= 320,
 	.bpp		= 16,
@@ -188,7 +189,18 @@ static struct s3c2410fb_mach_info hhs3c_fb_info __initdata = {
 	.num_displays	= 1,
 	.default_display = 0,
 
+	.gpccon		= 0xaa8002a8,
+	.gpccon_mask	= 0xffa003fa,
+	.gpcup		= 0x0000f81e,
+	.gpcup_mask	= 0xffffffff,
+
+	.gpdcon		= 0xaa80aaa0,
+	.gpdcon_mask	= 0xffa0fff0,
+	.gpdup		= 0x0000f8fa,
+	.gpdup_mask	= 0xffffffff,
+
 	.lpcsel		= 0x02,
+	//.lpcsel		= ((0xCE6) & ~7) | 1<<4,
 };
 
 /* DM9000AEP 10/100 ethernet controller */
@@ -258,14 +270,12 @@ static struct gpio_keys_button hhs3c_gpio_keys[] = {
 		.code		= BTN_0,
 		.desc		= "SW-PB/ICK1",
 		.active_low	= 1,
-	},
-	{
+	}, {
 		.gpio		= S3C2410_GPF2,
 		.code		= BTN_1,
 		.desc		= "SW-PB/ICK2",
 		.active_low	= 1,
-	},
-	{
+	}, {
 		.gpio		= S3C2410_GPF1,
 		.code		= BTN_3,
 		.desc		= "SW-PB/ICK4",
@@ -277,8 +287,7 @@ static struct gpio_keys_button hhs3c_gpio_keys[] = {
 		.code		= BTN_2,
 		.desc		= "SW-PB/ICK3",
 		.active_low	= 1,
-	},
-	{
+	}, {
 		.gpio		= S3C2410_GPB9,
 		.code		= BTN_4,
 		.desc		= "SW-PB/ICK5",
