@@ -39,6 +39,15 @@
 
 #include "s3c2410fb.h"
 
+#if 1
+#define	CONFIG_FB_COLORBAR	1
+#define FB_PIXEL_YUV		0x01
+
+#include "colorbar.c"
+#else// XXX: mhfan
+#define draw_colorbar(...)
+#endif
+
 /* Debugging stuff */
 #ifdef CONFIG_FB_S3C2410_DEBUG
 static int debug	= 1;
@@ -385,6 +394,7 @@ static void s3c2410fb_activate_var(struct fb_info *info)
 			clkdiv = 2;
 	}
 
+fbi->regs.lcdcon4 |= S3C2410_LCDCON4_MVAL(0x0d);	// XXX: mhfan
 	fbi->regs.lcdcon1 |=  S3C2410_LCDCON1_CLKVAL(clkdiv);
 
 	/* write new registers */
@@ -917,6 +927,8 @@ static int __init s3c24xxfb_probe(struct platform_device *pdev,
 		printk(KERN_ERR "failed to add debug attribute\n");
 	}
 
+draw_colorbar(fbinfo);
+fbinfo->fbops->fb_set_par(fbinfo);	// XXX: mhfan
 	printk(KERN_INFO "fb%d: %s frame buffer device\n",
 		fbinfo->node, fbinfo->fix.id);
 
