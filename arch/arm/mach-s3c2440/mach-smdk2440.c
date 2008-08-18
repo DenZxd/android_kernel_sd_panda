@@ -176,12 +176,14 @@ static struct s3c2410fb_display hhs3c_lcd_cfg __initdata = {
 	.xres		= 240,
 	.yres		= 320,
 	.bpp		= 16,
-	.left_margin	= 31,
-	.right_margin	= 19,
-	.hsync_len	= 4,
+
+	.left_margin	= 30,
+	.right_margin	= 20,
+	.hsync_len	= 1,
+
 	.upper_margin	= 1,
-	.lower_margin	= 2,
-	.vsync_len	= 2,
+	.lower_margin	= 1,
+	.vsync_len	= 1,
 };
 
 static struct s3c2410fb_mach_info hhs3c_fb_info __initdata = {

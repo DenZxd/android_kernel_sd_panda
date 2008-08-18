@@ -927,8 +927,8 @@ static int __init s3c24xxfb_probe(struct platform_device *pdev,
 		printk(KERN_ERR "failed to add debug attribute\n");
 	}
 
-draw_colorbar(fbinfo);
 fbinfo->fbops->fb_set_par(fbinfo);	// XXX: mhfan
+draw_colorbar(fbinfo);
 	printk(KERN_INFO "fb%d: %s frame buffer device\n",
 		fbinfo->node, fbinfo->fix.id);
 
