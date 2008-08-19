@@ -692,8 +692,8 @@ quiet_cmd_vmlinux_version = GEN     .version
 	$(MAKE) $(build)=init
 
 # Generate System.map
-quiet_cmd_sysmap = SYSMAP
-      cmd_sysmap = $(CONFIG_SHELL) $(srctree)/scripts/mksysmap
+quiet_cmd_sysmap = SYSMAP 	# XXX: mhfan
+      cmd_sysmap = true #$(CONFIG_SHELL) $(srctree)/scripts/mksysmap
 
 # Link of vmlinux
 # If CONFIG_KALLSYMS is set .version is already updated
