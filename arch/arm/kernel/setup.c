@@ -691,7 +691,7 @@ void __init setup_arch(char **cmdline_p)
 		tags = phys_to_virt(__atags_pointer);
 	else if (mdesc->boot_params)
 		tags = phys_to_virt(mdesc->boot_params);
-#else// XXX: by mhfan
+#else// XXX: by mhfan, FIXME
 	printk(KERN_WARNING "skipping atags from bootloader...\n");
 #endif
 

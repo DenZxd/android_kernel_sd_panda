@@ -78,7 +78,7 @@
 ENTRY(stext)
 mov	r1, #0x0168
 add	r1, #0x02
-mov	r2, #0	@ XXX: compatible with stupid hharm2440 by mhfan
+mov	r2, #0	@ XXX: compatible with stupid hharm2440 by mhfan, FIXME
 	msr	cpsr_c, #PSR_F_BIT | PSR_I_BIT | SVC_MODE @ ensure svc mode
 						@ and irqs disabled
 	mrc	p15, 0, r9, c0, c0		@ get processor id
