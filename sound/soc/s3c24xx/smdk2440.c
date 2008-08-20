@@ -144,18 +144,18 @@ static int smdk2440_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 
 	/* set MCLK division for sample rate */
-	ret = cpu_dai->dai_ops.set_clkdiv(cpu_dai, S3C24XX_DIV_MCLK, S3C2410_IISMOD_32FS );
+	ret = cpu_dai->dai_ops.set_clkdiv(cpu_dai, S3C24XX_DIV_MCLK, bclk);
 	if (ret < 0)
 		return ret;
 
 	/* set BCLK division for sample rate */
-	ret = cpu_dai->dai_ops.set_clkdiv(cpu_dai, S3C24XX_DIV_BCLK, bclk);
+	ret = cpu_dai->dai_ops.set_clkdiv(cpu_dai, S3C24XX_DIV_BCLK, S3C2410_IISMOD_32FS);	// XXX: mhfan
 	if (ret < 0)
 		return ret;
 
 	/* set prescaler division for sample rate */
 	ret = cpu_dai->dai_ops.set_clkdiv(cpu_dai, S3C24XX_DIV_PRESCALER,
-		S3C24XX_PRESCALE(div,div));
+		S3C24XX_PRESCALE(div, div));
 	if (ret < 0)
 		return ret;
 
@@ -257,8 +257,8 @@ static struct snd_soc_machine snd_soc_machine_smdk2440 = {
 };
 
 static struct uda1380_setup_data smdk2440_uda1380_setup = {
-	.i2c_address = 0x18,	// XXX: 0x1a
-	//.dac_clk = UDA1380_DAC_CLK_WSPLL,
+	.i2c_address = 0x18,	// 0x19, depends on pin L3MODE(A1)
+	//.dac_clk = UDA1380_DAC_CLK_WSPLL,	// XXX:
 };
 
 /* s3c24xx audio subsystem */
