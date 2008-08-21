@@ -14,6 +14,7 @@ if head=`git rev-parse --verify HEAD 2>/dev/null`; then
 	if git name-rev --tags HEAD | grep -E '^HEAD[[:space:]]+(.*~[0-9]*|undefined)$' > /dev/null; then
 		if tag=`git describe 2>/dev/null`; then
 			echo $tag | awk -F- '{printf("-%05d-%s", $(NF-1),$(NF))}'
+		else printf '%s%s' -g `echo "$head" | cut -c1-8` # XXX: mhfan
 		fi
 	fi
 
@@ -35,7 +36,7 @@ if hgid=`hg id 2>/dev/null`; then
 	# Do we have an untagged version?
 	if [ -z "$tag" -o "$tag" = tip ]; then
 		id=`printf '%s' "$hgid" | sed 's/[+ ].*//'`
-		printf '%s%s' -hg "$id"
+		printf '%s%s' -h "$id"
 	fi
 
 	# Are there uncommitted changes?
@@ -55,9 +56,9 @@ if rev=`svn info 2>/dev/null | grep '^Revision'`; then
 
 	# Are there uncommitted changes?
 	if [ $changes != 0 ]; then
-		printf -- '-svn%s%s%s' "$rev" -dirty "$changes"
+		printf -- '-r%s%s%s' "$rev" -dirty
 	else
-		printf -- '-svn%s' "$rev"
+		printf -- '-r%s' "$rev"
 	fi
 
 	# All done with svn
