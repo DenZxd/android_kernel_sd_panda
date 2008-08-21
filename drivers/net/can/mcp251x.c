@@ -149,7 +149,7 @@
 
 #define DEVICE_NAME "mcp251x"
 
-static int enable_dma; /* Enable SPI DMA. Default: 0 (Off) */
+static int enable_dma = 0; /* Enable SPI DMA. Default: 0 (Off) */
 module_param(enable_dma, int, S_IRUGO);
 MODULE_PARM_DESC(enable_dma, "Enable SPI DMA. Default: 0 (Off)");
 
