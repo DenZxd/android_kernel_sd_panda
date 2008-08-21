@@ -108,7 +108,7 @@ static struct s3c2410_uartcfg smdk2440_uartcfgs[] __initdata = {
 		.hwport	     = 2,
 		.flags	     = 0,
 		.ucon	     = 0x3c5,
-		.ulcon	     = 0x43,
+		.ulcon	     = 0x03,	// XXX: mhfan
 		.ufcon	     = 0x51,
 	}
 };
@@ -397,6 +397,10 @@ static void __init smdk2440_map_io(void)
 	s3c24xx_init_io(smdk2440_iodesc, ARRAY_SIZE(smdk2440_iodesc));
 	s3c24xx_init_clocks(12000000);	// XXX: 16934400, by mhfan
 	s3c24xx_init_uarts(smdk2440_uartcfgs, ARRAY_SIZE(smdk2440_uartcfgs));
+
+	__raw_writel((__raw_readl(S3C2410_GPHCON) & ~0xffff) | 0xaaaa,
+		S3C2410_GPHCON);	// XXX: enable UART 0/1/2
+	__raw_writel((__raw_readl(S3C2410_GPHUP) | 0xff), S3C2410_GPHUP);
 }
 
 static void __init smdk2440_machine_init(void)

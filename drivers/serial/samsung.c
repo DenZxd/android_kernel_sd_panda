@@ -349,7 +349,7 @@ static unsigned int s3c24xx_serial_get_mctrl(struct uart_port *port)
 {
 	unsigned int umstat = rd_regb(port, S3C2410_UMSTAT);
 
-	if (umstat & S3C2410_UMSTAT_CTS)
+	if (1 && (umstat & S3C2410_UMSTAT_CTS))	// XXX: mhfan
 		return TIOCM_CAR | TIOCM_DSR | TIOCM_CTS;
 	else
 		return TIOCM_CAR | TIOCM_DSR;
@@ -706,7 +706,7 @@ static void s3c24xx_serial_set_termios(struct uart_port *port,
 
 	wr_regl(port, S3C2410_ULCON, ulcon);
 	wr_regl(port, S3C2410_UBRDIV, quot);
-	wr_regl(port, S3C2410_UMCON, umcon);
+	wr_regl(port, S3C2410_UMCON, umcon);	// XXX: mhfan
 
 	dbg("uart: ulcon = 0x%08x, ucon = 0x%08x, ufcon = 0x%08x\n",
 	    rd_regl(port, S3C2410_ULCON),
