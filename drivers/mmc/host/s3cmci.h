@@ -9,7 +9,7 @@
  */
 
 /* FIXME: DMA Resource management ?! */
-#define S3CMCI_DMA 0
+#define S3CMCI_DMA 1	// XXX: mhfan
 
 enum s3cmci_waitfor {
 	COMPLETION_NONE,

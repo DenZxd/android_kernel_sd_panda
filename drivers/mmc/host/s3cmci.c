@@ -13,6 +13,7 @@
 #include <linux/clk.h>
 #include <linux/mmc/host.h>
 #include <linux/platform_device.h>
+#include <linux/delay.h>
 #include <linux/irq.h>
 #include <linux/io.h>
 
@@ -200,6 +201,7 @@ static inline int get_data_buffer(struct s3cmci_host *host,
 		return -EINVAL;
 
 	if (host->pio_sgptr >= host->mrq->data->sg_len) {
+		udelay(10);	// XXX: mhfan
 		dbg(host, dbg_debug, "no more buffers (%i/%i)\n",
 		      host->pio_sgptr, host->mrq->data->sg_len);
 		return -EBUSY;
