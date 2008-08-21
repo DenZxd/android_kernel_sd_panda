@@ -54,6 +54,7 @@
 #include <asm/plat-s3c24xx/devs.h>
 #include <asm/plat-s3c24xx/cpu.h>
 #include <asm/plat-s3c24xx/udc.h>
+#include <asm/plat-s3c24xx/mci.h>
 #include <asm/plat-s3c24xx/pm.h>
 
 #include <asm/plat-s3c24xx/common-smdk.h>
@@ -245,6 +246,11 @@ static struct s3c2410_spi_info hhs3c_spi_info = {
 	.pin_cs	    = S3C2410_GPG2,	// XXX:
 };
 
+static struct s3c24xx_mci_pdata hhs3c_sdi_info = {
+	.gpio_detect = S3C2410_GPG10,
+	.gpio_wprotect = S3C2410_GPG9,
+};
+
 /* Micorchip mcp251x series CAN over spi controller */
 
 static struct mcp251x_platform_data mcp251x_info = {
@@ -261,7 +267,7 @@ static struct spi_board_info hhs3c_spi_devs[] __initdata = {
 		.max_speed_hz	= 8000000,
 		.bus_num	= 0,
 		.irq		= IRQ_EINT4,
-		.chip_select	= 0,
+		.chip_select	= 0,	// XXX: S3C2410_GPG2,
 	},
 
 };
@@ -315,13 +321,13 @@ static struct platform_device hhtech_gpio_keys_dev = {
 static struct s3c24xx_led_platdata hhs3c_led1 = {
         .gpio           = S3C2410_GPB0,
         .flags          = S3C24XX_LEDF_ACTLOW | S3C24XX_LEDF_TRISTATE,
-        .name           = "led1_g",
+        .name           = "led1_r",
 };
 
 static struct s3c24xx_led_platdata hhs3c_led2 = {
         .gpio           = S3C2410_GPB1,
         .flags          = S3C24XX_LEDF_ACTLOW | S3C24XX_LEDF_TRISTATE,
-        .name           = "led2_r",
+        .name           = "led2_g",
 };
 
 static struct platform_device hhs3c_led1_dev = {
@@ -342,12 +348,12 @@ static struct platform_device hhs3c_led2_dev = {
 
 static struct gpio_led hhs3c_leds[] = {
 	[0] = {
-		.name = "led1-g",
+		.name = "led1-r",
 		.gpio = S3C2410_GPB0,
 		.active_low = 1,
 	},
 	[1] = {
-		.name = "led2-r",
+		.name = "led2-g",
 		.gpio = S3C2410_GPB1,
 		.active_low = 1,
 	},
@@ -396,11 +402,12 @@ static void __init smdk2440_map_io(void)
 {
 	s3c24xx_init_io(smdk2440_iodesc, ARRAY_SIZE(smdk2440_iodesc));
 	s3c24xx_init_clocks(12000000);	// XXX: 16934400, by mhfan
-	s3c24xx_init_uarts(smdk2440_uartcfgs, ARRAY_SIZE(smdk2440_uartcfgs));
 
 	__raw_writel((__raw_readl(S3C2410_GPHCON) & ~0xffff) | 0xaaaa,
 		S3C2410_GPHCON);	// XXX: enable UART 0/1/2
 	__raw_writel((__raw_readl(S3C2410_GPHUP) | 0xff), S3C2410_GPHUP);
+
+	s3c24xx_init_uarts(smdk2440_uartcfgs, ARRAY_SIZE(smdk2440_uartcfgs));
 }
 
 static void __init smdk2440_machine_init(void)
@@ -409,6 +416,11 @@ static void __init smdk2440_machine_init(void)
 	//s3c24xx_fb_set_platdata(&smdk2440_fb_info);
 	s3c24xx_fb_set_platdata(&hhs3c_fb_info);
 
+	__raw_writel((__raw_readl(S3C2410_GPECON) & ~0x0fc0) | 0x0a80,
+		S3C2410_GPECON);	// XXX: enable SPI0 pins
+	__raw_writel((__raw_readl(S3C2410_GPEUP) | 0x38), S3C2410_GPEUP);
+
+	s3c_device_sdi.dev.platform_data = &hhs3c_sdi_info;
 	s3c_device_spi0.dev.platform_data = &hhs3c_spi_info;
 	spi_register_board_info(hhs3c_spi_devs, ARRAY_SIZE(hhs3c_spi_devs));
 	i2c_register_board_info(0, hhs3c_i2c_devs, ARRAY_SIZE(hhs3c_i2c_devs));
