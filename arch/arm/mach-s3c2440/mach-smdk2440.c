@@ -277,16 +277,19 @@ static struct gpio_keys_button hhs3c_gpio_keys[] = {
 		.gpio		= S3C2410_GPF3,
 		.code		= BTN_0,
 		.desc		= "SW-PB/ICK1",
+		.debounce_interval = 1,
 		.active_low	= 1,
 	}, {
 		.gpio		= S3C2410_GPF2,
 		.code		= BTN_1,
 		.desc		= "SW-PB/ICK2",
+		.debounce_interval = 1,
 		.active_low	= 1,
 	}, {
 		.gpio		= S3C2410_GPF1,
 		.code		= BTN_3,
 		.desc		= "SW-PB/ICK4",
+		.debounce_interval = 1,
 		.active_low	= 1,
 	},
 #if 0 	/* no interrupts for these pins */
@@ -294,11 +297,13 @@ static struct gpio_keys_button hhs3c_gpio_keys[] = {
 		.gpio		= S3C2410_GPB10,
 		.code		= BTN_2,
 		.desc		= "SW-PB/ICK3",
+		.debounce_interval = 1,
 		.active_low	= 1,
 	}, {
 		.gpio		= S3C2410_GPB9,
 		.code		= BTN_4,
 		.desc		= "SW-PB/ICK5",
+		.debounce_interval = 1,
 		.active_low	= 1,
 	},
 #endif	/* comment by mhfan */
