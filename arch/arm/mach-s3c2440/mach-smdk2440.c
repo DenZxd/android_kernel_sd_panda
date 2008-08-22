@@ -321,13 +321,13 @@ static struct platform_device hhtech_gpio_keys_dev = {
 static struct s3c24xx_led_platdata hhs3c_led1 = {
         .gpio           = S3C2410_GPB0,
         .flags          = S3C24XX_LEDF_ACTLOW | S3C24XX_LEDF_TRISTATE,
-        .name           = "led1_r",
+        .name           = "led_1",
 };
 
 static struct s3c24xx_led_platdata hhs3c_led2 = {
         .gpio           = S3C2410_GPB1,
         .flags          = S3C24XX_LEDF_ACTLOW | S3C24XX_LEDF_TRISTATE,
-        .name           = "led2_g",
+        .name           = "led_2",
 };
 
 static struct platform_device hhs3c_led1_dev = {
@@ -348,12 +348,12 @@ static struct platform_device hhs3c_led2_dev = {
 
 static struct gpio_led hhs3c_leds[] = {
 	[0] = {
-		.name = "led1-r",
+		.name = "led-1",
 		.gpio = S3C2410_GPB0,
 		.active_low = 1,
 	},
 	[1] = {
-		.name = "led2-g",
+		.name = "led-2",
 		.gpio = S3C2410_GPB1,
 		.active_low = 1,
 	},
