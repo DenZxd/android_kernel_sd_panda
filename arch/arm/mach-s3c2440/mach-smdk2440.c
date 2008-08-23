@@ -399,8 +399,8 @@ static struct platform_device *smdk2440_devices[] __initdata = {
 	&s3c_device_usbgadget,
 	&hhtech_gpio_keys_dev,
 	&hhtech_leds_dev,
-	//&hhs3c_led1_dev,
-	//&hhs3c_led2_dev,
+	&hhs3c_led1_dev,
+	&hhs3c_led2_dev,
 };
 
 static void __init smdk2440_map_io(void)
