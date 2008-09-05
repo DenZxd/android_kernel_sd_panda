@@ -56,6 +56,7 @@
 #include <asm/plat-s3c24xx/udc.h>
 #include <asm/plat-s3c24xx/mci.h>
 #include <asm/plat-s3c24xx/pm.h>
+#include <asm/plat-s3c24xx/ts.h>
 
 #include <asm/plat-s3c24xx/common-smdk.h>
 
@@ -206,8 +207,13 @@ static struct s3c2410fb_mach_info hhs3c_fb_info __initdata = {
 	//.lpcsel		= ((0xCE6) & ~7) | 1<<4,
 };
 
-/* DM9000AEP 10/100 ethernet controller */
+static struct s3c2410_ts_mach_info hhs3c_ts_cfg __initdata = {
+	.delay = 10000,
+	.presc = 49,
+	.oversampling_shift = 2,
+};
 
+/* DM9000AEP 10/100 ethernet controller */
 static struct resource hhs3c_dm9k_resource[] = {
 	[0] = {
 		.start = S3C2410_CS1,
@@ -393,6 +399,7 @@ static struct platform_device *smdk2440_devices[] __initdata = {
 	&s3c_device_sdi,
 	&s3c_device_rtc,
 	&s3c_device_adc,
+	&s3c_device_ts,
 	&s3c_device_spi0,
 	&hhtech_dm9k_dev,
 	&s3c_device_camif,
@@ -420,6 +427,7 @@ static void __init smdk2440_machine_init(void)
 	s3c24xx_udc_set_platdata(&hhs3c_udc_cfg);
 	//s3c24xx_fb_set_platdata(&smdk2440_fb_info);
 	s3c24xx_fb_set_platdata(&hhs3c_fb_info);
+	set_s3c2410ts_info(&hhs3c_ts_cfg);
 
 	__raw_writel((__raw_readl(S3C2410_GPECON) & ~0x0fc0) | 0x0a80,
 		S3C2410_GPECON);	// XXX: enable SPI0 pins
