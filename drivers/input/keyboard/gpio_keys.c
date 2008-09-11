@@ -468,7 +468,9 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 			wakeup = 1;
 
 		input_set_capability(input, type, button->code);
-	}
+		input_event(input, type, button->code,
+			gpio_get_value(button->gpio));
+	}	input_sync (input);	// XXX: mhfan
 
 	error = sysfs_create_group(&pdev->dev.kobj, &gpio_keys_attr_group);
 	if (error) {
@@ -488,6 +490,9 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 	for (i = 0; i < pdata->nbuttons; i++)
 		gpio_keys_report_event(&ddata->data[i]);
 	input_sync(input);
+
+	//__set_bit(EV_REP, input->evbit);
+	//input->rep[REP_PERIOD] = 500;	// XXX: mhfan
 
 	device_init_wakeup(&pdev->dev, wakeup);
 
