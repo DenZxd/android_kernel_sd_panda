@@ -1375,8 +1375,8 @@ int input_register_device(struct input_dev *dev)
 	 * is handled by the driver itself and we don't do it in input.c.
 	 */
 
-	init_timer(&dev->timer);
 	if (!dev->rep[REP_DELAY] && !dev->rep[REP_PERIOD]) {
+		init_timer(&dev->timer);	// XXX: mhfan
 		dev->timer.data = (long) dev;
 		dev->timer.function = input_repeat_key;
 		dev->rep[REP_DELAY] = 250;
