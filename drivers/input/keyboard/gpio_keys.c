@@ -36,7 +36,7 @@ struct gpio_keys_drvdata {
 	struct gpio_button_data data[0];
 };
 
-static void gpio_keys_report_event(struct gpio_keys_button *button,
+static inline void gpio_keys_report_event(struct gpio_keys_button *button,
 				   struct input_dev *input)
 {
 	unsigned int type = button->type ?: EV_KEY;
@@ -163,7 +163,10 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 			wakeup = 1;
 
 		input_set_capability(input, type, button->code);
-	}
+
+		input_event(input, type, button->code,
+			gpio_get_value(button->gpio));
+	}	input_sync (input);	// XXX: mhfan
 
 	error = input_register_device(input);
 	if (error) {
@@ -171,6 +174,9 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 			"error: %d\n", error);
 		goto fail2;
 	}
+
+	__set_bit(EV_REP, input->evbit);
+	input->rep[REP_PERIOD] = 500;	// XXX: mhfan
 
 	device_init_wakeup(&pdev->dev, wakeup);
 
