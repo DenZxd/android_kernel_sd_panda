@@ -278,8 +278,7 @@ static int __init s3c2410ts_probe(struct platform_device *pdev)
 	}
 
 	ts.dev = input_dev;
-	ts.dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS)
-					    | BIT_MASK(EV_SYN);
+	ts.dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
 	ts.dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
 	input_set_abs_params(ts.dev, ABS_X, 0, 0x3FF, 0, 0);
 	input_set_abs_params(ts.dev, ABS_Y, 0, 0x3FF, 0, 0);
