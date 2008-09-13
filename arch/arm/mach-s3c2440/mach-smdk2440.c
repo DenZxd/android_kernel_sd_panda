@@ -292,27 +292,24 @@ static struct gpio_keys_button hhs3c_gpio_keys[] = {
 		.debounce_interval = 5,
 		.active_low	= 1,
 	}, {
-		.gpio		= S3C2410_GPF1,
-		.code		= BTN_3,
-		.desc		= "SW-PB/ICK4",
-		.debounce_interval = 5,
-		.active_low	= 1,
-	},
-#if 0 	/* no interrupts for these pins */
-	{
-		.gpio		= S3C2410_GPB10,
+		.gpio		= S3C2410_GPF0,
 		.code		= BTN_2,
 		.desc		= "SW-PB/ICK3",
 		.debounce_interval = 5,
 		.active_low	= 1,
 	}, {
-		.gpio		= S3C2410_GPB9,
+		.gpio		= S3C2410_GPF1,
+		.code		= BTN_3,
+		.desc		= "SW-PB/ICK4",
+		.debounce_interval = 5,
+		.active_low	= 1,
+	}, {
+		.gpio		= S3C2410_GPF5,
 		.code		= BTN_4,
 		.desc		= "SW-PB/ICK5",
 		.debounce_interval = 5,
 		.active_low	= 1,
 	},
-#endif	/* comment by mhfan */
 };
 
 static struct gpio_keys_platform_data hhtech_gpio_keys_data = {
@@ -366,6 +363,17 @@ static struct gpio_led hhs3c_leds[] = {
 	[1] = {
 		.name = "led-2",
 		.gpio = S3C2410_GPB1,
+		.active_low = 1,
+	},
+
+	[2] = {
+		.name = "led-3",
+		.gpio = S3C2410_GPB10,
+		.active_low = 1,
+	},
+	[3] = {
+		.name = "led-4",
+		.gpio = S3C2410_GPB9,
 		.active_low = 1,
 	},
 };
