@@ -412,7 +412,18 @@ static struct {
 	{NEW_SOLARIS_X86_PARTITION, parse_solaris_x86},
 	{0, NULL},
 };
- 
+
+static int check_msdos_pbr(struct parsed_partitions* state,
+	struct block_device* bdev, unsigned char* data)
+{
+    if (!memcmp(data + 0x36, "FAT", 3) ||
+	!memcmp(data + 0x52, "FAT32", 5)) {	// XXX:
+	put_partition(state, 1, 0, get_capacity(bdev->bd_disk));
+	printk(" (PBR)");
+	return 1;
+    }	return 0;
+}
+
 int msdos_partition(struct parsed_partitions *state, struct block_device *bdev)
 {
 	int sector_size = bdev_hardsect_size(bdev) / 512;
@@ -426,6 +437,7 @@ int msdos_partition(struct parsed_partitions *state, struct block_device *bdev)
 	if (!data)
 		return -1;
 	if (!msdos_magic_present(data + 510)) {
+goto PBR;	// XXX: mhfan
 		put_dev_sector(sect);
 		return 0;
 	}
@@ -453,10 +465,12 @@ int msdos_partition(struct parsed_partitions *state, struct block_device *bdev)
 			fb = (struct fat_boot_sector *) data;
 			if (slot == 1 && fb->reserved && fb->fats
 				&& fat_valid_media(fb->media)) {
+put_partition(state, 1, 0, get_capacity(bdev->bd_disk));	// XXX: mhfan
 				printk("\n");
 				put_dev_sector(sect);
 				return 1;
 			} else {
+goto PBR;	// XXX: mhfan
 				put_dev_sector(sect);
 				return 0;
 			}
@@ -505,6 +519,16 @@ int msdos_partition(struct parsed_partitions *state, struct block_device *bdev)
 			printk("[EZD]");
 	}
 
+if (!state->parts[1].size) {	// XXX: mhfan
+    for (slot = 2; slot < state->limit; ++slot) {
+	if (state->parts[slot].size) {
+	    state->parts[1] = state->parts[slot];	break;
+	}
+    }
+
+    if (state->limit == slot) check_msdos_pbr(state, bdev, data);
+}
+
 	printk("\n");
 
 	/* second pass - output for each on a separate line */
@@ -526,4 +550,7 @@ int msdos_partition(struct parsed_partitions *state, struct block_device *bdev)
 	}
 	put_dev_sector(sect);
 	return 1;
+
+PBR:	slot = check_msdos_pbr(state, bdev, data);	printk("???\n");
+	return slot;	// XXX: mhfan
 }
