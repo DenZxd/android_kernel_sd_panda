@@ -97,31 +97,23 @@ static int smdk2440_hw_params(struct snd_pcm_substream *substream,
 	div256 = iis_clkrate / (rate * 256);
 	div384 = iis_clkrate / (rate * 384);
 
-	if (((iis_clkrate / div256) - (rate * 256)) <
-		((rate * 256) - (iis_clkrate / (div256 + 1)))) {
-		diff256 = (iis_clkrate / div256) - (rate * 256);
-	} else {
-		div256++;
-		diff256 = (iis_clkrate / div256) - (rate * 256);
-	}
+	if ((diff256 = (iis_clkrate / div256) - (rate * 256)) >
+		(div = (rate * 256) - (iis_clkrate / (div256 + 1))))
+	     diff256 = -div, ++div256;
 
-	if (((iis_clkrate / div384) - (rate * 384)) <
-		((rate * 384) - (iis_clkrate / (div384 + 1)))) {
-		diff384 = (iis_clkrate / div384) - (rate * 384);
-	} else {
-		div384++;
-		diff384 = (iis_clkrate / div384) - (rate * 384);
-	}
+	if ((diff384 = (iis_clkrate / div384) - (rate * 384)) >
+		(div = (rate * 384) - (iis_clkrate / (div384 + 1))))
+	     diff384 = -div, ++div384;
 
 	DBG("diff256 %d, diff384 %d\n", diff256, diff384);
 
 	if (diff256<=diff384) {
 		DBG("Selected 256FS\n");
-		div = div256 - 1;
+		div = div256;
 		bclk = S3C2410_IISMOD_256FS;
 	} else {
 		DBG("Selected 384FS\n");
-		div = div384 - 1;
+		div = div384;
 		bclk = S3C2410_IISMOD_384FS;
 	}
 

@@ -2241,7 +2241,7 @@ static void snd_pcm_oss_init_substream(struct snd_pcm_substream *substream,
 	runtime = substream->runtime;
 	runtime->oss.params = 1;
 	runtime->oss.trigger = 1;
-	runtime->oss.rate = 8000;
+	runtime->oss.rate = 44100;	// XXX: 8000, by mhfan
 	mutex_init(&runtime->oss.params_lock);
 	switch (SNDRV_MINOR_OSS_DEVICE(minor)) {
 	case SNDRV_MINOR_OSS_PCM_8:
