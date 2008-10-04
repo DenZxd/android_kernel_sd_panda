@@ -201,9 +201,9 @@ static inline int get_data_buffer(struct s3cmci_host *host,
 		return -EINVAL;
 
 	if (host->pio_sgptr >= host->mrq->data->sg_len) {
-		udelay(10);	// XXX: mhfan
 		dbg(host, dbg_debug, "no more buffers (%i/%i)\n",
 		      host->pio_sgptr, host->mrq->data->sg_len);
+		udelay(20);	// XXX: mhfan
 		return -EBUSY;
 	}
 	sg = &host->mrq->data->sg[host->pio_sgptr];
@@ -1186,10 +1186,10 @@ static int __devinit s3cmci_probe(struct platform_device *pdev, int is2440)
 		host->clk_div	= 2;
 	}
 
-	host->dodma		= 0;
 	host->complete_what 	= COMPLETION_NONE;
 	host->pio_active 	= XFER_NONE;
 
+	host->dodma		= //0;	// XXX: mhfan
 	host->dma		= S3CMCI_DMA;
 
 	host->mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);

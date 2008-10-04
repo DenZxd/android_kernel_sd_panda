@@ -9,7 +9,7 @@
  */
 
 /* FIXME: DMA Resource management ?! */
-#define S3CMCI_DMA 1	// XXX: mhfan
+#define S3CMCI_DMA 0	// XXX: mhfan
 
 enum s3cmci_waitfor {
 	COMPLETION_NONE,
@@ -27,28 +27,31 @@ struct s3cmci_host {
 	struct resource		*mem;
 	struct clk		*clk;
 	void __iomem		*base;
-	int			irq;
-	int			irq_cd;
-	int			dma;
+
+	short			irq;
+	short			irq_cd;
 
 	unsigned long		clk_rate;
-	unsigned long		clk_div;
 	unsigned long		real_rate;
+	unsigned short		clk_div;
+
 	u8			prescaler;
 
-	int			is2440;
+	u8			dma:1;
+	u8			dodma:1;
+	u8			is2440:1;
+
+	u8			cmd_is_stop:1;
+	u8			dma_complete:1;
+
+	int			dmatogo;
 	unsigned		sdiimsk;
 	unsigned		sdidata;
-	int			dodma;
-	int			dmatogo;
 
 	struct mmc_request	*mrq;
-	int			cmd_is_stop;
 
 	spinlock_t		complete_lock;
 	enum s3cmci_waitfor	complete_what;
-
-	int			dma_complete;
 
 	u32			pio_sgptr;
 	u32			pio_words;
@@ -57,12 +60,13 @@ struct s3cmci_host {
 #define XFER_NONE 0
 #define XFER_READ 1
 #define XFER_WRITE 2
-	u32			pio_active;
+	u16			pio_active;
+	u16			bus_width;
 
-	int			bus_width;
-
+#ifdef CONFIG_MMC_DEBUG
 	char 			dbgmsg_cmd[301];
 	char 			dbgmsg_dat[301];
+#endif
 	char			*status;
 
 	unsigned int		ccnt, dcnt;
