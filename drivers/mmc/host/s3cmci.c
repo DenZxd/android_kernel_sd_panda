@@ -40,9 +40,9 @@ enum dbg_channels {
 	dbg_conf  = (1 << 8),
 };
 
-static const int dbgmap_err   = dbg_err | dbg_fail;
+static const int dbgmap_err   = dbg_fail;
 static const int dbgmap_info  = dbg_info | dbg_conf;
-static const int dbgmap_debug = dbg_debug;
+static const int dbgmap_debug = dbg_err | dbg_debug;
 
 #define dbg(host, channels, args...)		  \
 	do {					  \
@@ -203,7 +203,7 @@ static inline int get_data_buffer(struct s3cmci_host *host,
 	if (host->pio_sgptr >= host->mrq->data->sg_len) {
 		dbg(host, dbg_debug, "no more buffers (%i/%i)\n",
 		      host->pio_sgptr, host->mrq->data->sg_len);
-		udelay(20);	// XXX: mhfan
+udelay(20);	// XXX: mhfan
 		return -EBUSY;
 	}
 	sg = &host->mrq->data->sg[host->pio_sgptr];
@@ -239,6 +239,7 @@ static void do_pio_read(struct s3cmci_host *host)
 {
 	int res;
 	u32 fifo;
+	u32 *ptr;
 	void __iomem *from_ptr;
 
 	/* write real prescaler to host, it might be set slow to fix */
@@ -275,8 +276,10 @@ static void do_pio_read(struct s3cmci_host *host)
 		host->pio_words -= fifo;
 		host->pio_count += fifo;
 
+		ptr = host->pio_ptr;
 		while (fifo--)
-			*(host->pio_ptr++) = readl(from_ptr);
+			*ptr++ = readl(from_ptr);
+		host->pio_ptr = ptr;
 	}
 
 	if (!host->pio_words) {
@@ -300,6 +303,7 @@ static void do_pio_write(struct s3cmci_host *host)
 	void __iomem *to_ptr;
 	int res;
 	u32 fifo;
+	u32 *ptr;
 
 	to_ptr = host->base + host->sdidata;
 
@@ -327,8 +331,10 @@ static void do_pio_write(struct s3cmci_host *host)
 		host->pio_words -= fifo;
 		host->pio_count += fifo;
 
+		ptr = host->pio_ptr;
 		while (fifo--)
-			writel(*(host->pio_ptr++), to_ptr);
+			writel(*ptr++, to_ptr);
+		host->pio_ptr = ptr;
 	}
 
 	enable_imask(host, S3C2410_SDIIMSK_TXFIFOHALF);
@@ -452,7 +458,7 @@ static irqreturn_t s3cmci_irq(int irq, void *dev_id)
 	}
 
 	if (mci_csta & S3C2410_SDICMDSTAT_CMDTIMEOUT) {
-		//dbg(host, dbg_err, "CMDSTAT: error CMDTIMEOUT\n");
+		dbg(host, dbg_err, "CMDSTAT: error CMDTIMEOUT\n");
 		cmd->error = -ETIMEDOUT;
 		host->status = "error: command timeout";
 		goto fail_transfer;
