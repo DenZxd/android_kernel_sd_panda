@@ -1301,7 +1301,7 @@ static int __devinit s3cmci_probe(struct platform_device *pdev, int is2440)
 	mmc->max_phys_segs	= 128;
 	mmc->max_hw_segs	= 128;
 
-	dbg(host, dbg_conf,
+	dbg(host, dbg_debug,
 	    "probe: mode:%s mapped mci_base:%p irq:%u irq_cd:%u dma:%u.\n",
 	    (host->is2440?"2440":""),
 	    host->base, host->irq, host->irq_cd, host->dma);
