@@ -19,8 +19,8 @@
 #include <linux/interrupt.h>
 #include <linux/dm9000.h>
 #include <linux/list.h>
-#include <linux/timer.h>
 #include <linux/init.h>
+#include <linux/timer.h>
 #include <linux/gpio_keys.h>
 #include <linux/serial_core.h>
 #include <linux/platform_device.h>
@@ -37,10 +37,10 @@
 
 #include <mach/spi.h>
 #include <mach/hardware.h>
-#include <asm/irq.h>
 #include <asm/mach-types.h>
+#include <asm/irq.h>
+#include <asm/io.h>
 
-#include <asm/plat-s3c/regs-serial.h>
 #include <mach/leds-gpio.h>
 #include <mach/regs-gpio.h>
 #include <mach/regs-lcd.h>
@@ -48,6 +48,7 @@
 #include <mach/idle.h>
 #include <mach/fb.h>
 
+#include <asm/plat-s3c/regs-serial.h>
 #include <asm/plat-s3c24xx/s3c2410.h>
 #include <asm/plat-s3c24xx/s3c2440.h>
 #include <asm/plat-s3c24xx/clock.h>
