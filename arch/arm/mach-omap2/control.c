@@ -166,6 +166,7 @@ u32 omap_ctrl_readl(u16 offset)
 {
 	return __raw_readl(OMAP_CTRL_REGADDR(offset));
 }
+EXPORT_SYMBOL(omap_ctrl_readl);		// XXX: for module external usage
 
 void omap_ctrl_writeb(u8 val, u16 offset)
 {
@@ -181,6 +182,7 @@ void omap_ctrl_writel(u32 val, u16 offset)
 {
 	__raw_writel(val, OMAP_CTRL_REGADDR(offset));
 }
+EXPORT_SYMBOL(omap_ctrl_writel);	// XXX: by mhfan
 
 #if defined(CONFIG_ARCH_OMAP3) && defined(CONFIG_PM)
 /*

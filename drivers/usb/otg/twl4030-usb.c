@@ -478,6 +478,8 @@ static irqreturn_t twl4030_usb_irq(int irq, void *_twl)
 
 	status = twl4030_usb_linkstat(twl);
 	if (status >= 0) {
+		extern int twl4030charger_usb_en(int enable);	// XXX: mhfan
+
 		/* FIXME add a set_power() method so that B-devices can
 		 * configure the charger appropriately.  It's not always
 		 * correct to consume VBUS power, and how much current to

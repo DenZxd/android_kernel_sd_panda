@@ -1602,6 +1602,7 @@ out:
 	destroy_hrtimer_on_stack(&t.timer);
 	return ret;
 }
+EXPORT_SYMBOL(hrtimer_nanosleep);	// XXX: for omap34xx_temp module
 
 SYSCALL_DEFINE2(nanosleep, struct timespec __user *, rqtp,
 		struct timespec __user *, rmtp)
