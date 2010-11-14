@@ -1053,7 +1053,7 @@ static void __exit omap_dm_timer_driver_exit(void)
 }
 
 early_platform_init("earlytimer", &omap_dm_timer_driver);
-module_init(omap_dm_timer_driver_init);
+postcore_initcall(omap_dm_timer_driver_init);
 module_exit(omap_dm_timer_driver_exit);
 
 MODULE_DESCRIPTION("OMAP Dual-Mode Timer Driver");
