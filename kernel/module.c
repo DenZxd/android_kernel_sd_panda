@@ -1042,7 +1042,7 @@ static int check_version(Elf_Shdr *sechdrs,
 			return 1;
 		DEBUGP("Found checksum %lX vs module %lX\n",
 		       maybe_relocated(*crc, crc_owner), versions[i].crc);
-		goto bad_version;
+		//goto bad_version;	// XXX:
 	}
 
 	printk(KERN_WARNING "%s: no symbol version for %s\n",
@@ -2432,7 +2432,8 @@ static int check_modinfo(struct module *mod, struct load_info *info)
 	} else if (!same_magic(modmagic, vermagic, info->index.vers)) {
 		printk(KERN_ERR "%s: version magic '%s' should be '%s'\n",
 		       mod->name, modmagic, vermagic);
-		return -ENOEXEC;
+		err = -ENOEXEC;
+		//return -ENOEXEC;	// XXX:
 	}
 
 	if (get_modinfo(info, "staging")) {
