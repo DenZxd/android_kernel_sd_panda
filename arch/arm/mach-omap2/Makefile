@@ -308,6 +308,7 @@ obj-$(CONFIG_MACH_TI8168EVM)		+= board-ti8168evm.o
 
 obj-$(CONFIG_MACH_OMAP_4430SDP_CAMERA_SUPPORT)	+= board-4430sdp-camera.o
 obj-$(CONFIG_MACH_OMAP4_PANDA_CAMERA_SUPPORT)	+= board-omap4panda-camera.o
+obj-$(CONFIG_MACH_OMAP_BLAZE_CAMERA_SUPPORT)	+= board-44xx-tablet-camera.o
 
 usbfs-$(CONFIG_ARCH_OMAP_OTG)		:= usb-fs.o
 obj-y					+= $(usbfs-m) $(usbfs-y)
