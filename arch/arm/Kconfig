@@ -1874,6 +1874,13 @@ config AUTO_ZRELADDR
 	  0xf8000000. This assumes the zImage being placed in the first 128MB
 	  from start of memory.
 
+config UIMAGE_LOADADDR
+	hex "Load address for uImage"
+	default "0x81000040"
+	help
+	  To avoid any extra memory copy for kernel image,
+	  set this to u-Boot loading address plus 0x40.
+
 endmenu
 
 menu "CPU Power Management"
