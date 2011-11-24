@@ -67,7 +67,11 @@ quiet_cmd_uimage = UIMAGE  $@
 ifeq ($(CONFIG_ZBOOT_ROM),y)
 $(obj)/uImage: LOADADDR=$(CONFIG_ZBOOT_ROM_TEXT)
 else
+ifneq ($(CONFIG_UIMAGE_LOADADDR),)
+$(obj)/uImage: LOADADDR=$(CONFIG_UIMAGE_LOADADDR)
+else
 $(obj)/uImage: LOADADDR=$(ZRELADDR)
+endif
 endif
 
 $(obj)/uImage: STARTADDR=$(LOADADDR)
