@@ -373,7 +373,13 @@ static int omap_mcbsp_dai_hw_params(struct snd_pcm_substream *substream,
 	case SND_SOC_DAIFMT_I2S:
 	case SND_SOC_DAIFMT_LEFT_J:
 		regs->srgr2	|= FPER(framesize - 1);
+#ifdef CONFIG_SND_OMAP_SOC_OMAP4_CS42L52
+		// NOTE: this assumes CBS/SNDRV_PCM_FORMAT_S16_LE
+		// FIXME: dirty hack for the I2S mode is not working properly
+		regs->srgr1	|= FWID((framesize >> 2) - 1);
+#else
 		regs->srgr1	|= FWID((framesize >> 1) - 1);
+#endif
 		break;
 	case SND_SOC_DAIFMT_DSP_A:
 	case SND_SOC_DAIFMT_DSP_B:

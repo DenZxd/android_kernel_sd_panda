@@ -905,6 +905,11 @@ static struct i2c_board_info __initdata panda_i2c_bus2_boardinfo[] = {
 		I2C_BOARD_INFO("OZ8806", 0x2f),
 	},
 #endif
+#if defined(CONFIG_SND_SOC_CS42L52) || defined(CONFIG_SND_SOC_CS42L52_MODULE)
+	{
+		I2C_BOARD_INFO("cs42l52", 0x4b),
+	},
+#endif
 };
 
 static struct i2c_board_info __initdata panda_i2c_bus4_boardinfo[] = {

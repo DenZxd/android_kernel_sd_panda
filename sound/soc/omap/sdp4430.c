@@ -47,6 +47,14 @@
 #include "omap-dmic.h"
 #include "../codecs/twl6040.h"
 
+#ifdef CONFIG_SND_OMAP_SOC_OMAP4_CS42L52
+#include "../codecs/cs42l52.h"
+
+#define CONFIG_CS42L52_SLAVE	1
+
+#define OMAP_ABE_DAI_CS42L52	0x10	// XXX:
+#endif
+
 static struct regulator *av_switch_reg;
 static int twl6040_power_mode;
 static int mcbsp_cfg;
@@ -209,16 +217,30 @@ static int sdp4430_mcbsp_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	unsigned int channels, fmt;
 	int ret = 0;
-	unsigned int channels;
 
-	ret = snd_soc_dai_set_fmt(cpu_dai,
+#ifdef CONFIG_CS42L52_SLAVE
+	unsigned be_id = rtd->dai_link->be_id;
+	if (be_id == OMAP_ABE_DAI_CS42L52) {
+	    fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
+				  SND_SOC_DAIFMT_CBS_CFS;
+
+	    if ((ret = snd_soc_dai_set_fmt(codec_dai, fmt)) < 0) {
+		    pr_err("can't set codec DAI configuration\n");
+		    return ret;
+	    }
+	} else
+#endif
+
+	fmt = (
 			SND_SOC_DAIFMT_I2S |
 			SND_SOC_DAIFMT_NB_NF |
 			SND_SOC_DAIFMT_CBM_CFM);
 
-	if (ret < 0) {
+	if ((ret = snd_soc_dai_set_fmt(cpu_dai, fmt)) < 0) {
 		printk(KERN_ERR "can't set cpu DAI configuration\n");
 		return ret;
 	}
@@ -234,6 +256,26 @@ static int sdp4430_mcbsp_hw_params(struct snd_pcm_substream *substream,
 			omap_mcbsp_set_rx_threshold(
 				cpu_dai->id, channels);
 	}
+
+#ifdef CONFIG_SND_OMAP_SOC_OMAP4_CS42L52
+	ret = snd_soc_dai_set_sysclk(codec_dai, 0,
+				CS42L52_DEFAULT_CLK, SND_SOC_CLOCK_IN);
+        if (ret < 0) {
+                pr_err("can't set codec clock\n");
+                return ret;
+        }
+
+#ifdef CONFIG_CS42L52_SLAVE
+    if (be_id == OMAP_ABE_DAI_CS42L52) {
+	ret = snd_soc_dai_set_clkdiv(cpu_dai, OMAP_MCBSP_CLKGDV, fmt = 4);
+
+	ret = snd_soc_dai_set_sysclk(cpu_dai, OMAP_MCBSP_SYSCLK_CLKS_EXT,
+				     64 * fmt * params_rate(params),
+				     SND_SOC_CLOCK_OUT);
+    }	else	// XXX:
+#endif
+
+#endif
 
 	/*
 	 * TODO: where does this clock come from (external source??) -
@@ -725,6 +767,7 @@ struct snd_soc_dsp_link fe_lp_media = {
 /* Digital audio interface glue - connects codec <--> CPU */
 static struct snd_soc_dai_link sdp4430_dai[] = {
 
+#ifndef CONFIG_SND_OMAP_SOC_OMAP4_CS42L52
 /*
  * Frontend DAIs - i.e. userspace visible interfaces (ALSA PCMs)
  */
@@ -1072,6 +1115,20 @@ static struct snd_soc_dai_link sdp4430_dai[] = {
 		.be_id = OMAP_ABE_DAI_VXREC,
 		.ignore_suspend = 1,
 	},
+
+#else
+	{
+		.name = "cs42l52",
+		.stream_name = "ASP-In/Out",
+		.cpu_dai_name = "omap-mcbsp-dai.0",
+		.platform_name = "omap-pcm-audio",
+		.codec_dai_name = "cs42l52",
+		.codec_name = "cs42l52-codec.2-004b",
+		.ops = &sdp4430_mcbsp_ops,
+		.be_id = OMAP_ABE_DAI_CS42L52,
+	},
+#endif
+
 };
 
 /* Audio machine driver */
@@ -1080,7 +1137,9 @@ static struct snd_soc_card snd_soc_sdp4430 = {
 	.long_name = "TI OMAP4 Board",
 	.dai_link = sdp4430_dai,
 	.num_links = ARRAY_SIZE(sdp4430_dai),
+#ifndef CONFIG_SND_OMAP_SOC_OMAP4_CS42L52
 	.stream_event = sdp4430_stream_event,
+#endif
 };
 
 static struct platform_device *sdp4430_snd_device;
@@ -1142,6 +1201,11 @@ static int __init sdp4430_soc_init(void)
 	 * have full control of MCLK gating
 	 */
 	cdc_tcxo_set_req_prio(CDC_TCXO_CLK2, CDC_TCXO_PRIO_REQINT);
+
+#ifdef CONFIG_SND_OMAP_SOC_OMAP4_CS42L52
+	ret = regulator_set_voltage(av_switch_reg, 2500000, 2500000);
+	ret = regulator_enable(av_switch_reg);
+#endif
 
 	return ret;
 
