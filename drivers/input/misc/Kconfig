@@ -490,7 +490,7 @@ config INPUT_CMA3000
 	  module will be called cma3000_d0x.
 
 config INPUT_CMA3000_I2C
-	tristate "Support I2C bus connection"
+	bool "Support I2C bus connection"
 	depends on INPUT_CMA3000 && I2C
 	help
 	  Say Y here if you want to use VTI CMA3000_D0x Accelerometer
@@ -500,7 +500,7 @@ config INPUT_CMA3000_I2C
 	  module will be called cma3000_d0x_i2c.
 
 config INPUT_HMC5843
-	bool "Honeywell HMC5843 3-Axis Magnetometer"
+	tristate "Honeywell HMC5843 3-Axis Magnetometer"
 	depends on I2C && SYSFS
 	select INPUT_POLLDEV
 	help
@@ -508,14 +508,14 @@ config INPUT_HMC5843
 	  Magnetometer (digital compass).
 
 config INPUT_BH1780
-	bool "ROHM BH1780GLI ambient light sensor"
+	tristate "ROHM BH1780GLI ambient light sensor"
 	depends on I2C && SYSFS
 	help
 	  If you say yes here you get support for the ROHM BH1780GLI
 	  ambient light sensor.
 
 config INPUT_BMP085
-       bool "BMP085 digital pressure sensor"
+       tristate "BMP085 digital pressure sensor"
        depends on I2C && SYSFS
        help
          If you say yes here you get support for the Bosch Sensortec
@@ -535,21 +535,21 @@ config INPUT_XEN_KBDDEV_FRONTEND
 	  module will be called xen-kbdfront.
 
 config INPUT_BMA180
-	bool "BMA-180 Tri-axis accelerometer"
+	tristate "BMA-180 Tri-axis accelerometer"
 	depends on I2C && SYSFS
 	help
 	  Say Y here if you want to use BMA-180 Tri-axis accelerometer
 	  through I2C interface.
 
 config INPUT_MPU3050
-	bool "MPU-3050 Tri-axis gyroscope"
+	tristate "MPU-3050 Tri-axis gyroscope"
 	depends on I2C && SYSFS
 	help
 	  Say Y here if you want to use MPU-3050 Tri-axis gyroscope
 	  through I2C interface.
 
 config INPUT_TSL2771
-	bool "TSL2771 ALS/Proximity Sensor Driver"
+	tristate "TSL2771 ALS/Proximity Sensor Driver"
 	depends on I2C && SYSFS
 	help
 	  Say Y here if you want to use TSL2771 ALS/Proximity Sensor Driver

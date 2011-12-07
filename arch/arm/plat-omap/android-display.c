@@ -170,11 +170,11 @@ static void set_vram_sizes(struct sgx_omaplfb_config *sgx_config,
 	}
 
 	if (sgx_config) {
-#if defined(CONFIG_GCBV)
+#if defined(CONFIG_GCBV) || defined(CONFIG_GCBV_MODULE)
 		/* Add 2 extra VRAM buffers for gc320 composition - 4470 only*/
 		/* TODO: cpu_is_omap447x() is not returning the proper value
 			at this stage. Need to fix it */
-		if (1/*cpu_is_omap447x()*/)
+		if (cpu_is_omap447x())
 			sgx_config->vram_buffers += 2;
 #endif
 

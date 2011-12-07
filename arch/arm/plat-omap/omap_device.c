@@ -410,6 +410,7 @@ struct omap_device *omap_device_build(const char *pdev_name, int pdev_id,
 				    pdata_len, pm_lats, pm_lats_cnt,
 				    is_early_device);
 }
+EXPORT_SYMBOL(omap_device_build);
 
 /**
  * omap_device_build_ss - build and register an omap_device with multiple hwmods
@@ -801,6 +802,7 @@ int omap_device_enable_hwmods(struct omap_device *od)
 	/* XXX pass along return value here? */
 	return 0;
 }
+EXPORT_SYMBOL(omap_device_enable_hwmods);
 
 /**
  * omap_device_idle_hwmods - call omap_hwmod_idle() on all hwmods
@@ -818,6 +820,7 @@ int omap_device_idle_hwmods(struct omap_device *od)
 	/* XXX pass along return value here? */
 	return 0;
 }
+EXPORT_SYMBOL(omap_device_idle_hwmods);
 
 /**
  * omap_device_disable_clocks - disable all main and interface clocks

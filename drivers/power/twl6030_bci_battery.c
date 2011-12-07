@@ -3046,10 +3046,12 @@ static int twl6030_bci_battery_suspend(struct device *dev)
 	/* We cannot tolarate a sleep longer than 30 seconds
 	 * while on ac charging we have to reset the BQ watchdog timer.
 	 */
+#ifdef CONFIG_PM_DEBUG
 	if ((di->charger_source == POWER_SUPPLY_TYPE_MAINS) &&
 		((wakeup_timer_seconds > 25) || !wakeup_timer_seconds)) {
 		wakeup_timer_seconds = 25;
 	}
+#endif	// XXX:
 
 	/*reset the BQ watch dog*/
 	events = BQ2415x_RESET_TIMER;

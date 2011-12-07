@@ -257,6 +257,7 @@ int omap4_charger_detect(void)
 
 	return charger;
 }
+EXPORT_SYMBOL(omap4_charger_detect);
 
 int omap4430_phy_power(struct device *dev, int ID, int on)
 {

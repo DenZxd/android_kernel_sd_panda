@@ -601,6 +601,7 @@ __tagtable(ATAG_CORE, parse_tag_core);
 
 static int __init parse_tag_mem32(const struct tag *tag)
 {
+	pr_debug("ATAG Memory: %8x@%08x\n", tag->u.mem.size, tag->u.mem.start);
 	return arm_add_memory(tag->u.mem.start, tag->u.mem.size);
 }
 

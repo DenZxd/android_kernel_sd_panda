@@ -510,6 +510,7 @@ void gc_caps(struct gcicaps *gcicaps)
 	/* Success. */
 	gcicaps->gcerror = GCERR_NONE;
 }
+EXPORT_SYMBOL(gc_caps);
 
 void gc_commit(struct gcicommit *gcicommit, bool fromuser)
 {

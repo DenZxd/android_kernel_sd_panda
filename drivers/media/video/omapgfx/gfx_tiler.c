@@ -15,7 +15,7 @@
 #include "v4gfx.h"
 #include "gfx_bc.h"
 
-#ifdef CONFIG_TILER_OMAP
+#ifdef CONFIG_TI_TILER
 #include <mach/tiler.h>
 #define TILER_ALLOCATE_V4L2
 #endif
@@ -69,6 +69,7 @@ int v4gfx_tiler_buffer_setup(struct v4gfx_device *vout,
 	GFXLOG(1, V4L2DEV(vout), "tiler buffer alloc: "
 		"count = %d, start = %d :\n", *count, startindex);
 
+#if 0
 	/* special allocation scheme for NV12 format */
 	if (V4L2_PIX_FMT_NV12 == pix->pixelformat) {
 
@@ -96,6 +97,7 @@ int v4gfx_tiler_buffer_setup(struct v4gfx_device *vout,
 				(void **) vout->buf_phy_addr_alloced + start,
 				aligned);
 	}
+#endif
 
 	GFXLOG(1, V4L2DEV(vout),
 			"allocated %d buffers\n", n_alloc);
@@ -130,6 +132,7 @@ void v4gfx_tiler_image_incr(struct v4gfx_device *vout, int *cpu_pgwidth,
 			    int *tiler_increment)
 {
 	/* for NV12, Y buffer is 1bpp*/
+#if 0
 	if (V4L2_PIX_FMT_NV12 == vout->pix.pixelformat) {
 		*cpu_pgwidth =
 			(vout->pix.width + TILER_PAGE - 1) & ~(TILER_PAGE - 1);
@@ -142,11 +145,14 @@ void v4gfx_tiler_image_incr(struct v4gfx_device *vout, int *cpu_pgwidth,
 		else
 			*tiler_increment = 64 * TILER_WIDTH;
 	}
+#endif
 }
 
 void v4gfx_tiler_image_incr_uv(struct v4gfx_device *vout, int *tiler_increment)
 {
+#if 0
 	if (vout->pix.pixelformat == V4L2_PIX_FMT_NV12)
 		*tiler_increment = 2 * 64 * TILER_WIDTH;
+#endif
 	/* Otherwise do nothing */
 }

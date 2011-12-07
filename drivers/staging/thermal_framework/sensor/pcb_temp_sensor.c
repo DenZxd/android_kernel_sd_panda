@@ -67,6 +67,8 @@
 #include <plat/pcb_temperature_sensor.h>
 #include <linux/i2c/twl6030-gpadc.h>
 
+#define DRIVER_NAME "pcb-temp-sensor"	// XXX:
+
 /*
  * pcb_temp_sensor structure
  * @pdev - Platform device pointer

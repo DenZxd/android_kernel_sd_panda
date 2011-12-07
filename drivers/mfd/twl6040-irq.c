@@ -154,14 +154,24 @@ int twl6040_irq_init(struct twl6040 *twl6040)
 	     cur_irq < twl6040->irq_base + ARRAY_SIZE(twl6040_irqs);
 	     cur_irq++) {
 		irq_set_chip_data(cur_irq, twl6040);
+#ifdef CONFIG_TWL6040_CODEC_MODULE
+		irq_set_chip(cur_irq, &twl6040_irq_chip);
+		__irq_set_handler(cur_irq, handle_level_irq, 0, NULL);
+#else
 		irq_set_chip_and_handler(cur_irq, &twl6040_irq_chip,
 					 handle_level_irq);
+#endif
 		irq_set_nested_thread(cur_irq, 1);
 
 		/* ARM needs us to explicitly flag the IRQ as valid
 		 * and will set them noprobe when we do so. */
 #ifdef CONFIG_ARM
+#ifdef CONFIG_TWL6040_CODEC_MODULE
+		irq_modify_status(cur_irq, IRQ_NOREQUEST | IRQ_NOAUTOEN,
+			IRQ_NOPROBE);
+#else
 		set_irq_flags(cur_irq, IRQF_VALID);
+#endif
 #else
 		set_irq_noprobe(cur_irq);
 #endif

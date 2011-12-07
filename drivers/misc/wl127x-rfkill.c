@@ -28,15 +28,15 @@
 #include <linux/platform_device.h>
 #include <linux/wl127x-rfkill.h>
 
-static int wl127x_rfkill_set_power(void *data, enum rfkill_state state)
+static int wl127x_rfkill_set_power(void *data, enum rfkill_user_states state)
 {
 	int nshutdown_gpio = (int) data;
 
 	switch (state) {
-	case RFKILL_STATE_UNBLOCKED:
+	case RFKILL_USER_STATE_UNBLOCKED:
 		gpio_set_value(nshutdown_gpio, 1);
 		break;
-	case RFKILL_STATE_SOFT_BLOCKED:
+	case RFKILL_USER_STATE_SOFT_BLOCKED:
 		gpio_set_value(nshutdown_gpio, 0);
 		break;
 	default:
@@ -49,7 +49,7 @@ static int wl127x_rfkill_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct wl127x_rfkill_platform_data *pdata = pdev->dev.platform_data;
-	enum rfkill_state default_state = RFKILL_STATE_SOFT_BLOCKED;  /* off */
+	enum rfkill_user_states default_state = RFKILL_USER_STATE_SOFT_BLOCKED;  /* off */
 
 	rc = gpio_request(pdata->nshutdown_gpio, "wl127x_nshutdown_gpio");
 	if (unlikely(rc))
@@ -59,10 +59,11 @@ static int wl127x_rfkill_probe(struct platform_device *pdev)
 	if (unlikely(rc))
 		return rc;
 
+#if 0
 	rfkill_set_default(RFKILL_TYPE_BLUETOOTH, default_state);
 	wl127x_rfkill_set_power(NULL, default_state);
 
-	pdata->rfkill = rfkill_allocate(&pdev->dev, RFKILL_TYPE_BLUETOOTH);
+	pdata->rfkill = rfkill_alloc(&pdev->dev, RFKILL_TYPE_BLUETOOTH);
 	if (unlikely(!pdata->rfkill))
 		return -ENOMEM;
 
@@ -73,11 +74,12 @@ static int wl127x_rfkill_probe(struct platform_device *pdev)
 	pdata->rfkill->user_claim = 0;
 	pdata->rfkill->data = (void *) pdata->nshutdown_gpio;
 	pdata->rfkill->toggle_radio = wl127x_rfkill_set_power;
+#endif
 
 	rc = rfkill_register(pdata->rfkill);
 
 	if (unlikely(rc))
-		rfkill_free(pdata->rfkill);
+		rfkill_destroy(pdata->rfkill);
 
 	return 0;
 }
@@ -87,7 +89,7 @@ static int wl127x_rfkill_remove(struct platform_device *pdev)
 	struct wl127x_rfkill_platform_data *pdata = pdev->dev.platform_data;
 
 	rfkill_unregister(pdata->rfkill);
-	rfkill_free(pdata->rfkill);
+	rfkill_destroy(pdata->rfkill);
 	gpio_free(pdata->nshutdown_gpio);
 
 	return 0;

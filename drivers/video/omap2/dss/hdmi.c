@@ -190,7 +190,7 @@ static int relaxed_fb_mode_is_equal(const struct fb_videomode *mode1,
 static int hdmi_set_timings(struct fb_videomode *vm, bool check_only)
 {
 	int i = 0;
-	DSSDBG("hdmi_get_code\n");
+	//DSSDBG("hdmi_get_code\n");
 
 	if (!vm->xres || !vm->yres || !vm->pixclock)
 		goto fail;
@@ -317,7 +317,7 @@ u8 *hdmi_read_edid(struct omap_video_timings *dp)
 						HDMI_EDID_MAX_LENGTH);
 
 	for (i = 0; i < HDMI_EDID_MAX_LENGTH; i += 16)
-		pr_info("edid[%03x] = %02x %02x %02x %02x %02x %02x %02x %02x "
+		pr_debug("edid[%03x] = %02x %02x %02x %02x %02x %02x %02x %02x "
 			 "%02x %02x %02x %02x %02x %02x %02x %02x\n", i,
 			hdmi.edid[i], hdmi.edid[i + 1], hdmi.edid[i + 2],
 			hdmi.edid[i + 3], hdmi.edid[i + 4], hdmi.edid[i + 5],
@@ -587,11 +587,13 @@ int omapdss_hdmi_get_pixel_clock(void)
 {
 	return PICOS2KHZ(hdmi.cfg.timings.pixclock);
 }
+EXPORT_SYMBOL(omapdss_hdmi_get_pixel_clock);
 
 int omapdss_hdmi_get_mode(void)
 {
 	return hdmi.mode;
 }
+EXPORT_SYMBOL(omapdss_hdmi_get_mode);
 
 int omapdss_hdmi_register_hdcp_callbacks(void (*hdmi_start_frame_cb)(void),
 					 void (*hdmi_irq_cb)(int status),
@@ -716,7 +718,7 @@ int omapdss_hdmi_display_set_mode(struct omap_dss_device *dssdev,
 				  struct fb_videomode *vm)
 {
 	int r1, r2;
-	DSSINFO("Enter omapdss_hdmi_display_set_mode\n");
+	DSSDBG("Enter omapdss_hdmi_display_set_mode\n");
 	/* turn the hdmi off and on to get new timings to use */
 	hdmi.set_mode = true;
 	dssdev->driver->disable(dssdev);
@@ -747,7 +749,7 @@ int omapdss_hdmi_display_enable(struct omap_dss_device *dssdev)
 {
 	int r = 0;
 
-	DSSINFO("ENTER hdmi_display_enable\n");
+	DSSDBG("ENTER hdmi_display_enable\n");
 
 	mutex_lock(&hdmi.lock);
 
@@ -808,7 +810,7 @@ err0:
 
 void omapdss_hdmi_display_disable(struct omap_dss_device *dssdev)
 {
-	DSSINFO("Enter hdmi_display_disable\n");
+	DSSDBG("Enter hdmi_display_disable\n");
 
 	mutex_lock(&hdmi.lock);
 

@@ -51,6 +51,8 @@
 
 #include <linux/thermal_framework.h>
 
+#define DRIVER_NAME "omap446x-temp-sensor"	// XXX:
+
 /* This DEBUG flag is used to enable the sysfs entries
  * for the thermal shutdown thresholds, uncomment #define
  * for testing tshut mechanism

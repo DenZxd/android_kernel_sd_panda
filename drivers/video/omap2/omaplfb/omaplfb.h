@@ -325,7 +325,7 @@ void OMAPLFBPrintInfo(OMAPLFB_DEVINFO *psDevInfo);
 #define	OMAPLFBPrintInfo(psDevInfo)
 #endif
 
-#if defined(CONFIG_GCBV)
+#if defined(CONFIG_GCBV) || defined(CONFIG_GCBV_MODULE)
 /*
  * This is the number of framebuffers rendered to by GC320
  */

@@ -699,6 +699,6 @@ static void __exit omap4_duty_module_exit(void)
 	pr_debug("%s Done\n", __func__);
 }
 
-module_init(omap4_duty_module_init);
+late_initcall(omap4_duty_module_init);
 module_exit(omap4_duty_module_exit);
 

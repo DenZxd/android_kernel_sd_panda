@@ -12,7 +12,6 @@ ccflags-y += \
 
 omaplfb-y += \
 	omaplfb_linux.o \
+	$(if $(CONFIG_GCBV),omaplfb_bv.o) \
 	omaplfb_displayclass.o
 
-omaplfb-$(CONFIG_GCBV) += \
-	omaplfb_bv.o

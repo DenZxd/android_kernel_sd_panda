@@ -194,6 +194,7 @@ u32 omap_ctrl_readl(u16 offset)
 {
 	return __raw_readl(OMAP_CTRL_REGADDR(offset));
 }
+EXPORT_SYMBOL(omap_ctrl_readl);
 
 void omap_ctrl_writeb(u8 val, u16 offset)
 {
@@ -209,6 +210,7 @@ void omap_ctrl_writel(u32 val, u16 offset)
 {
 	__raw_writel(val, OMAP_CTRL_REGADDR(offset));
 }
+EXPORT_SYMBOL(omap_ctrl_writel);
 
 /*
  * On OMAP4 control pad are not addressable from control
@@ -231,6 +233,7 @@ u32 omap4_ctrl_pad_readl(u16 offset)
 {
 	return __raw_readl(OMAP4_CTRL_PAD_REGADDR(offset));
 }
+EXPORT_SYMBOL(omap4_ctrl_pad_readl);
 
 void omap4_ctrl_pad_writeb(u8 val, u16 offset)
 {
@@ -246,6 +249,7 @@ void omap4_ctrl_pad_writel(u32 val, u16 offset)
 {
 	__raw_writel(val, OMAP4_CTRL_PAD_REGADDR(offset));
 }
+EXPORT_SYMBOL(omap4_ctrl_pad_writel);
 
 u8 omap4_ctrl_wk_pad_readb(u16 offset)
 {

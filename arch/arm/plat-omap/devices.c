@@ -262,6 +262,8 @@ void __init omap_dsp_reserve_sdram_memblock(void)
 	memblock_free(paddr, size);
 	memblock_remove(paddr, size);
 
+	pr_info("%8x@%08x: reserved for (free) tidspbridge\n", size, paddr);
+
 	omap_dsp_phys_mempool_base = paddr;
 	omap_dsp_phys_mempool_size = size;
 }
@@ -341,6 +343,8 @@ void __init omap_ipu_reserve_sdram_memblock(void)
 	}
 	memblock_free(paddr, size);
 	memblock_remove(paddr, size);
+
+	pr_info("%8x@%08x: reserved for (free) remoteproc\n", size, paddr);
 
 	omap_ipu_phys_mempool_base = paddr;
 	omap_ipu_phys_mempool_size = size;

@@ -1,6 +1,7 @@
 menuconfig OMAP2_DSS
         tristate "OMAP2+ Display Subsystem support (EXPERIMENTAL)"
         depends on ARCH_OMAP2PLUS
+	select TI_TILER
         help
 	  OMAP2+ Display Subsystem support.
 

@@ -1482,7 +1482,7 @@ static int __init omap4_pm_init(void)
 		return -ENODEV;
 	}
 
-	pr_err("Power Management for TI OMAP4.\n");
+	pr_info("Power Management for TI OMAP4.\n");
 
 	/* setup the erratas */
 	omap4_pm_setup_errata();

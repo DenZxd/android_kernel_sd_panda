@@ -58,7 +58,7 @@ struct cdc_tcxo_platform_data {
 	char buf[4];
 };
 
-#ifdef CONFIG_CDC_TCXO
+#if defined(CONFIG_CDC_TCXO) || defined(CONFIG_CDC_TCXO_MODULE)
 int cdc_tcxo_set_req_int(int clk_id, int enable);
 int cdc_tcxo_set_req_prio(int clk_id, int req_prio);
 #else

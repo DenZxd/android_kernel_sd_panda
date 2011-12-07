@@ -258,7 +258,9 @@ static struct platform_device *panda_devices[] __initdata = {
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 	&gpio_keys,
 #endif
+#ifndef CONFIG_VENDOR_HHTECH
 	&leds_gpio,
+#endif
 #if defined(CONFIG_WL12XX_SDIO) || defined(CONFIG_WL12XX_SDIO_MODULE)
 	&wl1271_device,
 #endif
@@ -822,19 +824,14 @@ static struct omap_board_mux board_mux[] __initdata = {
 	OMAP4_MUX(DPM_EMU19, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
 	{ .reg_offset = OMAP_MUX_TERMINATOR },
 };
-
-static inline void __init board_serial_init(void)
-{
-	omap_serial_init();
-}
 #else
 #define board_mux	NULL
+#endif
 
 static inline void __init board_serial_init(void)
 {
 	omap_serial_init();
 }
-#endif
 
 #define GPIO_LVDS_POWER 34
 #define GPIO_LCD_POWER  35
@@ -940,7 +937,7 @@ struct omap_dss_device omap4_panda_dvi_device = {
 	.channel		= OMAP_DSS_CHANNEL_LCD2,
 };
 
-int __init omap4_panda_dvi_init(void)
+static int __init omap4_panda_dvi_init(void)
 {
 	int r;
 
@@ -955,12 +952,12 @@ int __init omap4_panda_dvi_init(void)
 #endif
 
 #ifdef CONFIG_OMAP4_DSS_HDMI
-static struct gpio panda_hdmi_gpios[] = {
+static struct gpio panda_hdmi_gpios[] __initdata = {
 	{ HDMI_GPIO_CT_CP_HPD,	GPIOF_OUT_INIT_HIGH, "hdmi_gpio_hpd"   },
 	{ HDMI_GPIO_LS_OE,	GPIOF_OUT_INIT_HIGH, "hdmi_gpio_ls_oe" },
 };
 
-static void omap4_panda_hdmi_mux_init(void)
+static void __init omap4_panda_hdmi_mux_init(void)
 {
 	u32 r;
 	int status;
@@ -1058,7 +1055,7 @@ static __initdata struct emif_device_details emif_devices = {
 	.cs1_device = &lpddr2_elpida_2G_S4_dev
 };
 
-void omap4_panda_display_init(void)
+static void __init omap4_panda_display_init(void)
 {
 	int r;
 
@@ -1166,7 +1163,11 @@ static void __init omap4_panda_reserve(void)
 
 	/* do the static reservations first */
 	memblock_remove(PHYS_ADDR_SMC_MEM, PHYS_ADDR_SMC_SIZE);
+	pr_info("%8x@%08x: reserved for SMC\n",
+		PHYS_ADDR_SMC_SIZE, PHYS_ADDR_SMC_MEM);
 	memblock_remove(PHYS_ADDR_DUCATI_MEM, PHYS_ADDR_DUCATI_SIZE);
+	pr_info("%8x@%08x: reserved for Ducati\n",
+		PHYS_ADDR_DUCATI_SIZE, PHYS_ADDR_DUCATI_MEM);
 	/* ipu needs to recognize secure input buffer area as well */
 	omap_ipu_set_static_mempool(PHYS_ADDR_DUCATI_MEM, PHYS_ADDR_DUCATI_SIZE +
 					OMAP4_ION_HEAP_SECURE_INPUT_SIZE +

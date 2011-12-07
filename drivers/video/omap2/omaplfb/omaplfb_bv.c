@@ -581,7 +581,7 @@ void OMAPLFBDeInitBltFBs(OMAPLFB_DEVINFO *psDevInfo)
 
 IMG_BOOL OMAPLFBInitBlt(void)
 {
-#if defined(CONFIG_GCBV)
+#if defined(CONFIG_GCBV) || defined(CONFIG_GCBV_MODULE)
 	/* Get the GC2D Bltsville implementation */
 	gcbv_init(&gsBvInterface);
 	gbBvInterfacePresent = gsBvInterface.bv_map ? IMG_TRUE : IMG_FALSE;

@@ -22,12 +22,12 @@
 #include "prminst44xx.h"
 #include "resetreason.h"
 
-static char resetreason[1024];
+static char resetreason[256];
 
 static struct {
 	const char *str;
 	u32 mask;
-} resetreason_flags[] = {
+} resetreason_flags[] __initdata = {
 	{ "C2C ",			OMAP4430_C2C_RST_MASK },
 	{ "IcePick ",			OMAP4430_ICEPICK_RST_MASK },
 	{ "Voltage Manager ",		OMAP4430_VDD_MPU_VOLT_MGR_RST_MASK |

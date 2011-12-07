@@ -51,6 +51,8 @@
 
 #include <mach/ctrl_module_core_44xx.h>
 
+#define DRIVER_NAME "omap446x-temp-sensor"	// XXX:
+
 extern void omap_thermal_throttle(void);
 extern void omap_thermal_unthrottle(void);
 
