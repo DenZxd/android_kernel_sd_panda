@@ -86,7 +86,6 @@
 		.endm
 #endif
 #endif
-#endif
 
 		.macro	kputc,val
 		mov	r0, \val
@@ -98,6 +97,7 @@
 		mov	r1, #\len
 		bl	phex
 		.endm
+#endif
 
 		.macro	debug_reloc_start
 #ifdef DEBUG

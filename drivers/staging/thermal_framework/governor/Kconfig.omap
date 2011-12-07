@@ -3,7 +3,7 @@
 #
 
 config OMAP_DIE_GOVERNOR
-	bool "OMAP On Die thermal governor support"
+	tristate "OMAP On Die thermal governor support"
 	depends on THERMAL_FRAMEWORK && OMAP_THERMAL
 	default y
 	help

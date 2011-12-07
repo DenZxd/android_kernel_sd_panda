@@ -310,6 +310,7 @@ void gc_debug_dump_status(const char *function, int line)
 
 	GCDBG_FLUSHDUMP(NULL);
 }
+EXPORT_SYMBOL(gc_debug_dump_status);
 
 static int gc_debug_show_gpu_status(struct seq_file *s, void *data)
 {
@@ -392,6 +393,7 @@ void gc_debug_blt(int srccount, int dstWidth, int dstHeight)
 	g_gcBltStats.totalPixels += pixels;
 	g_gcBltStats.totalCount++;
 }
+EXPORT_SYMBOL(gc_debug_blt);
 
 static void gc_debug_reset_blt_stats(void)
 {

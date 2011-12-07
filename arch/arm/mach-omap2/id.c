@@ -380,6 +380,7 @@ static void __init omap3_check_revision(void)
 
 static void __init omap4_check_revision(void)
 {
+	struct omap_die_id odi;
 	u32 idcode;
 	u8 rev;
 	/*
@@ -406,6 +407,16 @@ static void __init omap4_check_revision(void)
 		idcode = read_cpuid(CPUID_ID);
 		rev = (idcode & 0xf) - 1;
 	}
+
+	pr_debug("ID code: %08X (rev-%i, hawkeye-%04X manf-%03X)\n",
+		 idcode, rev, hawkeye, (idcode >> 1) & 0x7ff);
+
+	omap_get_die_id(&odi);
+	pr_debug("Die  ID: %08X-%08X-%08X-%08X\n",
+		odi.id_0, odi.id_1, odi.id_2, odi.id_3);
+
+	omap_get_production_id(&odi);
+	pr_debug("Prod.ID: %08X-%08X\n", odi.id_0, odi.id_1);
 
 	switch (hawkeye) {
 	case 0xb852:

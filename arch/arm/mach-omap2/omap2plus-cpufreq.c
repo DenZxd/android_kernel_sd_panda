@@ -205,6 +205,7 @@ void omap_thermal_throttle(void)
 
 	mutex_unlock(&omap_cpufreq_lock);
 }
+EXPORT_SYMBOL(omap_thermal_throttle);
 
 void omap_thermal_unthrottle(void)
 {
@@ -232,6 +233,7 @@ void omap_thermal_unthrottle(void)
 out:
 	mutex_unlock(&omap_cpufreq_lock);
 }
+EXPORT_SYMBOL(omap_thermal_unthrottle);
 
 static int omap_verify_speed(struct cpufreq_policy *policy)
 {

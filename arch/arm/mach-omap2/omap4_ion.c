@@ -142,6 +142,7 @@ void __init omap_ion_init(void)
 	omap4_ion_heap_nonsec_tiler_mem_addr = omap4_ion_heap_tiler_mem_addr -
 				omap4_ion_heap_nonsec_tiler_mem_size;
 
+    if (0) {
 	pr_info("omap4_total_ram_size = 0x%x\n" \
 				"omap4_smc_size = 0x%x\n"  \
 				"omap4_ion_heap_secure_input_size = 0x%x\n"  \
@@ -169,6 +170,7 @@ void __init omap_ion_init(void)
 				omap4_ducati_heap_addr,
 				omap4_ion_heap_tiler_mem_addr,
 				omap4_ion_heap_nonsec_tiler_mem_addr);
+    }
 
 	for (i = 0; i < omap4_ion_data.nr; i++) {
 		struct ion_platform_heap *h = &omap4_ion_data.heaps[i];
@@ -196,27 +198,24 @@ void __init omap_ion_init(void)
 		pr_info("%s: %s id=%u [%lx-%lx] size=%x\n",
 					__func__, h->name, h->id,
 					h->base, h->base + h->size, h->size);
-	}
 
-	for (i = 0; i < omap4_ion_data.nr; i++)
-		if (omap4_ion_data.heaps[i].type == ION_HEAP_TYPE_CARVEOUT ||
-		    omap4_ion_data.heaps[i].type == OMAP_ION_HEAP_TYPE_TILER) {
-			if (!omap4_ion_data.heaps[i].size)
+		if (h->type == ION_HEAP_TYPE_CARVEOUT ||
+		    h->type == OMAP_ION_HEAP_TYPE_TILER) {
+			if (!h->size)
 				continue;
-			ret = memblock_remove(omap4_ion_data.heaps[i].base,
-					      omap4_ion_data.heaps[i].size);
+			ret = memblock_remove(h->base, h->size);
 			if (omap4_ion_data.heaps[i].id ==
 					OMAP_ION_HEAP_SECURE_OUTPUT_WFDHDCP) {
 				/* Reducing the actual size being mapped for Ion/Ducati as
 				 * secure component uses the remaining memory */
-				omap4_ion_data.heaps[i].size =
+				h->size =
 					omap4_ion_heap_secure_output_wfdhdcp_size >> 1;
 			}
 			if (ret)
 				pr_err("memblock remove of %x@%lx failed\n",
-				       omap4_ion_data.heaps[i].size,
-				       omap4_ion_data.heaps[i].base);
+				       h->size, h->base);
 		}
+	}
 }
 
 phys_addr_t omap_smc_addr(void)

@@ -48,6 +48,8 @@
 
 #include <linux/thermal_framework.h>
 
+#define DRIVER_NAME "tmp102-temp-sensor"	// XXX:
+
 #define	TMP102_TEMP_REG			0x00
 #define	TMP102_CONF_REG			0x01
 /* note: these bit definitions are byte swapped */

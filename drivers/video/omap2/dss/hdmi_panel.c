@@ -206,7 +206,7 @@ static int hdmi_panel_enable(struct omap_dss_device *dssdev)
 
 	mutex_lock(&hdmi.hdmi_lock);
 
-	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE) return r; else	// XXX:
+	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE) goto err; else	// XXX:
 	if (dssdev->state != OMAP_DSS_DISPLAY_DISABLED) {
 		r = -EINVAL;
 		goto err;
@@ -302,7 +302,7 @@ static void hdmi_hotplug_detect_worker(struct work_struct *work)
 	}
 	dssdev = omap_dss_find_device(NULL, match);
 
-	pr_err("in hpd work %d, state=%d\n", state, dssdev->state);
+	pr_warn("HDMI: in hpd work %d, state=%d\n", state, dssdev->state);
 	if (dssdev == NULL)
 		return;
 
@@ -329,7 +329,7 @@ static void hdmi_hotplug_detect_worker(struct work_struct *work)
 		} else if (hdmi_read_edid(&dssdev->panel.timings)) {
 			/* get monspecs from edid */
 			hdmi_get_monspecs(&dssdev->panel.monspecs);
-			pr_info("panel size %d by %d\n",
+			pr_info("HDMI panel size %dx%d (cm)\n",
 					dssdev->panel.monspecs.max_x,
 					dssdev->panel.monspecs.max_y);
 			dssdev->panel.width_in_um =

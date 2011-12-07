@@ -407,14 +407,14 @@ config MACH_OMAP4_PANDA
 config MACH_OMAP4_PANDA_CAMERA_SUPPORT
 	bool "OMAP4 Panda Board Camera support"
 	depends on MACH_OMAP4_PANDA
-	select MEDIA_SUPPORT
+	#select MEDIA_SUPPORT
 	select MEDIA_CONTROLLER
-	select VIDEO_DEV
+	#select VIDEO_DEV
 	select VIDEO_V4L2_SUBDEV_API
 	select V4L_PLATFORM_DRIVERS
-	select VIDEO_OMAP4
-	select VIDEO_OV5640
-	select VIDEO_OV5650
+	#select VIDEO_OMAP4
+	#select VIDEO_OV5640
+	#select VIDEO_OV5650
 	help
 	  Enable Camera HW support for PandaBoard.
 	  This is for using the OMAP4 ISS CSI2A Camera sensor
@@ -461,6 +461,7 @@ config OMAP_FIQ_DEBUGGER
 
 config OMAP_REBOOT_REASON
 	depends on ARCH_OMAP4
+	#select HWSPINLOCK
 	bool
 
 config OMAP4_DPLL_CASCADING

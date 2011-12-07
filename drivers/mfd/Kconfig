@@ -260,7 +260,7 @@ config TWL6030_MADC
 	named twl6030-madc
 
 config TWL6040_CODEC
-	bool
+	tristate "Texas Instruments TWL6040 audio codec"
 	depends on TWL4030_CORE
 	select MFD_CORE
 	default n

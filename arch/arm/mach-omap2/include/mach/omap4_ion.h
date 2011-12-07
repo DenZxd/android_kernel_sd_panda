@@ -55,7 +55,7 @@ phys_addr_t omap_ducati_heap_addr(void);
 size_t omap_smc_size(void);
 size_t omap_ducati_heap_size(void);
 
-#ifdef CONFIG_ION_OMAP
+#if defined(CONFIG_ION_OMAP) || defined(CONFIG_ION_OMAP_MODULE)
 void omap_ion_init(void);
 void omap4_register_ion(void);
 

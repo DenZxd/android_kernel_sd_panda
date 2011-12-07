@@ -179,4 +179,4 @@ void __init omap44xx_voltagedomains_init(void)
 		voltdm->sys_clk.name = sys_clk_name;
 
 	voltdm_init(voltagedomains_omap4);
-};
+}

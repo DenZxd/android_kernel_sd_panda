@@ -118,9 +118,9 @@ int omap_ion_probe(struct platform_device *pdev)
 			goto err;
 		}
 		ion_device_add_heap(omap_ion_device, heaps[i]);
-		pr_info("%s: adding heap %s of type %d with %lx@%x\n",
+		pr_debug("%s: adding heap %s of type %d with %lx@%x\n",
 			__func__, heap_data->name, heap_data->type,
-			heap_data->base, heap_data->size);
+			heap_data->size, heap_data->base);
 
 	}
 

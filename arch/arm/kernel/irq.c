@@ -52,6 +52,7 @@
 unsigned long irq_err_count;
 
 ATOMIC_NOTIFIER_HEAD(touch_watchdog_notifier_head);
+EXPORT_SYMBOL(touch_watchdog_notifier_head);
 
 int arch_show_interrupts(struct seq_file *p, int prec)
 {

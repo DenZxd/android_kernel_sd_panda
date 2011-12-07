@@ -63,6 +63,7 @@ int omap_pm_set_min_bus_tput(struct device *dev, u8 agent_id, long r)
 
 	return ret;
 }
+EXPORT_SYMBOL(omap_pm_set_min_bus_tput);
 
 int omap_pm_apply_min_bus_tput(void)
 {
@@ -237,6 +238,7 @@ save_ctx:
 	/* by default return true so that driver will restore context*/
 	return true;
 }
+EXPORT_SYMBOL(omap_pm_was_context_lost);
 
 /* Should be called before clk framework init */
 int __init omap_pm_if_early_init(void)

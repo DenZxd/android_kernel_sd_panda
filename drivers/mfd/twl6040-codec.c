@@ -642,7 +642,7 @@ static int twl6040_power(struct twl6040 *twl6040, int enable)
 			ret = twl6040_power_up_completion(twl6040, naudint);
 			if (ret) {
 				dev_err(twl6040->dev,
-					"automatic power-down failed\n");
+					"automatic power-up failed\n");
 				return ret;
 			}
 		} else {

@@ -241,3 +241,4 @@ static void __exit keyreset_exit(void)
 
 module_init(keyreset_init);
 module_exit(keyreset_exit);
+MODULE_LICENSE("GPL");

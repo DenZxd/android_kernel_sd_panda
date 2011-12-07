@@ -1684,6 +1684,7 @@ int omap_hwmod_set_slave_idlemode(struct omap_hwmod *oh, u8 idlemode)
 
 	return retval;
 }
+EXPORT_SYMBOL(omap_hwmod_set_slave_idlemode);
 
 /**
  * omap_hwmod_lookup - look up a registered omap_hwmod by name
@@ -1703,6 +1704,7 @@ struct omap_hwmod *omap_hwmod_lookup(const char *name)
 
 	return oh;
 }
+EXPORT_SYMBOL(omap_hwmod_lookup);
 
 /**
  * omap_hwmod_for_each - call function for each registered omap_hwmod
@@ -2231,6 +2233,7 @@ int omap_hwmod_enable_ioring_wakeup(struct omap_hwmod *oh)
 	/* Enable pad wake-up capability */
 	return omap_hwmod_set_ioring_wakeup(oh, true);
 }
+EXPORT_SYMBOL(omap_hwmod_enable_ioring_wakeup);
 
 /**
  * omap_hwmod_disable_ioring_wakeup - Clear wakeup flag for iopad.
@@ -2246,6 +2249,7 @@ int omap_hwmod_disable_ioring_wakeup(struct omap_hwmod *oh)
 	/* Disable pad wakeup capability */
 	return omap_hwmod_set_ioring_wakeup(oh, false);
 }
+EXPORT_SYMBOL(omap_hwmod_disable_ioring_wakeup);
 
 /**
  * omap_hwmod_enable_wakeup - allow device to wake up the system
@@ -2432,6 +2436,7 @@ int omap_hwmod_for_each_by_class(const char *classname,
 
 	return ret;
 }
+EXPORT_SYMBOL(omap_hwmod_for_each_by_class);
 
 /**
  * omap_hwmod_set_postsetup_state - set the post-_setup() state for this hwmod

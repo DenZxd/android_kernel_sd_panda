@@ -3,6 +3,7 @@ config RPMSG
 	default y
 	select VIRTIO
 	select VIRTIO_RING
+	select FW_LOADER
 	depends on OMAP_RPMSG
 	---help---
 	  This virtio driver provides support for shared-memory-based

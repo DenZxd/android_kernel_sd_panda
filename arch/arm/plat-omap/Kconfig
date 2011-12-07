@@ -178,7 +178,7 @@ config OMAP_IOMMU
 	bool "IOMMU support for OMAP devices"
 
 config OMAP_IOMMU_DEBUG
-       bool "Export OMAP IOMMU internals in DebugFS"
+       tristate "Export OMAP IOMMU internals in DebugFS"
        depends on OMAP_IOMMU && DEBUG_FS
        help
          Select this to see extensive information about

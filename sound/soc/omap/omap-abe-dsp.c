@@ -2804,6 +2804,8 @@ out:
 #define abe_resume	NULL
 #endif
 
+#undef CONFIG_SND_OMAP_SOC_ABE_DSP_MODULE	// XXX:
+
 static int abe_probe(struct snd_soc_platform *platform)
 {
 	struct abe_data *abe = snd_soc_platform_get_drvdata(platform);
@@ -2825,8 +2827,9 @@ static int abe_probe(struct snd_soc_platform *platform)
 	ret = request_firmware(&fw, "omap4_abe", platform->dev);
 	if (ret != 0) {
 		dev_err(abe->dev, "Failed to load firmware: %d\n", ret);
-		return ret;
-	}
+		fw_data = (u8 *)abe_get_default_fw();
+		//return ret;	// XXX:
+	} else
 	fw_data = fw->data;
 #else
 	fw_data = (u8 *)abe_get_default_fw();

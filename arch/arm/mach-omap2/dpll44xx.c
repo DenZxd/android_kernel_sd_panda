@@ -1434,6 +1434,10 @@ void omap4_dpll_abe_reconfigure(void)
 }
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
+#ifndef CONFIG_SND_OMAP_SOC_ABE_DSP
+#define omap4_abe_can_enter_dpll_cascading(...) true
+#endif	// XXX:
+
 int omap4_dpll_cascading_blocker_hold(struct device *dev)
 {
 	struct dpll_cascading_blocker *blocker;

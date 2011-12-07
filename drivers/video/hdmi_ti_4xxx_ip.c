@@ -185,6 +185,10 @@ void hdmi_lib_stop_acr_wa(void)
 int hdmi_lib_start_acr_wa(void) { return 0; }
 void hdmi_lib_stop_acr_wa(void) { }
 #endif
+
+EXPORT_SYMBOL(hdmi_lib_start_acr_wa);
+EXPORT_SYMBOL(hdmi_lib_stop_acr_wa);
+
 static inline void hdmi_write_reg(void __iomem *base_addr,
 				const struct hdmi_reg idx, u32 val)
 {

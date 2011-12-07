@@ -649,7 +649,7 @@ void __init omap_vram_reserve_sdram_memblock(void)
 
 	omap_vram_add_region(paddr, size);
 
-	pr_info("Reserving %u bytes SDRAM for VRAM\n", size);
+	pr_info("%8x@%08x: reserved for (free) VRAM\n", size, paddr);
 }
 
 /*
