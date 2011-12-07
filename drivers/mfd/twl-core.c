@@ -1390,6 +1390,12 @@ twl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 			twl->client = NULL;	continue;
 #endif
 		    } else
+#else
+
+#ifdef CONFIG_SND_SOC_CS42L52
+			// XXX: assign a reserved address to avoid conflict
+			if (twl->address == 0x4b) twl->address = 0x7f;
+#endif
 #endif
 
 			twl->client = i2c_new_dummy(client->adapter,
