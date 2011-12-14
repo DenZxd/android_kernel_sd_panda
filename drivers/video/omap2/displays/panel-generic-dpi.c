@@ -58,6 +58,7 @@ struct panel_config {
 
 /* Panel configurations */
 static struct panel_config generic_dpi_panels[] = {
+#ifdef CONFIG_PANEL_DVI_OUTPUT
 	/* Generic Panel */
 	{
 		{
@@ -105,7 +106,9 @@ static struct panel_config generic_dpi_panels[] = {
 		.power_off_delay	= 0,
 		.name			= "generic_720p",
 	},
+#endif
 
+#ifdef CONFIG_PANEL_MISC_LCD
 	/* Sharp LQ043T1DG01 */
 	{
 		{
@@ -256,6 +259,7 @@ static struct panel_config generic_dpi_panels[] = {
 		.power_off_delay	= 0,
 		.name			= "powertip_ph480272t",
 	},
+#endif
 };
 
 struct panel_drv_data {

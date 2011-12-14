@@ -478,9 +478,11 @@ static struct twl4030_platform_data omap4_panda_twldata = {
  * is connected as I2C slave device, and can be accessed at address 0x50
  */
 static struct i2c_board_info __initdata panda_i2c_bus3_boardinfo[] = {
+#if defined(CONFIG_PANEL_DVI_OUTPUT) || defined(CONFIG_OMAP4_DSS_HDMI)
 	{
 		I2C_BOARD_INFO("eeprom", 0x50),
 	},
+#endif
 };
 
 static struct i2c_board_info __initdata panda_i2c_bus2_boardinfo[] = {
@@ -629,6 +631,7 @@ static inline void __init board_serial_init(void)
 }
 #endif
 
+#ifdef CONFIG_PANEL_DVI_OUTPUT
 /* Display DVI */
 #define PANDA_DVI_TFP410_POWER_DOWN_GPIO	0
 
@@ -672,7 +675,9 @@ int __init omap4_panda_dvi_init(void)
 
 	return r;
 }
+#endif
 
+#ifdef CONFIG_OMAP4_DSS_HDMI
 static struct gpio panda_hdmi_gpios[] = {
 	{ HDMI_GPIO_CT_CP_HPD,	GPIOF_OUT_INIT_HIGH, "hdmi_gpio_hpd"   },
 	{ HDMI_GPIO_LS_OE,	GPIOF_OUT_INIT_HIGH, "hdmi_gpio_ls_oe" },
@@ -725,10 +730,16 @@ static struct omap_dss_device  omap4_panda_hdmi_device = {
 	.hpd_gpio = HDMI_GPIO_HPD,
 	.channel = OMAP_DSS_CHANNEL_DIGIT,
 };
+#endif
 
 static struct omap_dss_device *omap4_panda_dss_devices[] = {
-	&omap4_panda_dvi_device,
+	&smartq_lcd_device,
+#ifdef CONFIG_OMAP4_DSS_HDMI
 	&omap4_panda_hdmi_device,
+#endif
+#ifdef CONFIG_PANEL_DVI_OUTPUT
+	&omap4_panda_dvi_device,
+#endif
 };
 
 static struct omap_dss_board_info omap4_panda_dss_data = {
@@ -758,11 +769,15 @@ void omap4_panda_display_init(void)
 {
 	int r;
 
+#ifdef CONFIG_PANEL_DVI_OUTPUT
 	r = omap4_panda_dvi_init();
 	if (r)
 		pr_err("error initializing panda DVI\n");
+#endif
 
+#ifdef CONFIG_OMAP4_DSS_HDMI
 	omap4_panda_hdmi_mux_init();
+#endif
 	omap_display_init(&omap4_panda_dss_data);
 }
 
