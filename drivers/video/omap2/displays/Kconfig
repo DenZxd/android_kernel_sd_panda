@@ -10,6 +10,18 @@ config PANEL_GENERIC_DPI
 	  Supports LCD Panel used in TI SDP3430 and EVM boards,
 	  OMAP3517 EVM boards and CM-T35.
 
+config PANEL_DVI_OUTPUT
+	bool "DVI Output"
+	depends on PANEL_GENERIC_DPI
+	help
+	  DVI output on Pandaboard
+
+config PANEL_MISC_LCD
+	bool "misc LCD Panel"
+	depends on PANEL_GENERIC_DPI
+	help
+	  misc LCD Panel on devices
+
 config PANEL_LGPHILIPS_LB035Q02
 	tristate "LG.Philips LB035Q02 LCD Panel"
 	depends on OMAP2_DSS_DPI && SPI
