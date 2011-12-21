@@ -644,7 +644,7 @@ static int __init omap_dss_init2(void)
 }
 
 core_initcall(omap_dss_init);
-device_initcall(omap_dss_init2);
+arch_initcall(omap_dss_init2);
 #endif
 
 MODULE_AUTHOR("Tomi Valkeinen <tomi.valkeinen@nokia.com>");

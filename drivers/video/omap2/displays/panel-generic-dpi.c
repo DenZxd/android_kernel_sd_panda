@@ -464,6 +464,6 @@ static void __exit generic_dpi_panel_drv_exit(void)
 	omap_dss_unregister_driver(&dpi_driver);
 }
 
-module_init(generic_dpi_panel_drv_init);
+arch_initcall(generic_dpi_panel_drv_init);
 module_exit(generic_dpi_panel_drv_exit);
 MODULE_LICENSE("GPL");
