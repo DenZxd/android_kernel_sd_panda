@@ -3202,10 +3202,16 @@ void dispc_set_tft_data_lines(enum omap_channel channel, u8 data_lines)
 		return;
 	}
 
-	if (channel == OMAP_DSS_CHANNEL_LCD2)
+	// XXX: why not enable the Spatial/Temporaral dither logic?
+	if (channel == OMAP_DSS_CHANNEL_LCD2) {
+		REG_FLD_MOD(DISPC_CONTROL2, 2, 31, 30);
+		REG_FLD_MOD(DISPC_CONTROL2, 1, 7, 7);
 		REG_FLD_MOD(DISPC_CONTROL2, code, 9, 8);
-	else
+	} else {
+		REG_FLD_MOD(DISPC_CONTROL, 2, 31, 30);
+		REG_FLD_MOD(DISPC_CONTROL, 1, 7, 7);
 		REG_FLD_MOD(DISPC_CONTROL, code, 9, 8);
+	}
 }
 
 void dispc_set_parallel_interface_mode(enum omap_channel channel,
