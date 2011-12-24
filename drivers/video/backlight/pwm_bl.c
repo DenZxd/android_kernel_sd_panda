@@ -202,7 +202,7 @@ static int __init pwm_backlight_init(void)
 {
 	return platform_driver_register(&pwm_backlight_driver);
 }
-module_init(pwm_backlight_init);
+fs_initcall(pwm_backlight_init);
 
 static void __exit pwm_backlight_exit(void)
 {

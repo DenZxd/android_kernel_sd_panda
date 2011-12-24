@@ -30,6 +30,7 @@
 #include <linux/reboot.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
+#include <linux/pwm_backlight.h>
 #include <linux/wl12xx.h>
 #include <linux/memblock.h>
 
@@ -49,6 +50,7 @@
 #include <plat/common.h>
 #include <plat/usb.h>
 #include <plat/mmc.h>
+#include <plat/pwm.h>
 #include <plat/omap_apps_brd_id.h>
 #include <plat/remoteproc.h>
 #include <plat/vram.h>
@@ -110,7 +112,63 @@ static struct platform_device leds_gpio = {
 	},
 };
 
+#define GPIO_BL_PWM	94
+#if defined(CONFIG_BACKLIGHT_PWM) || defined(CONFIG_BACKLIGHT_PWM_MODULE)
+#ifdef CONFIG_OMAP_PWM
+#define BL_PWM_GPT_ID	10
+static struct omap2_pwm_platform_config pwm_config = {
+	.timer_id   = BL_PWM_GPT_ID,
+#if defined(CONFIG_SMARTQ_T20)
+	.polarity   = 0,
+#else
+	.polarity   = 1,	// Active-high
+#endif
+};
+
+static struct platform_device pwm_device = {
+	.name	    = "omap-pwm",
+	.id	    = 0,
+	.dev	    = {
+		.platform_data  = &pwm_config
+	}
+};
+
+static int smartq_bl_init(struct device *dev)
+{
+    //omap_mux_init_signal("abe_dmic_din3.dmtimer9_pwm_evt", OMAP_MUX_MODE5);
+    omap_mux_init_signal("usbb1_ulpitll_dat6.dmtimer10_pwm_evt",
+	    OMAP_MUX_MODE1);
+    if (0 && gpio_request(GPIO_BL_PWM, "backlight_pwm"))
+	pr_err("Cannot request GPIO %d\n", GPIO_BL_PWM);
+    return 0;
+}
+#endif
+
+static struct platform_pwm_backlight_data smartq_backlight_data = {
+#ifdef CONFIG_OMAP_PWM
+	.init		= smartq_bl_init,
+	.pwm_id		= BL_PWM_GPT_ID,
+#endif
+	.max_brightness	= 255,
+	.dft_brightness	= 100,
+	.pwm_period_ns	= 1000000000 / (32000),
+};
+
+static struct platform_device smartq_backlight_device = {
+	.name		= "pwm-backlight",
+	.dev		= {
+		.platform_data = &smartq_backlight_data,
+	},
+};
+#endif
+
 static struct platform_device *panda_devices[] __initdata = {
+#if defined(CONFIG_BACKLIGHT_PWM) || defined(CONFIG_BACKLIGHT_PWM_MODULE)
+#ifdef CONFIG_OMAP_PWM
+	&pwm_device,
+#endif
+	&smartq_backlight_device,
+#endif
 	&leds_gpio,
 	&wl1271_device,
 };
@@ -668,6 +726,15 @@ static int __init smartq_lcd_init(struct omap_dss_device *dssdev)
 	if (r) goto err;
 
 	smartq_lcd_enable(dssdev);
+
+#if 0
+	gpio = GPIO_BL_PWM;
+	if (0) omap_mux_init_signal("usbb1_ulpitll_dat6.dmtimer10_pwm_evt",
+		OMAP_PIN_OUTPUT | OMAP_MUX_MODE3); else
+	omap_mux_init_gpio(gpio, OMAP_PIN_OUTPUT);
+	r = gpio_request_one(gpio, GPIOF_OUT_INIT_HIGH, "backlight_pwm");
+	if (r) goto err; //else gpio_free(gpio);
+#endif
 
 	return r;
 err:	pr_err("Cannot request GPIO %d\n", gpio);
