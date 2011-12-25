@@ -473,7 +473,7 @@ static int hdmi_power_on(struct omap_dss_device *dssdev)
 		if (cea_code > 0 && cea_code < CEA_MODEDB_SIZE)
 			default_mode = cea_modes[cea_code];
 		else
-			default_mode = vesa_modes[4];
+			default_mode = cea_modes[16];
 
 		hdmi_set_timings(&default_mode, false);
 	}
