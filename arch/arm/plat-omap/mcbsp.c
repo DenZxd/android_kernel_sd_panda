@@ -120,6 +120,16 @@ static void omap_mcbsp_dump_reg(u8 id)
 			MCBSP_READ(mcbsp, SRGR1));
 	dev_dbg(mcbsp->dev, "PCR0:  0x%04x\n",
 			MCBSP_READ(mcbsp, PCR0));
+	dev_dbg(mcbsp->dev, "MCR2:  0x%04x\n",
+			MCBSP_READ(mcbsp, MCR2));
+	dev_dbg(mcbsp->dev, "MCR1:  0x%04x\n",
+			MCBSP_READ(mcbsp, MCR1));
+	dev_dbg(mcbsp->dev, "XCCR:  0x%04x\n",
+			MCBSP_READ(mcbsp, XCCR));
+	dev_dbg(mcbsp->dev, "IRQST:  0x%04x\n",
+			MCBSP_READ(mcbsp, IRQST));
+	dev_dbg(mcbsp->dev, "WAKEUPEN:  0x%04x\n",
+			MCBSP_READ(mcbsp, WAKEUPEN));
 	dev_dbg(mcbsp->dev, "***********************\n");
 }
 
@@ -938,12 +948,12 @@ void omap_mcbsp_start(unsigned int id, int tx, int rx)
 	w = MCBSP_READ_CACHE(mcbsp, PCR0);
 	if (w & (FSXM | FSRM | CLKXM | CLKRM))
 		enable_srg = !((MCBSP_READ_CACHE(mcbsp, SPCR2) |
-				MCBSP_READ_CACHE(mcbsp, SPCR1)) & 1);
+				MCBSP_READ_CACHE(mcbsp, SPCR1)) & XRST);
 
 	if (enable_srg) {
 		/* Start the sample generator */
 		w = MCBSP_READ_CACHE(mcbsp, SPCR2);
-		MCBSP_WRITE(mcbsp, SPCR2, w | (1 << 6));
+		MCBSP_WRITE(mcbsp, SPCR2, w | GRST);
 	}
 
 	/* Enable transmitter and receiver */
@@ -966,7 +976,7 @@ void omap_mcbsp_start(unsigned int id, int tx, int rx)
 	if (enable_srg) {
 		/* Start frame sync */
 		w = MCBSP_READ_CACHE(mcbsp, SPCR2);
-		MCBSP_WRITE(mcbsp, SPCR2, w | (1 << 7));
+		MCBSP_WRITE(mcbsp, SPCR2, w | FRST);
 	}
 
 	if (cpu_is_omap2430() || cpu_is_omap34xx() || cpu_is_omap44xx()) {
@@ -1037,12 +1047,12 @@ void omap_mcbsp_stop(unsigned int id, int tx, int rx)
 	MCBSP_WRITE(mcbsp, SPCR1, w & ~rx);
 
 	idle = !((MCBSP_READ_CACHE(mcbsp, SPCR2) |
-			MCBSP_READ_CACHE(mcbsp, SPCR1)) & 1);
+			MCBSP_READ_CACHE(mcbsp, SPCR1)) & XRST);
 
 	if (idle) {
 		/* Reset the sample rate generator */
 		w = MCBSP_READ_CACHE(mcbsp, SPCR2);
-		MCBSP_WRITE(mcbsp, SPCR2, w & ~(1 << 6));
+		MCBSP_WRITE(mcbsp, SPCR2, w & ~GRST);
 	}
 
 	if (cpu_is_omap34xx())
