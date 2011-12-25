@@ -58,6 +58,32 @@ struct panel_config {
 
 /* Panel configurations */
 static struct panel_config generic_dpi_panels[] = {
+#ifdef CONFIG_PANEL_LG_IPS_10
+	/* LG IPS 9.7" */
+	{
+		{
+			.x_res		= 1024,
+			.y_res		= 768,
+
+			.pixel_clock	= 95933,    // XXX: 96000
+
+			.hfp		= 240,
+			.hsw		= 240,
+			.hbp		= 538,
+
+			.vfp		= 1,
+			.vsw		= 10,
+			.vbp		= 4,
+		},
+		.acbi			= 0x0,
+		.acb			= 0x0,
+		.config			= OMAP_DSS_LCD_TFT,
+		.power_on_delay		= 0,
+		.power_off_delay	= 0,
+		.name			= "lg_ips10",
+	},
+#endif
+
 #ifdef CONFIG_PANEL_DVI_OUTPUT
 	/* Generic Panel */
 	{
