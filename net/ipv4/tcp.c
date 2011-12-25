@@ -3340,6 +3340,9 @@ static int tcp_is_local6(struct net *net, struct in6_addr *addr) {
 	struct rt6_info *rt6 = rt6_lookup(net, addr, addr, 0, 0);
 	return rt6 && rt6->rt6i_dev && (rt6->rt6i_dev->flags & IFF_LOOPBACK);
 }
+#if defined(CONFIG_IPV6_MODULE)
+#define tcp_is_local6(...)	0	// FIXME:
+#endif
 #endif
 
 /*
@@ -3394,7 +3397,7 @@ restart:
 
 #if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
 			if (family == AF_INET6) {
-				struct in6_addr *s6;
+				struct in6_addr *s6, in6any = IN6ADDR_ANY_INIT;
 				if (!inet->pinet6)
 					continue;
 
@@ -3403,9 +3406,9 @@ restart:
 					continue;
 
 				if (!ipv6_addr_equal(in6, s6) &&
-				    !(ipv6_addr_equal(in6, &in6addr_any) &&
+				    !(ipv6_addr_equal(in6, &in6any) &&
 				      !tcp_is_local6(net, s6)))
-				continue;
+					continue;
 			}
 #endif
 
@@ -3429,3 +3432,5 @@ restart:
 
 	return 0;
 }
+EXPORT_SYMBOL(tcp_nuke_addr);
+
