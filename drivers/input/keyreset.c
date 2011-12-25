@@ -40,7 +40,11 @@ int restart_requested;
 static void deferred_restart(struct work_struct *dummy)
 {
 	restart_requested = 2;
+#ifdef CONFIG_INPUT_KEYRESET_MODULE
+	emergency_sync();	// XXX:
+#else
 	sys_sync();
+#endif
 	restart_requested = 3;
 	kernel_restart(NULL);
 }
