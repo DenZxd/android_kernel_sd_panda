@@ -142,6 +142,8 @@ static const u8 musb_test_packet[53] = {
 
 #ifdef CONFIG_USB_MUSB_HSET
 extern void musb_init_hset(char *name, struct musb *musb);
+extern void usb_hset_exit();
+extern int usb_hset_init();
 #endif
 
 /****************************** PERIPHERAL ROLE *****************************/

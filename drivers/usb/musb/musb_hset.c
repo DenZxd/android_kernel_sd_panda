@@ -401,7 +401,7 @@ static struct usb_driver hset_driver = {
 	.id_table =	hset_table,
 };
 
-static int __init usb_hset_init(void)
+int __init usb_hset_init(void)
 {
 	int result;
 	printk(KERN_ERR "BCERTIF:%s()\n", __func__);
@@ -413,15 +413,15 @@ static int __init usb_hset_init(void)
 	return result;
 }
 
-static void __exit usb_hset_exit(void)
+void __exit usb_hset_exit(void)
 {
 	printk(KERN_ERR "BCERTIF:%s()\n", __func__);
 	/* deregister this driver with the USB subsystem */
 	usb_deregister(&hset_driver);
 }
 
-module_init(usb_hset_init);
-module_exit(usb_hset_exit);
+//module_init(usb_hset_init);
+//module_exit(usb_hset_exit);
 
 MODULE_LICENSE("GPL");
 
