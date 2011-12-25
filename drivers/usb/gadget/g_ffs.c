@@ -134,7 +134,8 @@ static struct usb_gadget_strings *gfs_dev_strings[] = {
 
 struct gfs_configuration {
 	struct usb_configuration c;
-	int (*eth)(struct usb_configuration *c, u8 *ethaddr);
+	int (*eth)(struct usb_configuration *c, u8 *ethaddr,
+		u32 vendorID, const char *manufacturer);
 } gfs_configurations[] = {
 #ifdef CONFIG_USB_FUNCTIONFS_RNDIS
 	{
@@ -298,7 +299,8 @@ static int gfs_do_config(struct usb_configuration *c)
 	}
 
 	if (gc->eth) {
-		ret = gc->eth(c, gfs_hostaddr);
+		ret = gc->eth(c, gfs_hostaddr, gfs_dev_desc.idVendor,
+			"Unknown");
 		if (unlikely(ret < 0))
 			return ret;
 	}
