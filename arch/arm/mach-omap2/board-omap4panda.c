@@ -631,6 +631,69 @@ static inline void __init board_serial_init(void)
 }
 #endif
 
+#define GPIO_LVDS_POWER 34
+#define GPIO_LCD_POWER  35
+
+static int smartq_lcd_enable(struct omap_dss_device *dssdev)
+{
+	gpio_set_value(dssdev->reset_gpio >> 8, 1);
+	gpio_set_value(dssdev->reset_gpio & 0xFF, 1);
+	return 0;
+}
+
+static void smartq_lcd_disable(struct omap_dss_device *dssdev)
+{
+	gpio_set_value(dssdev->reset_gpio & 0xFF, 0);
+	gpio_set_value(dssdev->reset_gpio >> 8, 0);
+}
+
+/* we must enable both gpio to power on the LCD and LVDS controler */
+static int __init smartq_lcd_init(struct omap_dss_device *dssdev)
+{
+	int r, gpio;
+
+	gpio = dssdev->reset_gpio & 0xFF;
+	omap_mux_init_gpio(gpio, OMAP_PIN_OUTPUT);
+
+	/* Requesting LCD/LVDS PD GPIO and disabling them, at bootup */
+	r = gpio_request_one(gpio, GPIOF_OUT_INIT_LOW, "LCD PD");
+	if (r) goto err;
+
+	gpio = dssdev->reset_gpio >> 8;
+	if (!gpio) return r;
+
+	omap_mux_init_gpio(gpio, OMAP_PIN_OUTPUT);
+
+	r = gpio_request_one(gpio, GPIOF_OUT_INIT_LOW, "LVDS PD");
+	if (r) goto err;
+
+	smartq_lcd_enable(dssdev);
+
+	return r;
+err:	pr_err("Cannot request GPIO %d\n", gpio);
+	return r;
+}
+
+static struct panel_generic_dpi_data smartq_lcd_panel = {
+#ifdef CONFIG_PANEL_LG_IPS_10
+	.name			= "lg_ips10",
+#endif
+	.platform_enable	= smartq_lcd_enable,
+	.platform_disable	= smartq_lcd_disable,
+};
+
+struct omap_dss_device smartq_lcd_device = {
+	.type			= OMAP_DISPLAY_TYPE_DPI,
+	.name			= "SmartQ_LCD",
+	.driver_name		= "generic_dpi_panel",
+	.data			= &smartq_lcd_panel,
+#ifdef CONFIG_PANEL_LG_IPS_10
+	.phy.dpi.data_lines	= 18,
+#endif
+	.reset_gpio		= GPIO_LCD_POWER | (GPIO_LVDS_POWER << 8),
+	.channel		= OMAP_DSS_CHANNEL_LCD2,
+};
+
 #ifdef CONFIG_PANEL_DVI_OUTPUT
 /* Display DVI */
 #define PANDA_DVI_TFP410_POWER_DOWN_GPIO	0
@@ -745,7 +808,7 @@ static struct omap_dss_device *omap4_panda_dss_devices[] = {
 static struct omap_dss_board_info omap4_panda_dss_data = {
 	.num_devices	= ARRAY_SIZE(omap4_panda_dss_devices),
 	.devices	= omap4_panda_dss_devices,
-	.default_device	= &omap4_panda_dvi_device,
+	.default_device	= &smartq_lcd_device,
 };
 
 /*
@@ -768,6 +831,9 @@ static __initdata struct emif_device_details emif_devices = {
 void omap4_panda_display_init(void)
 {
 	int r;
+
+	if ((r = smartq_lcd_init(&smartq_lcd_device)))
+		pr_err("error initializing LCD\n");
 
 #ifdef CONFIG_PANEL_DVI_OUTPUT
 	r = omap4_panda_dvi_init();

@@ -10,6 +10,12 @@ config PANEL_GENERIC_DPI
 	  Supports LCD Panel used in TI SDP3430 and EVM boards,
 	  OMAP3517 EVM boards and CM-T35.
 
+config PANEL_LG_IPS_10
+	bool "LG IPS 9.7 LCD Panel"
+	depends on PANEL_GENERIC_DPI
+	help
+	  LCD Panel used on SmartQ devices
+
 config PANEL_DVI_OUTPUT
 	bool "DVI Output"
 	depends on PANEL_GENERIC_DPI
