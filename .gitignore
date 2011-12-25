@@ -59,6 +59,8 @@ include/linux/version.h
 include/generated
 arch/*/include/generated
 
+/samples/hidraw/hid-example
+
 # stgit generated dirs
 patches-*
 
