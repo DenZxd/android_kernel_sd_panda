@@ -186,6 +186,16 @@ static struct twl4030_usb_data omap4_usbphy_data = {
 };
 
 static struct omap2_hsmmc_info mmc[] = {
+	{	// for iNAND/eMMC
+		.mmc		= 2,
+		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_8_BIT_DATA
+				| MMC_CAP_1_8V_DDR,
+		.ocr_mask	= MMC_VDD_33_34, // | MMC_VDD_29_30,
+		.gpio_wp	= -EINVAL,
+		.gpio_cd	= -EINVAL,
+		.nonremovable	= true,
+		.no_off_init	= true,
+	},
 	{
 		.mmc		= 1,
 		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_1_8V_DDR
