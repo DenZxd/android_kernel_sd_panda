@@ -2500,7 +2500,7 @@ static int omapfb_probe(struct platform_device *pdev)
 		fbdev->displays[fbdev->num_displays++] = dssdev;
 	}
 
-	if (r)
+	if (r && fbdev->num_displays == 1)	// XXX:
 		goto cleanup;
 
 	if (fbdev->num_displays == 0) {
