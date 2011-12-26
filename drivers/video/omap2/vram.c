@@ -273,6 +273,46 @@ static void _omap_vram_dma_cb(int lch, u16 ch_status, void *data)
 	complete(compl);
 }
 
+int omap_vram_dma_copy(unsigned long dest, unsigned long src, int len)
+{
+
+        struct completion compl;
+        int lch, r;
+
+        init_completion(&compl);
+
+        r = omap_request_dma(OMAP_DMA_NO_DEVICE, "VRAM DMA",
+		_omap_vram_dma_cb, &compl, &lch);
+        if (r) {
+		pr_err("VRAM: request_dma failed for memory clear\n");
+		return -EBUSY;
+	}
+
+        omap_set_dma_transfer_params(lch, OMAP_DMA_DATA_TYPE_S32, len >> 2,
+		1, OMAP_DMA_SYNC_ELEMENT, 0, 0);
+
+        omap_set_dma_dest_params(lch, 0, OMAP_DMA_AMODE_POST_INC, dest, 0, 0);
+
+	omap_set_dma_src_params(lch, 0, OMAP_DMA_AMODE_POST_INC, src, 0, 0);
+
+        omap_start_dma(lch);
+
+	if (wait_for_completion_timeout(&compl,
+			msecs_to_jiffies(1000)) == 0) {
+		omap_stop_dma(lch);
+		pr_err("VRAM: dma timeout while copy memory\n");
+		r = -EIO;
+		goto err;
+	}
+
+        r = 0;
+err:
+        omap_free_dma(lch);
+
+        return r;
+}
+//EXPORT_SYMBOL(omap_vram_dma_copy);
+
 static int _omap_vram_clear(u32 paddr, unsigned pages)
 {
 	struct completion compl;
@@ -521,6 +561,17 @@ static int __init omap_vram_early_vram(char *p)
 }
 early_param("vram", omap_vram_early_vram);
 
+u32 omap_logo_vbmp_base, omap_logo_vbmp_size/* __initdata*/;
+
+static int __init omap_logo_vbmp_early(char *p)
+{
+    omap_logo_vbmp_base = simple_strtoul(p, &p, 16);
+    if (*p == ',') omap_logo_vbmp_size = memparse(p, &p);
+    if (!omap_logo_vbmp_size) omap_logo_vbmp_size = 64;	// XXX:
+    return 0;
+}
+early_param("vbmp", omap_logo_vbmp_early);
+
 /*
  * Called from map_io. We need to call to this early enough so that we
  * can reserve the fixed SDRAM regions before VM could get hold of them.
@@ -529,6 +580,20 @@ void __init omap_vram_reserve_sdram_memblock(void)
 {
 	u32 paddr;
 	u32 size = 0;
+
+    if (omap_logo_vbmp_size) {
+#if 0
+	extern int reserve_bootmem(unsigned long addr,
+		unsigned long size, int flags);
+	reserve_bootmem(omap_logo_vbmp_base, omap_logo_vbmp_size, 0);
+#else
+	if (memblock_reserve(omap_logo_vbmp_base, omap_logo_vbmp_size) < 0) {
+	} else {
+	    memblock_remove(omap_logo_vbmp_base, omap_logo_vbmp_size);
+	    memblock_free(omap_logo_vbmp_base, omap_logo_vbmp_size);
+	}
+#endif
+    }
 
 	/* cmdline arg overrides the board file definition */
 	if (omap_vram_def_sdram_size) {
