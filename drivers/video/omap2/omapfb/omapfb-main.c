@@ -2543,16 +2543,6 @@ static int omapfb_probe(struct platform_device *pdev)
 	if (r)
 		goto cleanup;
 
-	for (i = 0; i < fbdev->num_managers; i++) {
-		struct omap_overlay_manager *mgr;
-		mgr = fbdev->managers[i];
-		r = mgr->apply(mgr);
-		if (r)
-			dev_warn(fbdev->dev, "failed to apply dispc config\n");
-	}
-
-	DBG("mgr->apply'ed\n");
-
 	if (def_display) {
 		r = omapfb_init_display(fbdev, def_display);
 		if (r) {
@@ -2562,6 +2552,16 @@ static int omapfb_probe(struct platform_device *pdev)
 			goto cleanup;
 		}
 	}
+
+	for (i = 0; i < fbdev->num_managers; i++) {
+		struct omap_overlay_manager *mgr;
+		mgr = fbdev->managers[i];
+		r = mgr->apply(mgr);
+		if (r)
+			dev_warn(fbdev->dev, "failed to apply dispc config\n");
+	}
+
+	DBG("mgr->apply'ed\n");
 
 	DBG("create sysfs for fbs\n");
 	r = omapfb_create_sysfs(fbdev);
