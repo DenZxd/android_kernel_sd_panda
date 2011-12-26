@@ -1,0 +1,22 @@
+#
+# Sensor Misc devices
+#
+config MMA7455
+	tristate "MMA7455 Driver Support"
+	depends on I2C
+	default yes
+	help
+	  This option enables MMA7455 G-sensor support.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called mma7455.
+
+config ECOMPASS
+	tristate "MEMSIC eCompass Driver Support"
+	depends on I2C
+	default yes
+	help
+	  This option enables MEMSIC eCompass support.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called mecs.
