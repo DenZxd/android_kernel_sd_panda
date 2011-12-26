@@ -544,6 +544,7 @@ config CDC_TCXO
 	help
 	  Enable support for Texas Instruments CDC TCXO CDC3S04
 
+source "drivers/misc/sensors/Kconfig"
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
