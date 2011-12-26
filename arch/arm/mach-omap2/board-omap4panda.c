@@ -33,6 +33,7 @@
 #include <linux/pwm_backlight.h>
 #include <linux/wl12xx.h>
 #include <linux/memblock.h>
+#include <linux/gpio_keys.h>
 
 #include <mach/hardware.h>
 #include <mach/omap4-common.h>
@@ -162,12 +163,94 @@ static struct platform_device smartq_backlight_device = {
 };
 #endif
 
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#define GPIO_KEY_LOCK		171
+#define GPIO_KEY_VOLUP		103
+#define GPIO_KEY_VOLDOWN	101
+
+static struct gpio_keys_button btn_button_table[] = {
+	[0] = {
+#if defined(CONFIG_SMARTQ_T20) || defined(CONFIG_SMARTQ_Q8) || \
+    defined(CONFIG_SMARTQ_X7)
+		.code           = KEY_VOLUMEUP,
+#else
+		.code           = KEY_VOLUMEDOWN,
+#endif
+		.gpio           = GPIO_KEY_VOLDOWN,
+		.active_low     = 1,
+		.desc           = "vol-",
+		.type           = EV_KEY,
+		.wakeup         = 0,
+		//.debounce_interval = 10,
+	},
+	[1] = {
+#if defined(CONFIG_SMARTQ_T20) || defined(CONFIG_SMARTQ_Q8) || \
+    defined(CONFIG_SMARTQ_X7)
+		.code           = KEY_VOLUMEDOWN,
+#else
+		.code           = KEY_VOLUMEUP,
+#endif
+		.gpio           = GPIO_KEY_VOLUP,
+		.active_low     = 1,
+		.desc           = "vol+",
+		.type           = EV_KEY,
+		.wakeup         = 0,
+		//.debounce_interval = 10,
+	},
+	[2] = {
+		.code           = 252,
+		.gpio           = GPIO_KEY_LOCK,
+		.active_low     = 0,
+		.desc           = "screen_lock",
+		.type           = EV_SW,
+		.wakeup         = 0,
+		.debounce_interval = 20,
+	},
+};
+
+static struct gpio_keys_platform_data gpio_keys_data = {
+	.buttons  = btn_button_table,
+	.nbuttons = ARRAY_SIZE(btn_button_table),
+};
+
+static struct platform_device gpio_keys = {
+	.name = "gpio-keys",
+	.id   = -1,
+	.dev  = {
+		.platform_data = &gpio_keys_data,
+	},
+};
+
+static void __init omap4_gpio_keys_init(void)
+{
+    if (0) {
+	int i;
+	for (i = 0; i < ARRAY_SIZE(btn_button_table); ++i)
+		omap_mux_init_gpio(btn_button_table[i].gpio,
+			OMAP_PIN_INPUT_PULLUP);
+	return;
+    }
+
+	omap_mux_init_signal("gpmc_ncs4.gpio_101",
+		OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE3);
+	omap_mux_init_signal("gpmc_ncs6.gpio_103",
+		OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE3);
+	omap_mux_init_signal("kpd_col3.gpio_171",
+			OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE3);
+}
+#else
+static void __init omap4_gpio_keys_init(void) { }
+#endif
+
 static struct platform_device *panda_devices[] __initdata = {
 #if defined(CONFIG_BACKLIGHT_PWM) || defined(CONFIG_BACKLIGHT_PWM_MODULE)
 #ifdef CONFIG_OMAP_PWM
 	&pwm_device,
 #endif
 	&smartq_backlight_device,
+#endif
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+	&gpio_keys,
 #endif
 	&leds_gpio,
 	&wl1271_device,
@@ -958,6 +1041,8 @@ static void __init omap4_panda_init(void)
 
 	omap_init_board_version(OMAP4_PANDA);
 	omap4_create_board_props();
+
+	omap4_gpio_keys_init();
 
 	if (wl12xx_set_platform_data(&omap_panda_wlan_data))
 		pr_err("error setting wl12xx data\n");
