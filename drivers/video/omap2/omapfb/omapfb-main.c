@@ -1756,6 +1756,115 @@ static int omapfb_parse_vram_param(const char *param, int max_entries,
 	return 0;
 }
 
+static int show_logo(struct fb_info *fbi)
+{
+    typedef struct bmp_header {
+	/* Header */
+	char signature[2];
+	__u32	file_size;
+	__u32	reserved;
+	__u32	data_offset;
+	/* InfoHeader */
+	__u32	size;
+	__u32	width;
+	__u32	height;
+	__u16	planes;
+	__u16	bit_count;
+	__u32	compression;
+	__u32	image_size;
+	__u32	x_pixels_per_m;
+	__u32	y_pixels_per_m;
+	__u32	colors_used;
+	__u32	colors_important;
+	/* ColorTable */
+
+    } __attribute__((packed)) bmp_header_t;
+
+    extern u32 omap_logo_vbmp_base, omap_logo_vbmp_size;
+    extern int omap_vram_dma_copy(unsigned long dest,
+	    unsigned long src, int len);
+
+    int fb_line_len;
+    bmp_header_t *bmp;
+    unsigned long fbl, bml;
+    u16 padded_line, bytespp;
+    u16 fb_w, fb_h;
+    u16 x0, y0;
+
+    struct omapfb_info *ofbi = FB2OFB(fbi);
+    struct omap_dss_device *display = fb2display(fbi);
+
+    if (!display || !omap_logo_vbmp_size ||
+		    !omap_logo_vbmp_base) return 0;
+
+    bmp = (bmp_header_t*)//phys_to_virt(omap_logo_vbmp_base);
+	    ioremap(omap_logo_vbmp_base, omap_logo_vbmp_size);
+    if (!bmp) {
+	pr_warn("failed to ioremap %x + %x\n",
+		omap_logo_vbmp_base, omap_logo_vbmp_size);
+	return -ENOMEM;
+    }
+
+    if ((bmp->signature[0] != 'B') || (bmp->signature[1] != 'M')) {
+	pr_warn("invalid logo/BMP at %x\n", omap_logo_vbmp_base);
+	return -EINVAL;
+    }
+
+    bmp->width  = le32_to_cpu(bmp->width);
+    bmp->height = le32_to_cpu(bmp->height);
+    bmp->bit_count   = le16_to_cpu(bmp->bit_count);
+    bmp->data_offset = le32_to_cpu(bmp->data_offset);
+
+    display->driver->get_resolution(display, &fb_w, &fb_h);
+
+    switch (omapfb_get_recommended_bpp(ofbi->fbdev, display)) {
+    case 16: bytespp = 2; break;
+    //case 24: bytespp = 4; break;
+    default: bytespp = 4; break;
+    }
+
+    pr_info("display logo at %x/%x: %dx%d-%d => %dx%d-%d\n",
+	    omap_logo_vbmp_base, bmp->data_offset, bmp->width, bmp->height,
+	    bmp->bit_count, fb_w, fb_h, bytespp * 8);
+
+    if (fb_w < bmp->width || fb_h < bmp->height ||
+	    bytespp != (bmp->bit_count >> 3) ||
+	    (bmp->data_offset & 0x03)) {
+	pr_warn("invalid logo/BMP parameters\n");
+	return -EINVAL;
+    }
+
+    fb_line_len = fb_w * bytespp;
+    x0 = (fb_w - bmp->width)  >> 1;
+    y0 = (fb_h - bmp->height) >> 1;
+
+    fbl = ofbi->region->paddr +
+	    (y0 + bmp->height - 1) * fb_line_len + x0 * bytespp;
+    padded_line = ((bmp->width + 0x03) & ~0x03) * bytespp;
+    bml = omap_logo_vbmp_base + bmp->data_offset;
+
+    x0 = bmp->width * bytespp;
+    for (y0 = 0; y0 < bmp->height; ++y0) {
+	omap_vram_dma_copy(fbl, bml, x0);
+	bml += padded_line;
+	fbl -= fb_line_len;
+    }
+
+    iounmap((void*)bmp);
+    if (omap_logo_vbmp_size) {
+	// FIXME: how to return this memory block back to kernel?
+#if 0
+	extern void free_bootmem(unsigned long addr, unsigned long size);
+	free_bootmem(omap_logo_vbmp_base, omap_logo_vbmp_size);
+#else
+	extern long memblock_add(phys_addr_t base, phys_addr_t size);
+	memblock_add(omap_logo_vbmp_base, omap_logo_vbmp_size);
+#endif
+    }
+
+    return 0;
+}
+
 static int omapfb_allocate_all_fbs(struct omapfb2_device *fbdev)
 {
 	int i, r;
@@ -1799,6 +1908,8 @@ static int omapfb_allocate_all_fbs(struct omapfb2_device *fbdev)
 
 			if (r)
 				return r;
+
+			if (!i) show_logo(fbdev->fbs[i]);
 		}
 	}
 
