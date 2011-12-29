@@ -81,6 +81,7 @@
 #define HDMI_GPIO_HPD  63 /* Hotplug detect */
 #define TPS62361_GPIO   7 /* VCORE1 power control */
 
+#if defined(CONFIG_WL12XX_SDIO) || defined(CONFIG_WL12XX_SDIO_MODULE)
 /* wl127x BT, FM, GPS connectivity chip */
 static int wl1271_gpios[] = {46, -1, -1};
 static struct platform_device wl1271_device = {
@@ -90,6 +91,7 @@ static struct platform_device wl1271_device = {
 		.platform_data	= &wl1271_gpios,
 	},
 };
+#endif
 
 static struct gpio_led gpio_leds[] = {
 	{
@@ -257,7 +259,9 @@ static struct platform_device *panda_devices[] __initdata = {
 	&gpio_keys,
 #endif
 	&leds_gpio,
+#if defined(CONFIG_WL12XX_SDIO) || defined(CONFIG_WL12XX_SDIO_MODULE)
 	&wl1271_device,
+#endif
 };
 
 static void __init omap4_panda_init_early(void)
@@ -348,6 +352,19 @@ static struct omap2_hsmmc_info mmc[] = {
 		.gpio_wp	= -EINVAL,
 		.gpio_cd	= -EINVAL,
 	},
+#if defined(CONFIG_BCM4329) || defined(CONFIG_BCM4329_MODULE) || \
+    defined(CONFIG_BCMDHD)  || defined(CONFIG_BCMDHD_MODULE)
+	{
+		.name		= "omap_wlan",
+		.mmc		= 5,
+		.caps		= MMC_CAP_4_BIT_DATA,
+		.gpio_wp	= -EINVAL,
+		.gpio_cd	= -EINVAL,
+		.ocr_mask	= MMC_VDD_165_195 | MMC_VDD_33_34,
+		.nonremovable	= false,
+		.mmc_data	= &panda_wifi_data,
+	},
+#elif defined(CONFIG_WL12XX_SDIO) || defined(CONFIG_WL12XX_SDIO_MODULE)
 	{
 		.name		= "wl1271",
 		.mmc		= 5,
@@ -357,6 +374,7 @@ static struct omap2_hsmmc_info mmc[] = {
 		.ocr_mask	= MMC_VDD_165_195,
 		.nonremovable	= true,
 	},
+#endif
 	{}	/* Terminator */
 };
 
@@ -367,6 +385,7 @@ static struct regulator_consumer_supply omap4_panda_vmmc_supply[] = {
 	},
 };
 
+#if defined(CONFIG_WL12XX_SDIO) || defined(CONFIG_WL12XX_SDIO_MODULE)
 static struct regulator_consumer_supply omap4_panda_vmmc5_supply = {
 	.supply = "vmmc",
 	.dev_name = "omap_hsmmc.4",
@@ -403,6 +422,7 @@ struct wl12xx_platform_data omap_panda_wlan_data  __initdata = {
 	/* PANDA ref clock is 38.4 MHz */
 	.board_ref_clock = 2,
 };
+#endif
 
 static int omap4_twl6030_hsmmc_late_init(struct device *dev)
 {
@@ -1088,14 +1108,19 @@ static void __init omap4_panda_init(void)
 
 	omap4_gpio_keys_init();
 
+#ifdef CONFIG_VENDOR_HHTECH
+	panda_wlan_init();
+#elif defined(CONFIG_WL12XX_SDIO) || defined(CONFIG_WL12XX_SDIO_MODULE)
 	if (wl12xx_set_platform_data(&omap_panda_wlan_data))
 		pr_err("error setting wl12xx data\n");
+
+	platform_device_register(&omap_vwlan_device);
+#endif
 
 	omap4_panda_i2c_init();
 	omap4_register_ion();
 	omap4_audio_conf();
 	platform_add_devices(panda_devices, ARRAY_SIZE(panda_devices));
-	platform_device_register(&omap_vwlan_device);
 	board_serial_init();
 	omap4_twl6030_hsmmc_init(mmc);
 	omap4_ehci_init();
