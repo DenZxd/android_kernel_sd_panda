@@ -290,6 +290,7 @@ obj-$(CONFIG_MACH_OMAP_BLAZE)		+= board-44xx-tablet.o \
 obj-$(CONFIG_TOUCHSCREEN_CYPRESS_TTSP)  += board-touch-cyttsp4_core.o
 obj-$(CONFIG_MACH_OMAP4_PANDA)		+= board-omap4panda.o \
 					   hsmmc.o \
+					   board-panda-wifi.o \
 					   board-44xx-identity.o \
 					   omap4_apps_brd_id.o \
 					   omap_phy_internal.o
