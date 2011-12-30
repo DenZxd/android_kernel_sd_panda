@@ -29,6 +29,13 @@ config IRQ_WORK
 
 menu "General setup"
 
+config VENDOR_HHTECH
+	bool "HHTech Co. Ltd. vendor products"
+	help
+	  Select this to configure the linux kernel for
+	  HHTech Co. Ltd. vendor products.
+
+
 config EXPERIMENTAL
 	bool "Prompt for development and/or incomplete code/drivers"
 	---help---
