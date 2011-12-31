@@ -544,6 +544,12 @@ config CDC_TCXO
 	help
 	  Enable support for Texas Instruments CDC TCXO CDC3S04
 
+config SMARTQ_ENCRYPT
+	tristate "AT88SC5211C CryptoMemory device driver"
+	default n
+	---help---
+	  AT88SC5211C CryptoMemory device driver for SmartQ products
+
 source "drivers/misc/sensors/Kconfig"
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
