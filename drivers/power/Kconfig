@@ -216,6 +216,18 @@ config BATTERY_INTEL_MID
 	  Say Y here to enable the battery driver on Intel MID
 	  platforms.
 
+config BATTERY_OZ8806
+	tristate "OZ8806 Driver"
+	depends on I2C
+	help
+	  Batter Monitor OZ8806 driver
+
+config CHARGER_HHCN
+	tristate "Battery indicator"
+	depends on BATTERY_OZ8806
+	help
+	  Say Y here to enable support Battery indicator
+
 config CHARGER_ISP1704
 	tristate "ISP1704 USB Charger Detection"
 	depends on USB_OTG_UTILS
