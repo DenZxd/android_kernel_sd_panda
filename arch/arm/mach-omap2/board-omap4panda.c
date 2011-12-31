@@ -627,6 +627,11 @@ static struct i2c_board_info __initdata panda_i2c_bus3_boardinfo[] = {
 };
 
 static struct i2c_board_info __initdata panda_i2c_bus2_boardinfo[] = {
+#if defined(CONFIG_MMA7455) || defined(CONFIG_MMA7455_MODULE)
+	{
+		I2C_BOARD_INFO("mma7455", 0x1D),
+	},
+#endif
 };
 
 static struct i2c_board_info __initdata panda_i2c_bus4_boardinfo[] = {
