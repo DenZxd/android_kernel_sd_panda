@@ -68,6 +68,10 @@
 #include "prm-regbits-44xx.h"
 #include "prm44xx.h"
 
+#ifdef CONFIG_VENDOR_HHTECH
+#define COMMIX_VCC_ALWAYS_ON 1
+#endif
+
 #define GPIO_HUB_POWER		1
 #define GPIO_HUB_NRESET		62
 #define GPIO_WIFI_PMENA		43
@@ -455,6 +459,12 @@ static struct regulator_consumer_supply sdp4430_vaux2_supply[] = {
 	REGULATOR_SUPPLY("av-switch", "soc-audio"),
 };
 
+static struct regulator_consumer_supply panda_vaux3_supplies[] = {
+	{
+		.supply = "commix_vcc",
+	}
+};
+
 static struct regulator_init_data omap4_panda_vaux2 = {
 	.constraints = {
 		.min_uV			= 1200000,
@@ -472,8 +482,13 @@ static struct regulator_init_data omap4_panda_vaux2 = {
 
 static struct regulator_init_data omap4_panda_vaux3 = {
 	.constraints = {
+#ifdef COMMIX_VCC_ALWAYS_ON
+		.always_on		= true,
+		.min_uV			= 3300000,
+#else
 		.min_uV			= 1000000,
-		.max_uV			= 3000000,
+#endif
+		.max_uV			= 3300000,
 		.apply_uV		= true,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL
 					| REGULATOR_MODE_STANDBY,
@@ -481,6 +496,8 @@ static struct regulator_init_data omap4_panda_vaux3 = {
 					| REGULATOR_CHANGE_MODE
 					| REGULATOR_CHANGE_STATUS,
 	},
+	.num_consumer_supplies = ARRAY_SIZE(panda_vaux3_supplies),
+	.consumer_supplies = panda_vaux3_supplies,
 };
 
 /* VMMC1 for MMC1 card */
@@ -613,6 +630,28 @@ static struct twl4030_platform_data omap4_panda_twldata = {
 	/* children */
 	.codec		= &twl6040_codec,
 };
+
+#ifndef COMMIX_VCC_ALWAYS_ON
+void omap4_commix_vcc_power(int action)
+{
+	static struct regulator *omap4_commix_vcc_reg = NULL;
+
+	if (IS_ERR_OR_NULL(omap4_commix_vcc_reg)) {
+		omap4_commix_vcc_reg = regulator_get(NULL, "commix_vcc");
+		if (IS_ERR_OR_NULL(omap4_commix_vcc_reg)) {
+			pr_err("Can't get commix_vcc for system!\n");
+			return;
+		}
+	}
+
+	if (action < 0) {
+		regulator_put(omap4_commix_vcc_reg);
+		omap4_commix_vcc_reg = NULL;
+	} else
+	if (0 < action) regulator_enable(omap4_commix_vcc_reg);
+	else regulator_disable(omap4_commix_vcc_reg);
+}
+#endif
 
 /*
  * Display monitor features are burnt in their EEPROM as EDID data. The EEPROM
