@@ -248,6 +248,61 @@ static void __init omap4_gpio_keys_init(void)
 static void __init omap4_gpio_keys_init(void) { }
 #endif
 
+#if defined(CONFIG_CHARGER_HHCN) || defined(CONFIG_CHARGER_HHCN_MODULE)
+#include <linux/power/hhcn_charger.h>
+
+#define GPIO_CHARGER 137
+#define GPIO_CHARGER_DETECT 95
+
+static void __init omap_charger_io_init(void)
+{
+	int ret;
+
+	omap_mux_init_gpio(GPIO_CHARGER, OMAP_PIN_OUTPUT);
+	ret = gpio_request(GPIO_CHARGER, "charger ctrl");
+	if (ret) {
+		pr_err("Fail to request GPIO %d\n", GPIO_CHARGER);
+		return ;
+	}
+	gpio_direction_output(GPIO_CHARGER, 1);
+
+	omap_mux_init_gpio(GPIO_CHARGER_DETECT, OMAP_PIN_INPUT_PULLUP);
+	ret = gpio_request(GPIO_CHARGER_DETECT, "charger detect");
+	if (ret) {
+		pr_err("Fail to request GPIO %d\n", GPIO_CHARGER_DETECT);
+		return ;
+	}
+}
+
+static void omap_charger_control(int val)
+{
+	if (val)
+		gpio_direction_output(GPIO_CHARGER, 1);
+	else
+		gpio_direction_output(GPIO_CHARGER, 0);
+}
+
+static int omap_charger_get_status(void)
+{
+	return !gpio_get_value(GPIO_CHARGER_DETECT);
+}
+
+static struct pltdata_charger pdata_charger = {
+	.charger_crt = omap_charger_control,
+	.charger_sts = omap_charger_get_status,
+};
+
+static struct platform_device hhcn_charger = {
+	.name	= "hhcn-charger",
+	.id	= -1,
+	.dev  = {
+		.platform_data = &pdata_charger,
+	},
+};
+#else
+static void __init omap_charger_io_init(void) { }
+#endif
+
 static struct platform_device *panda_devices[] __initdata = {
 #if defined(CONFIG_BACKLIGHT_PWM) || defined(CONFIG_BACKLIGHT_PWM_MODULE)
 #ifdef CONFIG_OMAP_PWM
@@ -257,6 +312,9 @@ static struct platform_device *panda_devices[] __initdata = {
 #endif
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 	&gpio_keys,
+#endif
+#if defined(CONFIG_CHARGER_HHCN) || defined(CONFIG_CHARGER_HHCN_MODULE)
+	&hhcn_charger,
 #endif
 #ifndef CONFIG_VENDOR_HHTECH
 	&leds_gpio,
@@ -746,6 +804,11 @@ static struct i2c_board_info __initdata panda_i2c_bus2_boardinfo[] = {
 		I2C_BOARD_INFO("mma7455", 0x1D),
 	},
 #endif
+#if defined(CONFIG_BATTERY_OZ8806) || defined(CONFIG_BATTERY_OZ8806_MODULE)
+	{
+		I2C_BOARD_INFO("OZ8806", 0x2f),
+	},
+#endif
 };
 
 static struct i2c_board_info __initdata panda_i2c_bus4_boardinfo[] = {
@@ -1165,6 +1228,7 @@ static void __init omap4_panda_init(void)
 
 	omap4_gpio_keys_init();
 	touchscreen_gpio_init();
+	omap_charger_io_init();
 
 #ifdef CONFIG_VENDOR_HHTECH
 	panda_wlan_init();
