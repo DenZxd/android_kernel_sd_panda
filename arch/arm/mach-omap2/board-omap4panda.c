@@ -477,10 +477,16 @@ static struct twl4030_platform_data omap4_panda_twldata = {
  * Display monitor features are burnt in their EEPROM as EDID data. The EEPROM
  * is connected as I2C slave device, and can be accessed at address 0x50
  */
-static struct i2c_board_info __initdata panda_i2c_eeprom[] = {
+static struct i2c_board_info __initdata panda_i2c_bus3_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("eeprom", 0x50),
 	},
+};
+
+static struct i2c_board_info __initdata panda_i2c_bus2_boardinfo[] = {
+};
+
+static struct i2c_board_info __initdata panda_i2c_bus4_boardinfo[] = {
 };
 
 static void __init omap_i2c_hwspinlock_init(int bus_id, int spinlock_id,
@@ -521,14 +527,16 @@ static int __init omap4_panda_i2c_init(void)
 
 
 	omap4_pmic_init("twl6030", &omap4_panda_twldata);
-	omap_register_i2c_bus(2, 400, NULL, 0);
+	omap_register_i2c_bus(2, 400, panda_i2c_bus2_boardinfo,
+					ARRAY_SIZE(panda_i2c_bus2_boardinfo));
 	/*
 	 * Bus 3 is attached to the DVI port where devices like the pico DLP
 	 * projector don't work reliably with 400kHz
 	 */
-	omap_register_i2c_bus(3, 100, panda_i2c_eeprom,
-					ARRAY_SIZE(panda_i2c_eeprom));
-	omap_register_i2c_bus(4, 400, NULL, 0);
+	omap_register_i2c_bus(3, 100, panda_i2c_bus3_boardinfo,
+					ARRAY_SIZE(panda_i2c_bus3_boardinfo));
+	omap_register_i2c_bus(4, 400, panda_i2c_bus4_boardinfo,
+					ARRAY_SIZE(panda_i2c_bus4_boardinfo));
 	return 0;
 }
 
