@@ -248,6 +248,26 @@ static void __init omap4_gpio_keys_init(void)
 static void __init omap4_gpio_keys_init(void) { }
 #endif
 
+#if defined(CONFIG_SMARTQ_ENCRYPT) || defined(CONFIG_SMARTQ_ENCRYPT_MODULE)
+#define GPIO_ENCRYPT_SCL 44
+#define GPIO_ENCRYPT_SDA 45
+
+static void __init omap_encrypt_io_init(void)
+{
+    if (0) {
+	omap_mux_init_signal("gpmc_a20.gpio_44",
+		OMAP_PIN_INPUT | OMAP_MUX_MODE3);
+	omap_mux_init_signal("gpmc_a21.gpio_45",
+		OMAP_PIN_INPUT | OMAP_MUX_MODE3);
+    } else {
+	omap_mux_init_gpio(GPIO_ENCRYPT_SCL, OMAP_PIN_INPUT);
+	omap_mux_init_gpio(GPIO_ENCRYPT_SDA, OMAP_PIN_INPUT);
+    }
+}
+#else
+static void __init omap_encrypt_io_init(void) { }
+#endif
+
 #if defined(CONFIG_CHARGER_HHCN) || defined(CONFIG_CHARGER_HHCN_MODULE)
 #include <linux/power/hhcn_charger.h>
 
@@ -1229,6 +1249,7 @@ static void __init omap4_panda_init(void)
 	omap4_gpio_keys_init();
 	touchscreen_gpio_init();
 	omap_charger_io_init();
+	omap_encrypt_io_init();
 
 #ifdef CONFIG_VENDOR_HHTECH
 	panda_wlan_init();
