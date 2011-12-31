@@ -675,6 +675,59 @@ void omap4_commix_vcc_power(int action)
 }
 #endif
 
+#if defined(CONFIG_TOUCHSCREEN_GOODIX) || \
+    defined(CONFIG_TOUCHSCREEN_GOODIX_MODULE)
+#define GPIO_TOUCHSCREEN_IRQ 38
+#define GPIO_TOUCHSCREEN_RST 37
+
+static void touchscreen_rst(void)
+{
+	gpio_direction_output(GPIO_TOUCHSCREEN_RST, 1);
+
+	//gpio_set_value(GPIO_TOUCHSCREEN_RST, 1);
+	msleep_interruptible(30);
+	gpio_set_value(GPIO_TOUCHSCREEN_RST, 0);
+}
+
+static void touchscreen_irq_init(void)
+{
+	gpio_direction_input(GPIO_TOUCHSCREEN_IRQ);
+}
+
+static void __init touchscreen_gpio_init(void)
+{
+	int gpio = GPIO_TOUCHSCREEN_IRQ;
+	if (0) omap_mux_init_signal("gpmc_ad14.gpio_38",
+		OMAP_PIN_INPUT | OMAP_MUX_MODE3); else
+	omap_mux_init_gpio(gpio, OMAP_PIN_INPUT);
+
+	if (gpio_request(gpio, "touchscreen_irq"))
+		pr_err("Cannot request GPIO %d\n", gpio);
+	//gpio_direction_input(gpio);
+
+	gpio = GPIO_TOUCHSCREEN_RST;
+	if (0) omap_mux_init_signal("gpmc_ad13.gpio_37",
+		OMAP_PIN_OUTPUT | OMAP_MUX_MODE3); else
+	omap_mux_init_gpio(gpio, OMAP_PIN_OUTPUT);
+
+	if (gpio_request(gpio, "touchscreen_rst"))
+		pr_err("Cannot request GPIO %d\n", gpio);
+	//gpio_direction_output(gpio, 0);
+}
+
+#include <linux/goodix_touch.h>
+
+struct goodix_i2c_rmi_platform_data goodix_pdata = {
+	.rst = touchscreen_rst,
+	.irq = OMAP_GPIO_IRQ(GPIO_TOUCHSCREEN_IRQ),
+	.irq_gpio = GPIO_TOUCHSCREEN_IRQ,
+	.irq_init = touchscreen_irq_init,
+	//.gpio_init = touchscreen_gpio_init,
+};
+#else
+static void __init touchscreen_gpio_init(void) { }
+#endif
+
 /*
  * Display monitor features are burnt in their EEPROM as EDID data. The EEPROM
  * is connected as I2C slave device, and can be accessed at address 0x50
@@ -696,6 +749,13 @@ static struct i2c_board_info __initdata panda_i2c_bus2_boardinfo[] = {
 };
 
 static struct i2c_board_info __initdata panda_i2c_bus4_boardinfo[] = {
+#if defined(CONFIG_TOUCHSCREEN_GOODIX) || \
+    defined(CONFIG_TOUCHSCREEN_GOODIX_MODULE)
+	{
+		I2C_BOARD_INFO("Goodix-TS", 0x55),
+		.platform_data = &goodix_pdata,
+	},
+#endif
 };
 
 static void __init omap_i2c_hwspinlock_init(int bus_id, int spinlock_id,
@@ -1104,6 +1164,7 @@ static void __init omap4_panda_init(void)
 	omap4_create_board_props();
 
 	omap4_gpio_keys_init();
+	touchscreen_gpio_init();
 
 #ifdef CONFIG_VENDOR_HHTECH
 	panda_wlan_init();
