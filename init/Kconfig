@@ -31,6 +31,7 @@ menu "General setup"
 
 config VENDOR_HHTECH
 	bool "HHTech Co. Ltd. vendor products"
+	select TWL6040_UNBOUND if TWL6040_CODEC
 	help
 	  Select this to configure the linux kernel for
 	  HHTech Co. Ltd. vendor products.
