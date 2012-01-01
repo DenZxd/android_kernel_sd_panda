@@ -273,6 +273,7 @@ config TWL6040_UNBOUND
 config TWL6040_I2C_BUS_NO
 	int "I2C bus no which the twl6040 attached on"
 	depends on TWL6040_UNBOUND
+	default 2 if VENDOR_HHTECH
 	range 1 4
 	default 1
 
