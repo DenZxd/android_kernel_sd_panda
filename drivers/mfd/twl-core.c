@@ -397,6 +397,11 @@ int twl_i2c_write(u8 mod_no, u8 *value, u8 reg, unsigned num_bytes)
 	sid = twl_map[mod_no].sid;
 	twl = &twl_modules[sid];
 
+	if (unlikely(!twl->client)) {
+		pr_err("%s: client %d is not initialized\n", DRIVER_NAME, sid);
+		return -EPERM;
+	}
+
 	mutex_lock(&twl->xfer_lock);
 	/*
 	 * [MSG1]: fill the register address data
@@ -454,6 +459,11 @@ int twl_i2c_read(u8 mod_no, u8 *value, u8 reg, unsigned num_bytes)
 	}
 	sid = twl_map[mod_no].sid;
 	twl = &twl_modules[sid];
+
+	if (unlikely(!twl->client)) {
+		pr_err("%s: client %d is not initialized\n", DRIVER_NAME, sid);
+		return -EPERM;
+	}
 
 	mutex_lock(&twl->xfer_lock);
 	/* [MSG1] fill the register address data */
@@ -582,6 +592,13 @@ add_numbered_child(unsigned chip, const char *name, int num,
 	struct platform_device	*pdev;
 	struct twl_client	*twl = &twl_modules[chip];
 	int			status;
+
+	if (unlikely(!twl->client)) {
+		pr_err("%s: client %d is not initialized\n",
+			DRIVER_NAME, chip);
+		status = -EPERM;
+		goto err;
+	}
 
 	pdev = platform_device_alloc(name, num);
 	if (!pdev) {
@@ -1304,6 +1321,11 @@ static int __devexit twl_remove(struct i2c_client *client)
 	for (i = 0; i < TWL_NUM_SLAVES; i++) {
 		struct twl_client	*twl = &twl_modules[i];
 
+#ifdef CONFIG_TWL6040_UNBOUND
+		if (i == twl_map[TWL_MODULE_AUDIO_VOICE].sid)	// XXX:
+			continue;
+#endif
+
 		if (twl->client && twl->client != client)
 			i2c_unregister_device(twl->client);
 		twl_modules[i].client = NULL;
@@ -1347,6 +1369,27 @@ twl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		if (i == 0)
 			twl->client = client;
 		else {
+#ifdef CONFIG_TWL6040_UNBOUND
+		    if (i == twl6030_map[TWL_MODULE_AUDIO_VOICE].sid) {
+#if 0
+			struct i2c_adapter *adapter = i2c_get_adapter(2);
+
+			/* XXX: It will definitely fail, because I2C bus 2
+			 * adapter will be initialized latter than I2C bus 1
+			 * which this driver is attached.
+			 */
+			if (!adapter) {
+			    dev_err(&client->dev,
+				    "I2C bus 2 is still not ready?\n");
+			    status = -ENODEV;	goto fail;
+			} else
+			twl->client = i2c_new_dummy(adapter, twl->address);
+#else
+			twl->client = NULL;	continue;
+#endif
+		    } else
+#endif
+
 			twl->client = i2c_new_dummy(client->adapter,
 					twl->address);
 			if (!twl->client) {
@@ -1468,6 +1511,73 @@ static struct i2c_driver twl_driver = {
 	.suspend	= twl_suspend,
 	.resume		= twl_resume,
 };
+
+#ifdef CONFIG_TWL6040_UNBOUND
+#undef  DRIVER_NAME
+#define DRIVER_NAME	"twl6040"
+static const struct i2c_device_id twl6040_ids[] = {
+	{ DRIVER_NAME, 0 },
+	{ /* end of list */ },
+};
+MODULE_DEVICE_TABLE(i2c, twl6040_ids);
+
+static int __devinit twl6040_probe(struct i2c_client *client,
+		const struct i2c_device_id *id)
+{
+	u8 val = 0, sub_chip_id = twl_map[TWL_MODULE_AUDIO_VOICE].sid;
+	struct twl4030_codec_data *pdata = client->dev.platform_data;
+	struct twl_client* twl;
+	struct device* child;
+	int ret = 0;
+
+	if (!pdata) {
+		dev_dbg(&client->dev, "no platform data?\n");
+		return -EINVAL;
+	}
+
+	if (i2c_check_functionality(client->adapter, I2C_FUNC_I2C) == 0) {
+		dev_dbg(&client->dev, "can't talk I2C?\n");
+		return -EIO;
+	}
+
+	twl = &twl_modules[sub_chip_id];
+	if (twl->client) i2c_unregister_device(twl->client);
+
+	twl->client  = client;
+	twl->address = client->addr;
+	mutex_init(&twl->xfer_lock);
+
+	ret = twl_i2c_read_u8(TWL_MODULE_AUDIO_VOICE, &val, 0x01);
+	if (0 && val != 0x4b) { if (!ret) ret = -ENODEV; goto err; }
+
+	child = add_child(sub_chip_id, "twl6040-audio",
+			pdata, sizeof(*pdata), false, 0, 0);
+	if (IS_ERR(child)) { ret = PTR_ERR(child); goto err; }
+
+	return 0;
+err:	//i2c_unregister_device(client);
+	twl->client = NULL;
+	return ret;
+}
+
+static int __devexit twl6040_remove(struct i2c_client *client)
+{
+	twl_modules[twl_map[TWL_MODULE_AUDIO_VOICE].sid].client = NULL;
+	// It's not needed to explicit call this for real I2C client.
+	//i2c_unregister_device(client);
+	return 0;
+}
+
+struct i2c_driver twl6040_i2c_driver = {
+	.driver.name	= DRIVER_NAME,
+	.id_table	= twl6040_ids,
+	.probe		= twl6040_probe,
+	.remove		= __devexit_p(twl6040_remove),
+	//.suspend	= twl_suspend,
+	//.resume	= twl_resume,
+};
+EXPORT_SYMBOL(twl6040_i2c_driver);
+#endif
 
 static int __init twl_init(void)
 {

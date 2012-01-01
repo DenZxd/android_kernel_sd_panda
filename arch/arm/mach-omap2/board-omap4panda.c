@@ -766,6 +766,13 @@ static struct twl4030_codec_data twl6040_codec = {
 	.irq_base	= TWL6040_CODEC_IRQ_BASE,
 };
 
+#ifdef CONFIG_TWL6040_UNBOUND
+static struct i2c_board_info __initdata twl6040_boardinfo = {
+	I2C_BOARD_INFO("twl6040", 0x4b),
+	.platform_data = &twl6040_codec,
+};
+#endif
+
 static struct twl4030_platform_data omap4_panda_twldata = {
 	.irq_base	= TWL6030_IRQ_BASE,
 	.irq_end	= TWL6030_IRQ_END,
@@ -783,7 +790,9 @@ static struct twl4030_platform_data omap4_panda_twldata = {
 	.usb		= &omap4_usbphy_data,
 
 	/* children */
+#ifndef CONFIG_TWL6040_UNBOUND
 	.codec		= &twl6040_codec,
+#endif
 };
 
 #ifndef COMMIX_VCC_ALWAYS_ON
@@ -936,6 +945,10 @@ static int __init omap4_panda_i2c_init(void)
 	omap4_pmic_init("twl6030", &omap4_panda_twldata);
 	omap_register_i2c_bus(2, 400, panda_i2c_bus2_boardinfo,
 					ARRAY_SIZE(panda_i2c_bus2_boardinfo));
+#ifdef CONFIG_TWL6040_UNBOUND
+	i2c_register_board_info(CONFIG_TWL6040_I2C_BUS_NO,
+		&twl6040_boardinfo, 1);
+#endif
 	/*
 	 * Bus 3 is attached to the DVI port where devices like the pico DLP
 	 * projector don't work reliably with 400kHz

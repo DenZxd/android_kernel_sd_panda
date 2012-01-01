@@ -28,6 +28,7 @@
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
 #include <linux/gpio.h>
+#include <linux/i2c.h>
 #include <linux/delay.h>
 #include <linux/kobject.h>
 #include <linux/i2c/twl.h>
@@ -948,6 +949,11 @@ static int __devinit twl6040_probe(struct platform_device *pdev)
 		}
 	}
 
+#ifndef CONFIG_TWL6040_UNBOUND
+	if (0 && twl6040_reg_read(twl6040, TWL6040_REG_ASICID) != 0x4b)
+		goto gpio1_err;
+#endif
+
 	twl6040->icrev = twl6040_reg_read(twl6040, TWL6040_REG_ASICREV);
 	if (twl6040->icrev < 0) {
 		ret = twl6040->icrev;
@@ -1117,6 +1123,13 @@ static struct platform_driver twl6040_driver = {
 
 static int __devinit twl6040_init(void)
 {
+#ifdef CONFIG_TWL6040_UNBOUND
+	extern struct i2c_driver twl6040_i2c_driver;
+
+	if (i2c_add_driver(&twl6040_i2c_driver) < 0)
+		pr_err("Fail to add twl6040 I2C driver!\n");
+#endif
+
 	return platform_driver_register(&twl6040_driver);
 }
 module_init(twl6040_init);
@@ -1124,6 +1137,12 @@ module_init(twl6040_init);
 static void __devexit twl6040_exit(void)
 {
 	platform_driver_unregister(&twl6040_driver);
+
+#ifdef CONFIG_TWL6040_UNBOUND
+	extern struct i2c_driver twl6040_i2c_driver;
+
+	i2c_del_driver(&twl6040_i2c_driver);
+#endif
 }
 
 module_exit(twl6040_exit);
