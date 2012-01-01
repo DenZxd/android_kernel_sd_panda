@@ -1800,6 +1800,15 @@ static int twl6040_probe(struct snd_soc_codec *codec)
 	codec->control_data = dev_get_drvdata(codec->dev->parent);
 	codec->dapm.idle_bias_off = 1;
 
+#ifndef CONFIG_TWL6040_UNBOUND
+	// already checked in drivers/mfd/twl6040-codec.c
+	if (0 && twl6040_reg_read(codec->control_data,
+		    TWL6040_REG_ASICID) != 0x4b) {
+		ret = -ENODEV;
+		goto work_err;
+	}
+#endif
+
 	if (pdata && pdata->hs_left_step && pdata->hs_right_step) {
 		priv->hs_left_step = pdata->hs_left_step;
 		priv->hs_right_step = pdata->hs_right_step;
