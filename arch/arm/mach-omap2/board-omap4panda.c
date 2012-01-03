@@ -407,12 +407,63 @@ static struct omap_musb_board_data musb_board_data = {
 	.power			= 100,
 };
 
+#ifdef CONFIG_VENDOR_HHTECH
+#define GPIO_USB_POWER 151
+#define GPIO_USB_VBUS  152
+
+static int hhtech_phy_init(struct device *dev)
+{
+	if (0) omap_mux_init_signal("mcspi4_clk.gpio_151",
+		OMAP_PIN_OUTPUT | OMAP_MUX_MODE3); else
+	omap_mux_init_gpio(GPIO_USB_POWER, OMAP_PIN_OUTPUT);
+	if (gpio_request(GPIO_USB_POWER, "USB power"))
+		pr_err("Fail to request GPIO %d\n", GPIO_USB_POWER);
+	else gpio_direction_output(GPIO_USB_POWER, 1);
+
+	if (0) omap_mux_init_signal("mcspi4_simo.gpio_152",
+		OMAP_PIN_OUTPUT | OMAP_MUX_MODE3); else
+	omap_mux_init_gpio(GPIO_USB_VBUS, OMAP_PIN_OUTPUT);
+	if (gpio_request(GPIO_USB_VBUS, "USB vbus"))
+		pr_err("Fail to request GPIO %d\n", GPIO_USB_VBUS);
+	else gpio_direction_output(GPIO_USB_VBUS, 0);
+
+	return omap4430_phy_init(dev);
+}
+
+static int hhtech_phy_exit(struct device *dev)
+{
+	gpio_free(GPIO_USB_VBUS);
+	gpio_free(GPIO_USB_POWER);
+
+	return omap4430_phy_exit(dev);
+}
+
+static int hhtech_phy_power(struct device *dev, int ID, int on)
+{
+	int value = on && ID;
+
+	gpio_set_value(GPIO_USB_VBUS, value);
+	gpio_set_value(GPIO_USB_POWER, !value);
+
+	return omap4430_phy_power(dev, ID, on);
+}
+
+static struct twl4030_usb_data omap4_usbphy_data = {
+	.phy_init	= hhtech_phy_init,
+	.phy_exit	= hhtech_phy_exit,
+	.phy_power	= hhtech_phy_power,
+	.phy_suspend	= omap4430_phy_suspend,
+	.phy_set_clock	= omap4430_phy_set_clk,
+};
+#else
+
 static struct twl4030_usb_data omap4_usbphy_data = {
 	.phy_init	= omap4430_phy_init,
 	.phy_exit	= omap4430_phy_exit,
 	.phy_power	= omap4430_phy_power,
 	.phy_suspend	= omap4430_phy_suspend,
 };
+#endif
 
 static struct omap2_hsmmc_info mmc[] = {
 	{	// for iNAND/eMMC
