@@ -746,6 +746,7 @@ b_host:
 		case OTG_STATE_A_SUSPEND:
 			usb_hcd_resume_root_hub(musb_to_hcd(musb));
 			musb_root_disconnect(musb);
+			musb_platform_disable(musb);
 			/* FIX: Multiple times hotplug with removal and connect
 			 * time-gap less than a second. "0" delay gives 7ms time
 			 * to call musb_do_idle
