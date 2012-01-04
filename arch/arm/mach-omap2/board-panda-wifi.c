@@ -39,6 +39,17 @@
 #if defined(CONFIG_BCM4329) || defined(CONFIG_BCM4329_MODULE) || \
     defined(CONFIG_BCMDHD)  || defined(CONFIG_BCMDHD_MODULE)
 #define WL_RST_N 40
+#define GPIO_WLAN_IRQ	53
+
+static struct resource panda_wifi_resources[] = {
+	[0] = {
+		.name       = "bcmdhd_wlan_irq",
+		.start      = OMAP_GPIO_IRQ(GPIO_WLAN_IRQ),
+		.end        = OMAP_GPIO_IRQ(GPIO_WLAN_IRQ),
+		.flags      = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL |
+			      IORESOURCE_IRQ_SHAREABLE,
+	},
+};
 
 static int panda_wifi_cd = 0; /* WIFI virtual 'card detect' status */
 static void (*wifi_status_cb)(int card_present, void *dev_id);
@@ -181,6 +192,8 @@ static struct wifi_platform_data panda_wifi_control = {
 static struct platform_device panda_wifi_device = {
         .name           = "bcm4329_wlan",
         .id             = 1,
+        .num_resources  = ARRAY_SIZE(panda_wifi_resources),
+        .resource       = panda_wifi_resources,
         .dev            = {
                 .platform_data = &panda_wifi_control,
         },
@@ -197,6 +210,15 @@ int __init panda_wlan_init(void)
 		pr_err("%s: can't reserve GPIO: %d\n", __func__, WL_RST_N);
 		return ret;
 	} else gpio_direction_output(WL_RST_N, 0);
+
+	omap_mux_init_gpio(GPIO_WLAN_IRQ, OMAP_PIN_INPUT);
+
+	ret = gpio_request(GPIO_WLAN_IRQ, "wlan_irq");
+	if (ret < 0) {
+		pr_err("%s: can't reserve GPIO: %d\n",
+			__func__, GPIO_WLAN_IRQ);
+		return ret;
+	} else gpio_direction_input(GPIO_WLAN_IRQ);
 
 	return platform_device_register(&panda_wifi_device);
 }
