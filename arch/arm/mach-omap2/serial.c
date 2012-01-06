@@ -84,19 +84,19 @@ static struct omap_device_pm_latency omap_uart_latency[] = {
 #ifdef CONFIG_OMAP_MUX
 static struct omap_device_pad default_uart1_pads[] __initdata = {
 	{
-		.name	= "uart1_cts.uart1_cts",
+		.name	= "mcspi1_cs2.uart1_cts",
 		.enable	= OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0,
 	},
 	{
-		.name	= "uart1_rts.uart1_rts",
+		.name	= "mcspi1_cs3.uart1_rts",
 		.enable	= OMAP_PIN_OUTPUT | OMAP_MUX_MODE0,
 	},
 	{
-		.name	= "uart1_tx.uart1_tx",
+		.name	= "uart3_cts_rctx.uart1_tx",	// XXX:
 		.enable	= OMAP_PIN_OUTPUT | OMAP_MUX_MODE0,
 	},
 	{
-		.name	= "uart1_rx.uart1_rx",
+		.name	= "mcspi1_cs1.uart1_rx",
 		.flags	= OMAP_DEVICE_PAD_REMUX | OMAP_DEVICE_PAD_WAKEUP,
 		.enable	= OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0,
 		.idle	= OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0,
