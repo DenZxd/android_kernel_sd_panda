@@ -26,6 +26,30 @@
 #define LED_PWM_CTRL1	0xF4
 #define LED_PWM_CTRL2	0xF5
 
+/* TOGGLE3 register control PWMx */
+#define REG_TOGGLE3	0x92
+
+#define PWM2EN		(0x01 << 5)
+#define PWM2S		(0x01 << 4)
+#define PWM2R		(0x01 << 3)
+#define PWM1EN		(0x01 << 2)
+#define PWM1S		(0x01 << 1)
+#define PWM1R		(0x01 << 0)
+
+#define REG_PWDNSTATUS2	0x94
+
+#define PWM2_CLK_EN	(0x01 << 3)
+#define PWM2_STS	(0x01 << 2)
+#define PWM1_CLK_EN	(0x01 << 1)
+#define PWM1_STS	(0x01 << 0)
+
+#define REG_PWM1ON	0xBA
+#define REG_PWM1OFF	0xBB
+#define REG_PWM2ON	0xBD
+#define REG_PWM2OFF	0xBE
+
+#define PWM_LENGTH_64	(0x01 << 7)
+
 /* Max value for CTRL1 register */
 #define PWM_CTRL1_MAX	255
 
@@ -58,6 +82,7 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 	if (pwm == NULL || period_ns == 0 || duty_ns > period_ns)
 		return -EINVAL;
 
+    if (pwm->pwm_id == 1) {
 	duty_cycle = (duty_ns * PWM_CTRL1_MAX) / period_ns;
 
 	ret = twl_i2c_write_u8(TWL6030_MODULE_ID1, duty_cycle, LED_PWM_CTRL1);
@@ -67,6 +92,27 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 			pwm->label, ret);
 		return ret;
 	}
+    } else
+    if (1 || 1 < pwm->pwm_id) {
+	ret = twl_i2c_read_u8(TWL6030_MODULE_ID1, &duty_cycle,
+		REG_PWM1ON + 3 * (pwm->pwm_id - 2));
+	if (ret < 0) {
+dtrace;
+		return ret;
+	}
+
+	ret = ((duty_cycle & PWM_LENGTH_64) ? 64 : 128) - 1;
+
+	duty_cycle = (duty_ns * ret) / period_ns;
+
+	ret = twl_i2c_write_u8(TWL6030_MODULE_ID1, duty_cycle,
+		REG_PWM1OFF + 3 * (pwm->pwm_id - 2));
+	if (ret < 0) {
+dtrace;
+		return ret;
+	}
+    }
+
 	return 0;
 }
 EXPORT_SYMBOL(pwm_config);
@@ -76,6 +122,7 @@ int pwm_enable(struct pwm_device *pwm)
 	u8 val;
 	int ret;
 
+    if (pwm->pwm_id == 1) {
 	ret = twl_i2c_read_u8(TWL6030_MODULE_ID1, &val, LED_PWM_CTRL2);
 	if (ret < 0) {
 		pr_err("%s: Failed to enable PWM, Error %d\n", pwm->label, ret);
@@ -93,6 +140,17 @@ int pwm_enable(struct pwm_device *pwm)
 	}
 
 	twl_i2c_read_u8(TWL6030_MODULE_ID1, &val, LED_PWM_CTRL2);
+    } else
+    if (1 || 1 < pwm->pwm_id) {
+	val = (PWM1S | PWM1EN) << (3 * (pwm->pwm_id - 2));
+
+	ret = twl_i2c_write_u8(TWL6030_MODULE_ID1, val, REG_TOGGLE3);
+	if (ret < 0) {
+dtrace;
+		return ret;
+	}
+    }
+
 	return 0;
 }
 EXPORT_SYMBOL(pwm_enable);
@@ -102,6 +160,7 @@ void pwm_disable(struct pwm_device *pwm)
 	u8 val;
 	int ret;
 
+    if (pwm->pwm_id == 1) {
 	ret = twl_i2c_read_u8(TWL6030_MODULE_ID1, &val, LED_PWM_CTRL2);
 	if (ret < 0) {
 		pr_err("%s: Failed to disable PWM, Error %d\n",
@@ -118,6 +177,17 @@ void pwm_disable(struct pwm_device *pwm)
 			pwm->label, ret);
 		return;
 	}
+    } else
+    if (1 || 1 < pwm->pwm_id) {
+	val = PWM1R << (3 * (pwm->pwm_id - 2));
+
+	ret = twl_i2c_write_u8(TWL6030_MODULE_ID1, val, REG_TOGGLE3);
+	if (ret < 0) {
+dtrace;
+		return ret;
+	}
+    }
+
 	return;
 }
 EXPORT_SYMBOL(pwm_disable);
@@ -128,6 +198,12 @@ struct pwm_device *pwm_request(int pwm_id, const char *label)
 	int ret;
 	struct pwm_device *pwm;
 
+	if (3 < pwm_id || pwm_id < 1) {
+		pr_err("Fail to request PWM with invalid ID(%d) for %s\n",
+			pwm_id, label);
+		return NULL;
+	}
+
 	pwm = kzalloc(sizeof(struct pwm_device), GFP_KERNEL);
 	if (pwm == NULL) {
 		pr_err("%s: failed to allocate memory\n", label);
@@ -137,6 +213,7 @@ struct pwm_device *pwm_request(int pwm_id, const char *label)
 	pwm->label = label;
 	pwm->pwm_id = pwm_id;
 
+    if (pwm->pwm_id == 1) {
 	/* Configure PWM */
 	val = PWM_CTRL2_DIS_PD | PWM_CTRL2_CURR_02 | PWM_CTRL2_SRC_VAC |
 		PWM_CTRL2_MODE_HW;
@@ -150,6 +227,38 @@ struct pwm_device *pwm_request(int pwm_id, const char *label)
 		kfree(pwm);
 		return NULL;
 	}
+    } else
+    if (1 || 1 < pwm->pwm_id) {
+	ret = twl_i2c_read_u8(TWL6030_MODULE_ID1, &val, REG_PWDNSTATUS2);
+	if (ret < 0) {
+dtrace;
+		kfree(pwm);	return NULL;
+	}
+
+	if (val & ((PWM1_CLK_EN | PWM1_STS) << (2 * (pwm->pwm_id - 2)))) {
+		pr_err("PWM%d is already in use!\n", pwm->pwm_id);
+		kfree(pwm);	return NULL;
+	}
+
+    if (0) {
+	val = PWM1EN << (3 * (pwm->pwm_id - 2));
+
+	ret = twl_i2c_write_u8(TWL6030_MODULE_ID1, val, REG_TOGGLE3);
+	if (ret < 0) {
+dtrace;
+		kfree(pwm);	return NULL;
+	}
+    }
+
+	val = 0; //| PWM_LENGTH_64;	// we perfer to use 128 clk period.
+
+	ret = twl_i2c_write_u8(TWL6030_MODULE_ID1, val,
+		REG_PWM1ON + 3 * (pwm->pwm_id - 2));
+	if (ret < 0) {
+dtrace;
+		kfree(pwm);	return NULL;
+	}
+    }
 
 	return pwm;
 }
