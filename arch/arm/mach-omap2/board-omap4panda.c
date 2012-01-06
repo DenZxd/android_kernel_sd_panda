@@ -155,6 +155,8 @@ static struct platform_pwm_backlight_data smartq_backlight_data = {
 #ifdef CONFIG_OMAP_PWM
 	.init		= smartq_bl_init,
 	.pwm_id		= BL_PWM_GPT_ID,
+#else
+	.pwm_id		= 2,
 #endif
 	.max_brightness	= 255,
 	.dft_brightness	= 100,
