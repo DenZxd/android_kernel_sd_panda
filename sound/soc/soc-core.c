@@ -942,7 +942,7 @@ int soc_pcm_hw_params(struct snd_pcm_substream *substream,
 	if (rtd->dai_link->no_host_mode == SND_SOC_DAI_LINK_NO_HOST) {
 		substream->dma_buffer.dev.type = SNDRV_DMA_TYPE_DEV;
 		substream->dma_buffer.dev.dev = &rtd->dev;
-		substream->dma_buffer.dev.dev->coherent_dma_mask = ISA_DMA_THRESHOLD;
+		substream->dma_buffer.dev.dev->coherent_dma_mask = (0xffffffffULL);		// XXX: fix with no ISA_DMA_THRESHOLD defined
 		substream->dma_buffer.private_data = NULL;
 
 		ret = snd_pcm_lib_malloc_pages(substream, PAGE_SIZE);
