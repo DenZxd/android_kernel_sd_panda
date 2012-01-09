@@ -945,6 +945,9 @@ static void twl6040_hs_jack_report(struct snd_soc_codec *codec,
 	/* Sync status */
 	status = twl6040_read_reg_volatile(codec, TWL6040_REG_STATUS);
 	if (status & TWL6040_PLUGCOMP)
+#ifdef CONFIG_VENDOR_HHTECH	// CONFIG_MACH_OMAP4_PANDA
+		state = 0; else	// XXX:
+#endif
 		state = report;
 
 	mutex_unlock(&priv->mutex);
