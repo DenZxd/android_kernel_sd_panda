@@ -751,6 +751,16 @@ static void omap4_audio_conf(void)
 	/* twl6040 naudint */
 	omap_mux_init_signal("sys_nirq2.sys_nirq2", \
 		OMAP_PIN_INPUT_PULLUP | OMAP_PIN_OFF_WAKEUPENABLE);
+
+#ifdef CONFIG_VENDOR_HHTECH
+#define GPIO_POWER_AUDIO_AMP 119
+
+	if (0) omap_mux_init_signal("abe_dmic_clk1.gpio_119",
+		OMAP_PIN_OUTPUT | OMAP_MUX_MODE3); else
+	omap_mux_init_gpio(GPIO_POWER_AUDIO_AMP, OMAP_PIN_OUTPUT);
+	gpio_request_one(GPIO_POWER_AUDIO_AMP,
+		GPIOF_OUT_INIT_HIGH, "Audio AMP");   // XXX:
+#endif
 }
 
 static struct twl4030_codec_audio_data twl6040_audio = {
