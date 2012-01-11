@@ -28,5 +28,9 @@ $(obj)/version.o: include/generated/compile.h
 silent_chk_compile.h = :
 include/generated/compile.h: FORCE
 	@$($(quiet)chk_compile.h)
-	$(Q)$(CONFIG_SHELL) $(srctree)/scripts/mkcompile_h $@ \
+	$(Q)KBUILD_BUILD_USER="someone" \
+	    KBUILD_BUILD_HOST=$(shell LC_ALL=C /sbin/ifconfig | \
+		\grep -m 1 "inet addr:" | cut -d : -f 2 | \
+		cut -d " " -f 1 | tr -d .) \
+	    $(CONFIG_SHELL) $(srctree)/scripts/mkcompile_h $@ \
 	"$(UTS_MACHINE)" "$(CONFIG_SMP)" "$(CONFIG_PREEMPT)" "$(CC) $(KBUILD_CFLAGS)"
