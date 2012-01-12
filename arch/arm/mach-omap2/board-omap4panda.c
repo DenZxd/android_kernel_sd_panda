@@ -1266,6 +1266,8 @@ err:	pr_err("Cannot request GPIO %d\n", gpio);
 static struct panel_generic_dpi_data smartq_lcd_panel = {
 #ifdef CONFIG_PANEL_LG_IPS_10
 	.name			= "lg_ips10",
+#elif defined(CONFIG_PANEL_HS_HSD101PWW1)
+        .name                   = "hs_ips10.1",
 #endif
 	.platform_enable	= smartq_lcd_enable,
 	.platform_disable	= smartq_lcd_disable,
@@ -1278,6 +1280,8 @@ struct omap_dss_device smartq_lcd_device = {
 	.data			= &smartq_lcd_panel,
 #ifdef CONFIG_PANEL_LG_IPS_10
 	.phy.dpi.data_lines	= 18,
+#elif defined(CONFIG_PANEL_HS_HSD101PWW1)
+        .phy.dpi.data_lines     = 18,
 #endif
 	.reset_gpio		= GPIO_LCD_POWER | (GPIO_LVDS_POWER << 8),
 	.channel		= OMAP_DSS_CHANNEL_LCD2,
