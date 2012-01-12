@@ -845,18 +845,25 @@ void omap4_commix_vcc_power(int action)
 }
 #endif
 
-#if defined(CONFIG_TOUCHSCREEN_GOODIX) || \
-    defined(CONFIG_TOUCHSCREEN_GOODIX_MODULE)
+#ifdef CONFIG_VENDOR_HHTECH
 #define GPIO_TOUCHSCREEN_IRQ 38
 #define GPIO_TOUCHSCREEN_RST 37
 
 static void touchscreen_rst(void)
 {
+#ifdef CONFIG_SMARTQ_T15
 	gpio_direction_output(GPIO_TOUCHSCREEN_RST, 1);
 
 	//gpio_set_value(GPIO_TOUCHSCREEN_RST, 1);
 	msleep_interruptible(30);
 	gpio_set_value(GPIO_TOUCHSCREEN_RST, 0);
+#else
+	gpio_direction_output(GPIO_TOUCHSCREEN_RST, 0);
+
+	//gpio_set_value(GPIO_TOUCHSCREEN_RST, 0);
+	msleep_interruptible(30);
+	gpio_set_value(GPIO_TOUCHSCREEN_RST, 1);
+#endif
 }
 
 static void touchscreen_irq_init(void)
@@ -885,6 +892,17 @@ static void __init touchscreen_gpio_init(void)
 	//gpio_direction_output(gpio, 0);
 }
 
+static void touchscreen_gpio_free(void)
+{
+        gpio_free(GPIO_TOUCHSCREEN_IRQ);
+        gpio_free(GPIO_TOUCHSCREEN_RST);
+}
+#else
+static void __init touchscreen_gpio_init(void) { }
+#endif
+
+#if defined(CONFIG_TOUCHSCREEN_GOODIX) || \
+    defined(CONFIG_TOUCHSCREEN_GOODIX_MODULE)
 #include <linux/goodix_touch.h>
 
 struct goodix_i2c_rmi_platform_data goodix_pdata = {
@@ -894,8 +912,102 @@ struct goodix_i2c_rmi_platform_data goodix_pdata = {
 	.irq_init = touchscreen_irq_init,
 	//.gpio_init = touchscreen_gpio_init,
 };
+#endif
+
+#if defined(CONFIG_TOUCHSCREEN_SSD2533) || \
+    defined(CONFIG_TOUCHSCREEN_SSD2533_MODULE)
+#include <mach/ssd2533.h>
+
+Reg_Item ssd2533_Init[]={
+        {CMD_1B,0x04,0x00},         // Exit sleep mode
+        {CMD_DELAY, 100},
+        {CMD_1B,0xAE,0x00},         // Disable self cap
+        {CMD_1B,0x06,0x16},         // Drive No: 23
+        {CMD_1B,0x07,0x23},         // Sense No: 36
+        {CMD_2B,0x08,0x00,0x16},    // Set 1st drive line reg
+        {CMD_2B,0x09,0x00,0x15},    // Set 2st drive line reg
+        {CMD_2B,0x0a,0x00,0x14},    // Set 3st drive line reg
+        {CMD_2B,0x0b,0x00,0x13},    // Set 4st drive line reg
+        {CMD_2B,0x0c,0x00,0x12},    // Set 5st drive line reg
+        {CMD_2B,0x0d,0x00,0x11},    // Set 6st drive line reg
+        {CMD_2B,0x0e,0x00,0x10},    // Set 7st drive line reg
+        {CMD_2B,0x0f,0x00,0x0f},    // Set 8st drive line reg
+        {CMD_2B,0x10,0x00,0x0e},    // Set 9st drive line reg
+        {CMD_2B,0x11,0x00,0x0d},    // Set 10st drive line reg
+        {CMD_2B,0x12,0x00,0x0c},    // Set 11st drive line reg
+        {CMD_2B,0x13,0x00,0x0b},    // Set 12st drive line reg
+        {CMD_2B,0x14,0x00,0x0a},    // Set 13st drive line reg
+        {CMD_2B,0x15,0x00,0x09},    // Set 14st drive line reg
+        {CMD_2B,0x16,0x00,0x08},    // Set 15st drive line reg
+        {CMD_2B,0x17,0x00,0x07},    // Set 16st drive line reg
+        {CMD_2B,0x18,0x00,0x06},    // Set 17st drive line reg
+        {CMD_2B,0x19,0x00,0x05},    // Set 18st drive line reg
+        {CMD_2B,0x1a,0x00,0x04},    // Set 19st drive line reg
+        {CMD_2B,0x1b,0x00,0x03},    // Set 20st drive line reg
+        {CMD_2B,0x1c,0x00,0x02},    // Set 21st drive line reg
+        {CMD_2B,0x1d,0x00,0x01},    // Set 22st drive line reg
+        {CMD_2B,0x1e,0x00,0x00},    // Set 23st drive line reg
+        {CMD_1B,0x2a,0x07},         // Sub-frame
+        {CMD_1B,0x2c,0x01},         // Median filter
+        {CMD_1B,0x2e,0x0b},         // Sub-frame drive pulse
+        {CMD_1B,0x2f,0x01},         // Integration gain
+        {CMD_1B,0xd5,0x03},         // Set driving voltage,5.5V
+        {CMD_1B,0x30,0x03},         // Start integrate
+        {CMD_1B,0x31,0x07},         // Stop integrate
+        {CMD_1B,0xd7,0x02},         // ADC range
+        {CMD_1B,0xd8,0x07},
+        {CMD_1B,0xdb,0x02},         // Set integration cap
+        {CMD_2B,0x33,0x00,0x01},    // min. finger area
+        {CMD_2B,0x34,0x00,0x30},    // min finger level
+        {CMD_2B,0x35,0x00,0x00},    // finger weight threshold
+        {CMD_2B,0x36,0x00,0x20},    // max. finger area
+        {CMD_1B,0x37,0x00},         // segmentation depth
+
+        {CMD_1B,0x39,0x02},         // CG method
+        {CMD_1B,0x3a,0x00},         // Hybrid mode select
+        {CMD_1B,0x53,0x20},         // Move tolerance
+        {CMD_2B,0x54,0x00,0x80},    // X tracking
+        {CMD_2B,0x55,0x00,0x80},    // Y tracking
+
+        {CMD_1B,0x56,0x00},         // Moing average filter
+        {CMD_1B,0x58,0x01},         // Finger weight scaling
+        {CMD_1B,0x59,0x00},         // Enable random walk
+        {CMD_1B,0x5a,0x20},         // Disable missing frame
+        {CMD_1B,0x5b,0x20},         // Set random walk window
+#ifdef CONFIG_SMARTQ_T15
+	{CMD_1B,0x65,0x02},         // Set X-Invert
+	{CMD_2B,0x66,0x7d,0xf0},    // X scaling
+	{CMD_2B,0x67,0x8d,0xb0},    // Y scaling
 #else
-static void __init touchscreen_gpio_init(void) { }
+	{CMD_1B,0x65,0x01},         // Set X-Invert
+	{CMD_2B,0x66,0x8e,0x30},    // X scaling
+	{CMD_2B,0x67,0x8b,0x20},    // Y scaling
+#endif
+        {CMD_1B,0x8a,0x0a},         // Max finger
+        {CMD_1B,0x3d,0x01},         // 2d filter
+
+//        {CMD_2B,0x7a,0xff,0xff},    // mask all events but finger leave
+//        {CMD_2B,0x7b,0xff,0xc3},    // mask IRQ: fifo overflow, large object.
+
+//        {CMD_1B,0xc4,0x01},         // Enable booster syn
+        {CMD_1B,0x40,0xff},
+        {CMD_1B,0x44,0x01},
+		{CMD_1B,0x8b,0x01},
+		{CMD_1B,0x8c,0xc0},
+		{CMD_1B,0x25,0x02},         // set scan mode, 100Hz
+        {CMD_DELAY, 300},
+        {CMD_1B,0xa2,0x00},         // reset init reference
+};
+
+struct ssd2533_platform_data ssd2533_pdata = {
+	.rst = touchscreen_rst,
+	.irq = OMAP_GPIO_IRQ(GPIO_TOUCHSCREEN_IRQ),
+	.irq_init = touchscreen_irq_init,
+        //.gpio_init = touchscreen_gpio_init,
+        .gpio_free = touchscreen_gpio_free,
+        .reg_array = ssd2533_Init,
+        .reg_size = ARRAY_SIZE(ssd2533_Init),
+};
 #endif
 
 /*
@@ -946,6 +1058,13 @@ static struct i2c_board_info __initdata panda_i2c_bus4_boardinfo[] = {
 		I2C_BOARD_INFO("Goodix-TS", 0x55),
 		.platform_data = &goodix_pdata,
 	},
+#endif
+#if defined(CONFIG_TOUCHSCREEN_SSD2533) || \
+    defined(CONFIG_TOUCHSCREEN_SSD2533_MODULE)
+        {
+                I2C_BOARD_INFO(SSD2533_I2C_NAME, SSD2533_I2C_ADDR),
+                .platform_data = &ssd2533_pdata,
+        },
 #endif
 };
 
