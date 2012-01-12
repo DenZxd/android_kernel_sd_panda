@@ -84,6 +84,32 @@ static struct panel_config generic_dpi_panels[] = {
 	},
 #endif
 
+#ifdef CONFIG_PANEL_HS_HSD101PWW1
+        /* HannStar IPS 10.1" */
+        {
+                {
+                        .x_res          = 1280,
+                        .y_res          = 800,
+
+                        .pixel_clock    = 75506,    // XXX: 75518
+
+                        .hfp            = 60,
+                        .hsw            = 48,
+                        .hbp            = 96,
+
+                        .vfp            = 4,
+                        .vsw            = 9,
+                        .vbp            = 35,
+                },
+                .acbi                   = 0x0,
+                .acb                    = 0x0,
+                .config                 = OMAP_DSS_LCD_TFT,
+                .power_on_delay         = 0,
+                .power_off_delay        = 0,
+                .name                   = "hs_ips10.1",
+        },
+#endif
+
 #ifdef CONFIG_PANEL_DVI_OUTPUT
 	/* Generic Panel */
 	{

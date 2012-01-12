@@ -16,6 +16,12 @@ config PANEL_LG_IPS_10
 	help
 	  LCD Panel used on SmartQ devices
 
+config PANEL_HS_HSD101PWW1
+        bool "HannStar HSD101PWW1 LCD Panel"
+        depends on PANEL_GENERIC_DPI
+        help
+          LCD Panel used on SmartQ devices
+
 config PANEL_DVI_OUTPUT
 	bool "DVI Output"
 	depends on PANEL_GENERIC_DPI
