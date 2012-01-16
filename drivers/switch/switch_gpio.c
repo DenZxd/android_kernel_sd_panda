@@ -33,6 +33,9 @@ struct gpio_switch_data {
 	const char *state_on;
 	const char *state_off;
 	int irq;
+	int active_low;
+	int timer_debounce; /* in msecs */
+	struct timer_list timer;
 	struct work_struct work;
 };
 
@@ -42,14 +45,26 @@ static void gpio_switch_work(struct work_struct *work)
 	struct gpio_switch_data	*data =
 		container_of(work, struct gpio_switch_data, work);
 
-	state = gpio_get_value(data->gpio);
+	state = (gpio_get_value(data->gpio) ? 1 : 0) ^ data->active_low;
 	switch_set_state(&data->sdev, state);
+}
+
+static void gpio_switch_timer(unsigned long _data)
+{
+	struct gpio_switch_data *switch_data =
+		(struct gpio_switch_data *)_data;
+
+	schedule_work(&switch_data->work);
 }
 
 static irqreturn_t gpio_irq_handler(int irq, void *dev_id)
 {
 	struct gpio_switch_data *switch_data =
 	    (struct gpio_switch_data *)dev_id;
+
+	if (switch_data->timer_debounce) mod_timer(&switch_data->timer,
+		jiffies + msecs_to_jiffies(switch_data->timer_debounce));
+	else
 
 	schedule_work(&switch_data->work);
 	return IRQ_HANDLED;
@@ -74,6 +89,7 @@ static int gpio_switch_probe(struct platform_device *pdev)
 {
 	struct gpio_switch_platform_data *pdata = pdev->dev.platform_data;
 	struct gpio_switch_data *switch_data;
+	unsigned long irqflags;
 	int ret = 0;
 
 	if (!pdata)
@@ -90,8 +106,12 @@ static int gpio_switch_probe(struct platform_device *pdev)
 	switch_data->state_on = pdata->state_on;
 	switch_data->state_off = pdata->state_off;
 	switch_data->sdev.print_state = switch_gpio_print_state;
+	switch_data->active_low = pdata->active_low;
+	switch_data->timer_debounce = 0;
 
-    ret = switch_dev_register(&switch_data->sdev);
+	platform_set_drvdata(pdev, switch_data);
+
+	ret = switch_dev_register(&switch_data->sdev);
 	if (ret < 0)
 		goto err_switch_dev_register;
 
@@ -105,14 +125,27 @@ static int gpio_switch_probe(struct platform_device *pdev)
 
 	INIT_WORK(&switch_data->work, gpio_switch_work);
 
+	if (pdata->debounce_interval) {
+		ret = gpio_set_debounce(switch_data->gpio,
+					pdata->debounce_interval * 1000);
+
+		/* use timer if gpiolib doesn't provide debounce */
+		if (ret < 0) {
+			switch_data->timer_debounce = pdata->debounce_interval;
+			setup_timer(&switch_data->timer, gpio_switch_timer,
+				(unsigned long)switch_data);
+		}
+	}
+
 	switch_data->irq = gpio_to_irq(switch_data->gpio);
 	if (switch_data->irq < 0) {
 		ret = switch_data->irq;
 		goto err_detect_irq_num_failed;
 	}
 
+	irqflags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING;
 	ret = request_irq(switch_data->irq, gpio_irq_handler,
-			  IRQF_TRIGGER_LOW, pdev->name, switch_data);
+			  irqflags, pdev->name, switch_data);
 	if (ret < 0)
 		goto err_request_irq;
 
@@ -123,11 +156,15 @@ static int gpio_switch_probe(struct platform_device *pdev)
 
 err_request_irq:
 err_detect_irq_num_failed:
+	if (switch_data->timer_debounce)
+		del_timer_sync(&switch_data->timer);
+	cancel_work_sync(&switch_data->work);
 err_set_gpio_input:
 	gpio_free(switch_data->gpio);
 err_request_gpio:
     switch_dev_unregister(&switch_data->sdev);
 err_switch_dev_register:
+	platform_set_drvdata(pdev, NULL);
 	kfree(switch_data);
 
 	return ret;
@@ -137,6 +174,8 @@ static int __devexit gpio_switch_remove(struct platform_device *pdev)
 {
 	struct gpio_switch_data *switch_data = platform_get_drvdata(pdev);
 
+	if (switch_data->timer_debounce)
+		del_timer_sync(&switch_data->timer);
 	cancel_work_sync(&switch_data->work);
 	gpio_free(switch_data->gpio);
     switch_dev_unregister(&switch_data->sdev);
@@ -145,12 +184,37 @@ static int __devexit gpio_switch_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int gpio_switch_suspend(struct device *dev)
+{
+	return 0;
+}
+
+static int gpio_switch_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct gpio_switch_data *switch_data = platform_get_drvdata(pdev);
+
+	gpio_switch_work(&switch_data->work);
+
+	return 0;
+}
+
+static const struct dev_pm_ops gpio_switch_pm_ops = {
+	.suspend    = gpio_switch_suspend,
+	.resume     = gpio_switch_resume,
+};
+#endif
+
 static struct platform_driver gpio_switch_driver = {
 	.probe		= gpio_switch_probe,
 	.remove		= __devexit_p(gpio_switch_remove),
 	.driver		= {
 		.name	= "switch-gpio",
 		.owner	= THIS_MODULE,
+#ifdef CONFIG_PM
+		.pm = &gpio_switch_pm_ops,
+#endif
 	},
 };
 
