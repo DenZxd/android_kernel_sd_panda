@@ -171,8 +171,32 @@ static struct platform_device smartq_backlight_device = {
 };
 #endif
 
-#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#if defined(CONFIG_SWITCH_GPIO) || defined(CONFIG_SWITCH_GPIO_MODULE)
+#include <linux/switch.h>
 #define GPIO_KEY_LOCK		171
+
+static struct gpio_switch_platform_data ts_key_switch_data = {
+	.name		= "touch_key_lock",
+	.gpio		= GPIO_KEY_LOCK,
+	.active_low	= 0,
+	//.debounce_interval = 20,
+};
+
+static struct platform_device ts_key_switch_device = {
+	.name	= "switch-gpio",
+	.dev.platform_data = &ts_key_switch_data,
+};
+
+static void __init omap4_gpio_switch_init(void)
+{
+	omap_mux_init_signal("kpd_col3.gpio_171",
+			OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE3);
+}
+#else
+static void __init omap4_gpio_switch_init(void) { }
+#endif
+
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 #define GPIO_KEY_VOLUP		103
 #define GPIO_KEY_VOLDOWN	101
 
@@ -205,15 +229,6 @@ static struct gpio_keys_button btn_button_table[] = {
 		.wakeup         = 0,
 		//.debounce_interval = 10,
 	},
-	[2] = {
-		.code           = 252,
-		.gpio           = GPIO_KEY_LOCK,
-		.active_low     = 0,
-		.desc           = "screen_lock",
-		.type           = EV_SW,
-		.wakeup         = 0,
-		.debounce_interval = 20,
-	},
 };
 
 static struct gpio_keys_platform_data gpio_keys_data = {
@@ -243,8 +258,6 @@ static void __init omap4_gpio_keys_init(void)
 		OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE3);
 	omap_mux_init_signal("gpmc_ncs6.gpio_103",
 		OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE3);
-	omap_mux_init_signal("kpd_col3.gpio_171",
-			OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE3);
 }
 #else
 static void __init omap4_gpio_keys_init(void) { }
@@ -343,6 +356,9 @@ static struct platform_device *panda_devices[] __initdata = {
 #endif
 #if defined(CONFIG_WL12XX_SDIO) || defined(CONFIG_WL12XX_SDIO_MODULE)
 	&wl1271_device,
+#endif
+#if defined(CONFIG_SWITCH_GPIO) || defined(CONFIG_SWITCH_GPIO_MODULE)
+	&ts_key_switch_device,
 #endif
 };
 
@@ -1395,6 +1411,7 @@ static void __init omap4_panda_init(void)
 	omap4_create_board_props();
 
 	omap4_gpio_keys_init();
+	omap4_gpio_switch_init();
 	touchscreen_gpio_init();
 	omap_charger_io_init();
 	omap_encrypt_io_init();
