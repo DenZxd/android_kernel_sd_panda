@@ -272,6 +272,8 @@ static void omap_hsmmc_status_notify_cb(int card_present, void *dev_id)
 	oldstat = mmc_slot(host).mmc_data.card_present;
 	mmc_slot(host).mmc_data.card_present = status;
 	if (status ^ oldstat) {
+		if (!status)
+			host->power_mode = MMC_POWER_OFF;
 		pr_debug("%s: Slot status change detected (%d -> %d)\n",
 			mmc_hostname(host->mmc), oldstat, status);
 		mmc_detect_change(host->mmc, 0);
