@@ -1442,9 +1442,11 @@ static void __init omap4_panda_reserve(void)
 			OMAP_RAM_CONSOLE_SIZE_DEFAULT);
 
 	/* do the static reservations first */
+#ifdef CONFIG_SECURITY_MIDDLEWARE_COMPONENT
 	memblock_remove(PHYS_ADDR_SMC_MEM, PHYS_ADDR_SMC_SIZE);
 	pr_info("%8x@%08x: reserved for SMC\n",
 		PHYS_ADDR_SMC_SIZE, PHYS_ADDR_SMC_MEM);
+#endif// XXX: useless for GP devices
 	memblock_remove(PHYS_ADDR_DUCATI_MEM, PHYS_ADDR_DUCATI_SIZE);
 	pr_info("%8x@%08x: reserved for Ducati\n",
 		PHYS_ADDR_DUCATI_SIZE, PHYS_ADDR_DUCATI_MEM);

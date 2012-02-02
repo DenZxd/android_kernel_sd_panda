@@ -118,6 +118,7 @@ void __init omap_ion_init(void)
 		omap4_ion_heap_nonsec_tiler_mem_size = 0;
 		omap4_ion_heap_tiler_mem_size = 0;
 	} else {
+		// XXX: why need for both GP and HS chips?
 		omap4_ion_heap_secure_input_size = (SZ_1M * 90);
 		omap4_ion_heap_secure_output_wfdhdcp_size = (SZ_1M * 16);
 		omap4_ducati_heap_size = (SZ_1M * 109);
