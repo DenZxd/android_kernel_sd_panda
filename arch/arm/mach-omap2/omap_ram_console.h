@@ -17,9 +17,17 @@
 #ifndef __OMAP_RAM_CONSOLE_H
 #define __OMAP_RAM_CONSOLE_H
 
+#include <mach/omap4_ion.h>
+
+#ifdef CONFIG_SECURITY_MIDDLEWARE_COMPONENT
 /* Board files use the following if they are ok with the defaults */
 #define OMAP_RAM_CONSOLE_START_DEFAULT	(PLAT_PHYS_OFFSET + SZ_256M)
 #define OMAP_RAM_CONSOLE_SIZE_DEFAULT	SZ_2M
+//#define OMAP_RAM_CONSOLE_START_DEFAULT	(0x83000000 - SZ_2M)
+#else// XXX:
+#define OMAP_RAM_CONSOLE_SIZE_DEFAULT	SZ_1M
+#define OMAP_RAM_CONSOLE_START_DEFAULT	(PHYS_ADDR_SMC_MEM/* + SZ_1M*/)
+#endif
 
 #ifdef CONFIG_OMAP_RAM_CONSOLE
 extern int omap_ram_console_init(phys_addr_t phy_addr, size_t size);

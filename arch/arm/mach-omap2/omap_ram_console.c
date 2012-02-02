@@ -24,9 +24,11 @@
 static struct resource ram_console_resources[] = {
 	{
 		.flags  = IORESOURCE_MEM,
+#ifdef CONFIG_SECURITY_MIDDLEWARE_COMPONENT
 		.start  = OMAP_RAM_CONSOLE_START_DEFAULT,
 		.end    = OMAP_RAM_CONSOLE_START_DEFAULT +
 			  OMAP_RAM_CONSOLE_SIZE_DEFAULT - 1,
+#endif
 	},
 };
 
