@@ -102,6 +102,10 @@ static const unsigned int csi2_input_fmts[] = {
 	V4L2_MBUS_FMT_SBGGR10_DPCM8_1X8,
 	V4L2_MBUS_FMT_SGBRG10_1X10,
 	V4L2_MBUS_FMT_SGBRG10_DPCM8_1X8,
+	V4L2_MBUS_FMT_SBGGR8_1X8,
+	V4L2_MBUS_FMT_SGBRG8_1X8,
+	V4L2_MBUS_FMT_SGRBG8_1X8,
+	V4L2_MBUS_FMT_SRGGB8_1X8,
 	V4L2_MBUS_FMT_UYVY8_1X16,
 	V4L2_MBUS_FMT_YUYV8_1X16,
 };
@@ -150,6 +154,23 @@ static const u16 __csi2_fmt_map[][2][2] = {
 			CSI2_USERDEF_8BIT_DATA1_DPCM10_VP,
 		},
 	},
+	/* RAW8 formats */
+	{
+		/* Output to memory */
+		{
+			/* No DPCM decompression */
+			CSI2_PIX_FMT_RAW8,
+			/* DPCM decompression */
+			0,
+		},
+		/* Output to both */
+		{
+			/* No DPCM decompression */
+			CSI2_PIX_FMT_RAW8_VP,
+			/* DPCM decompression */
+			0,
+		},
+	},
 	/* YUV422 formats */
 	{
 		/* Output to memory */
@@ -193,9 +214,15 @@ static u16 csi2_ctx_map_format(struct iss_csi2_device *csi2)
 	case V4L2_MBUS_FMT_SGBRG10_DPCM8_1X8:
 		fmtidx = 1;
 		break;
+	case V4L2_MBUS_FMT_SBGGR8_1X8:
+	case V4L2_MBUS_FMT_SGBRG8_1X8:
+	case V4L2_MBUS_FMT_SGRBG8_1X8:
+	case V4L2_MBUS_FMT_SRGGB8_1X8:
+		fmtidx = 2;
+		break;
 	case V4L2_MBUS_FMT_UYVY8_1X16:
 	case V4L2_MBUS_FMT_YUYV8_1X16:
-		fmtidx = 2;
+		fmtidx = 3;
 		break;
 	default:
 		WARN(1, KERN_ERR "CSI2: pixel format %08x unsupported!\n",
