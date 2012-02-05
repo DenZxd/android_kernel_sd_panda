@@ -40,6 +40,24 @@ static const struct v4l2_frmsize_discrete ov5650_frmsizes[OV5650_SIZE_LAST] = {
 	{ 2592, 1944 },
 };
 
+/* Find a frame size in an array */
+static int ov5650_find_framesize(u32 width, u32 height)
+{
+	int i;
+
+	for (i = 0; i < OV5650_SIZE_LAST; i++) {
+		if ((ov5650_frmsizes[i].width >= width) &&
+		    (ov5650_frmsizes[i].height >= height))
+			break;
+	}
+
+	/* If not found, select biggest */
+	if (i >= OV5650_SIZE_LAST)
+		i = OV5650_SIZE_LAST - 1;
+
+	return i;
+}
+
 struct ov5650 {
 	struct v4l2_subdev subdev;
 	struct media_pad pad;
@@ -67,10 +85,7 @@ struct ov5650_reg {
 	u8	val;
 };
 
-/* TODO: Divide this properly */
-static const struct ov5650_reg configscript_5MP[] = {
-	{ 0x3008, 0x82 },
-	{ 0x3008, 0x42 },
+static const struct ov5650_reg configscript_common1[] = {
 	{ 0x3103, 0x93 },
 	{ 0x3b07, 0x0c },
 	{ 0x3017, 0xff },
@@ -100,18 +115,9 @@ static const struct ov5650_reg configscript_5MP[] = {
 	{ 0x3a18, 0x00 },
 	{ 0x3a19, 0xf8 },
 	{ 0x3a00, 0x38 },
-	{ 0x3800, 0x02 },
-	{ 0x3801, 0x54 },
-	{ 0x3803, 0x0c },
-	{ 0x3808, 0x0a },
-	{ 0x3809, 0x20 },
-	{ 0x380a, 0x07 },
-	{ 0x380b, 0x98 },
-	{ 0x380c, 0x0c },
-	{ 0x380d, 0xb4 },
-	{ 0x380e, 0x07 },
-	{ 0x380f, 0xb0 },
-	{ 0x3830, 0x50 },
+};
+
+static const struct ov5650_reg configscript_common2[] = {
 	{ 0x3a08, 0x12 },
 	{ 0x3a09, 0x70 },
 	{ 0x3a0a, 0x0f },
@@ -137,7 +143,6 @@ static const struct ov5650_reg configscript_5MP[] = {
 	{ 0x4001, 0x02 },
 	{ 0x401c, 0x46 },
 	{ 0x5046, 0x01 },
-	{ 0x3810, 0x40 },
 	{ 0x3836, 0x41 },
 	{ 0x505f, 0x04 },
 	{ 0x5000, 0x00 },
@@ -177,6 +182,35 @@ static const struct ov5650_reg configscript_5MP[] = {
 	{ 0x4800, 0x04 },
 	{ 0x3815, 0x82 },
 	{ 0x3003, 0x01 },
+};
+
+static const struct ov5650_reg timing_cfg[][16] = {
+	[OV5650_SIZE_5MP] = {
+		{ 0x3800, 0x02 }, /* HREF Start Point: 596 */
+		{ 0x3801, 0x54 },
+
+		{ 0x3803, 0x0c }, /* VREF Start Point: 12 */
+
+		{ 0x3804, 0x0a }, /* HREF Width: 2592 */
+		{ 0x3805, 0x20 },
+
+		{ 0x3806, 0x07 }, /* HREF Height: 1944 */
+		{ 0x3807, 0x98 },
+
+		{ 0x3808, 0x0a }, /* Horizontal Output Size: 2592 */
+		{ 0x3809, 0x20 },
+
+		{ 0x380a, 0x07 }, /* Vertical Output Size: 1944 */
+		{ 0x380b, 0x98 },
+
+		{ 0x380c, 0x0c }, /* Total Horizontal Size: 3252 */
+		{ 0x380d, 0xb4 },
+
+		{ 0x380e, 0x07 }, /* Total Vertical Size: 1968 */
+		{ 0x380f, 0xb0 },
+
+		{ 0x3810, 0x40 },
+	},
 };
 
 /**
@@ -270,6 +304,18 @@ static int ov5650_reg_writes(struct i2c_client *client,
 	return 0;
 }
 
+static int ov5650_reg_set(struct i2c_client *client, u16 reg, u8 val)
+{
+	int ret;
+	u8 tmpval = 0;
+
+	ret = ov5650_reg_read(client, reg, &tmpval);
+	if (ret)
+		return ret;
+
+	return ov5650_reg_write(client, reg, tmpval | val);
+}
+
 static int ov5650_reg_clr(struct i2c_client *client, u16 reg, u8 val)
 {
 	int ret;
@@ -281,6 +327,19 @@ static int ov5650_reg_clr(struct i2c_client *client, u16 reg, u8 val)
 
 	return ov5650_reg_write(client, reg, tmpval & ~val);
 }
+
+static int ov5650_config_timing(struct v4l2_subdev *sd)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct ov5650 *ov5650 = to_ov5650(sd);
+	int ret = 0, i;
+
+	i = ov5650_find_framesize(ov5650->format.width, ov5650->format.height);
+
+	ret = ov5650_reg_writes(client, timing_cfg[i],
+			ARRAY_SIZE(timing_cfg[i]));
+	return ret;
+};
 
 static struct v4l2_mbus_framefmt *
 __ov5650_get_pad_format(struct ov5650 *ov5650, struct v4l2_subdev_fh *fh,
@@ -374,9 +433,35 @@ static int ov5650_s_stream(struct v4l2_subdev *sd, int enable)
 	int ret = 0;
 
 	if (enable) {
-		/* HACK: Hardcoding to 5MP! */
-		ret = ov5650_reg_writes(client, configscript_5MP,
-				ARRAY_SIZE(configscript_5MP));
+		/* SW Reset */
+		ret = ov5650_reg_set(client, 0x3008, 0x80);
+		if (ret)
+			goto out;
+
+		msleep(2);
+
+		ret = ov5650_reg_clr(client, 0x3008, 0x80);
+		if (ret)
+			goto out;
+
+		/* SW Powerdown */
+		ret = ov5650_reg_set(client, 0x3008, 0x40);
+		if (ret)
+			goto out;
+
+		ret = ov5650_reg_writes(client, configscript_common1,
+				ARRAY_SIZE(configscript_common1));
+		if (ret)
+			goto out;
+
+		ret = ov5650_config_timing(sd);
+		if (ret)
+			return ret;
+
+		ret = ov5650_reg_writes(client, configscript_common2,
+				ARRAY_SIZE(configscript_common2));
+		if (ret)
+			goto out;
 
 		switch ((u32)ov5650->format.code) {
 		case V4L2_MBUS_FMT_SGRBG8_1X8:
@@ -425,6 +510,10 @@ static int ov5650_s_stream(struct v4l2_subdev *sd, int enable)
 		if (ret)
 			goto out;
 
+	} else {
+		ret = ov5650_reg_set(client, 0x3008, 0x40);
+		if (ret)
+			goto out;
 	}
 
 out:
