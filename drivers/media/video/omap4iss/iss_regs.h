@@ -14,6 +14,9 @@
 #ifndef _OMAP4_ISS_REGS_H_
 #define _OMAP4_ISS_REGS_H_
 
+extern phys_addr_t omap_cam_get_mempool_base(void);
+extern phys_addr_t omap_cam_get_mempool_size(void);
+
 /* ISS */
 #define ISS_HL_REVISION					0x0
 
