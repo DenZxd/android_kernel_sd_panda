@@ -934,6 +934,8 @@ static int iss_probe(struct platform_device *pdev)
 	struct iss_platform_data *pdata = pdev->dev.platform_data;
 	struct iss_device *iss;
 	int i, ret;
+	dma_addr_t pool_bus_addr;
+	size_t pool_size;
 
 	if (pdata == NULL)
 		return -EINVAL;
@@ -1006,8 +1008,21 @@ static int iss_probe(struct platform_device *pdev)
 
 	omap4iss_put(iss);
 
+	// attach dma pool to camera device
+	//TODO: move to platform code
+	pool_bus_addr = (dma_addr_t)omap_cam_get_mempool_base();
+	pool_size = (size_t)omap_cam_get_mempool_size();
+	if(dma_declare_coherent_memory(&pdev->dev, pool_bus_addr, pool_bus_addr,
+		pool_size, DMA_MEMORY_MAP | DMA_MEMORY_EXCLUSIVE) != DMA_MEMORY_MAP)
+	{
+		dev_err(&pdev->dev, "dma_declare_coherent_memory: failed\n");
+		goto exit_free_ctx;
+	}
+
 	return 0;
 
+exit_free_ctx:
+	iss_unregister_entities(iss);
 error_modules:
 	iss_cleanup_modules(iss);
 error_irq:
