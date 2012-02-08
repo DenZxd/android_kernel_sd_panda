@@ -1045,6 +1045,8 @@ error:
 		}
 	}
 	platform_set_drvdata(pdev, NULL);
+
+	mutex_destroy(&iss->iss_mutex);
 	kfree(iss);
 
 	return ret;
