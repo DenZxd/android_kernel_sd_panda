@@ -1095,23 +1095,7 @@ static struct platform_driver iss_driver = {
 	},
 };
 
-static int __init iss_init(void)
-{
-	return platform_driver_register(&iss_driver);
-}
-
-static void __exit iss_exit(void)
-{
-	platform_driver_unregister(&iss_driver);
-}
-
-/*
- * FIXME: Had to make it late_initcall. Strangely while being module_init,
- * The I2C communication was failing in the sensor, because no XCLK was
- * provided.
- */
-late_initcall(iss_init);
-module_exit(iss_exit);
+module_platform_driver(iss_driver);
 
 MODULE_DESCRIPTION("TI OMAP4 ISS driver");
 MODULE_AUTHOR("Sergio Aguirre <saaguirre@ti.com>");
