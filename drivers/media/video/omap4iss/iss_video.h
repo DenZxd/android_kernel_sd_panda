@@ -74,6 +74,10 @@ enum iss_pipeline_state {
 	ISS_PIPELINE_STREAM = (1 << 6),
 };
 
+/*
+ * struct iss_pipeline - An OMAP4 ISS hardware pipeline
+ * @error: A hardware error occurred during capture
+ */
 struct iss_pipeline {
 	struct media_pipeline pipe;
 	spinlock_t lock;		/* Pipeline state and queue flags */
@@ -83,6 +87,7 @@ struct iss_pipeline {
 	struct iss_video *output;
 	atomic_t frame_number;
 	bool do_propagation; /* of frame number */
+	bool error;
 	struct v4l2_fract max_timeperframe;
 };
 
@@ -185,8 +190,7 @@ void omap4iss_video_cleanup(struct iss_video *video);
 int omap4iss_video_register(struct iss_video *video,
 			    struct v4l2_device *vdev);
 void omap4iss_video_unregister(struct iss_video *video);
-struct iss_buffer *omap4iss_video_buffer_next(struct iss_video *video,
-					      unsigned int error);
+struct iss_buffer *omap4iss_video_buffer_next(struct iss_video *video);
 struct media_pad *omap4iss_video_remote_pad(struct iss_video *video);
 
 const struct iss_format_info *

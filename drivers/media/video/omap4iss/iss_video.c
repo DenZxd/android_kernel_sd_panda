@@ -440,21 +440,19 @@ static struct vb2_ops iss_video_vb2ops = {
 /*
  * omap4iss_video_buffer_next - Complete the current buffer and return the next
  * @video: ISS video object
- * @error: Whether an error occurred during capture
  *
  * Remove the current video buffer from the DMA queue and fill its timestamp,
  * field count and state fields before waking up its completion handler.
  *
- * The buffer state is set to VIDEOBUF_DONE if no error occurred (@error is 0)
- * or VIDEOBUF_ERROR otherwise (@error is non-zero).
+ * For capture video nodes, the buffer state is set to VB2_BUF_STATE_DONE if no
+ * error has been flagged in the pipeline, or to VB2_BUF_STATE_ERROR otherwise.
  *
  * The DMA queue is expected to contain at least one buffer.
  *
  * Return a pointer to the next buffer in the DMA queue, or NULL if the queue is
  * empty.
  */
-struct iss_buffer *omap4iss_video_buffer_next(struct iss_video *video,
-					      unsigned int error)
+struct iss_buffer *omap4iss_video_buffer_next(struct iss_video *video)
 {
 	struct iss_pipeline *pipe = to_iss_pipeline(&video->video.entity);
 	enum iss_pipeline_state state;
@@ -488,7 +486,7 @@ struct iss_buffer *omap4iss_video_buffer_next(struct iss_video *video,
 	else
 		buf->vb.v4l2_buf.sequence = atomic_read(&pipe->frame_number);
 
-	vb2_buffer_done(&buf->vb, error < 0 ? VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
+	vb2_buffer_done(&buf->vb, pipe->error ? VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
 
 	spin_lock_irqsave(&video->qlock, flags);
 	if (list_empty(&video->dmaqueue)) {
@@ -845,6 +843,8 @@ iss_video_streamon(struct file *file, void *fh, enum v4l2_buf_type type)
 	ret = iss_video_validate_pipeline(pipe);
 	if (ret < 0)
 		goto error;
+
+	pipe->error = false;
 
 	spin_lock_irqsave(&pipe->lock, flags);
 	pipe->state &= ~ISS_PIPELINE_STREAM;
