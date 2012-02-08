@@ -1154,6 +1154,8 @@ int omap4iss_video_init(struct iss_video *video, const char *name)
 void omap4iss_video_cleanup(struct iss_video *video)
 {
 	media_entity_cleanup(&video->video.entity);
+	mutex_destroy(&video->stream_lock);
+	mutex_destroy(&video->mutex);
 }
 
 int omap4iss_video_register(struct iss_video *video, struct v4l2_device *vdev)
