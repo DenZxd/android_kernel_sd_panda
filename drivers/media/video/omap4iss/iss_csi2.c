@@ -1250,8 +1250,6 @@ static int csi2_init_entities(struct iss_csi2_device *csi2)
 
 void omap4iss_csi2_unregister_entities(struct iss_csi2_device *csi2)
 {
-	media_entity_cleanup(&csi2->subdev.entity);
-
 	v4l2_device_unregister_subdev(&csi2->subdev);
 	omap4iss_video_unregister(&csi2->video_out);
 }
@@ -1286,6 +1284,10 @@ error:
  */
 void omap4iss_csi2_cleanup(struct iss_device *iss)
 {
+	struct iss_csi2_device *csi2a = &iss->csi2a;
+
+	omap4iss_video_cleanup(&csi2a->video_out);
+	media_entity_cleanup(&csi2a->subdev.entity);
 }
 
 /*

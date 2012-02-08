@@ -181,6 +181,7 @@ struct iss_video_fh {
 				container_of(q, struct iss_video_fh, queue)
 
 int omap4iss_video_init(struct iss_video *video, const char *name);
+void omap4iss_video_cleanup(struct iss_video *video);
 int omap4iss_video_register(struct iss_video *video,
 			    struct v4l2_device *vdev);
 void omap4iss_video_unregister(struct iss_video *video);
