@@ -675,7 +675,7 @@ static void csi2_isr_buffer(struct iss_csi2_device *csi2)
 
 	csi2_ctx_enable(csi2, 0, 0);
 
-	buffer = omap4iss_video_buffer_next(&csi2->video_out, 0);
+	buffer = omap4iss_video_buffer_next(&csi2->video_out);
 
 	/*
 	 * Let video queue operation restart engine if there is an underrun
@@ -731,17 +731,15 @@ static void csi2_isr_ctx(struct iss_csi2_device *csi2,
 
 /*
  * omap4iss_csi2_isr - CSI2 interrupt handling.
- *
- * Return -EIO on Transmission error
  */
-int omap4iss_csi2_isr(struct iss_csi2_device *csi2)
+void omap4iss_csi2_isr(struct iss_csi2_device *csi2)
 {
+	struct iss_pipeline *pipe = to_iss_pipeline(&csi2->subdev.entity);
 	u32 csi2_irqstatus, cpxio1_irqstatus;
 	struct iss_device *iss = csi2->iss;
-	int retval = 0;
 
 	if (!csi2->available)
-		return -ENODEV;
+		return;
 
 	csi2_irqstatus = readl(csi2->regs1 + CSI2_IRQSTATUS);
 	writel(csi2_irqstatus, csi2->regs1 + CSI2_IRQSTATUS);
@@ -754,7 +752,7 @@ int omap4iss_csi2_isr(struct iss_csi2_device *csi2)
 			csi2->regs1 + CSI2_COMPLEXIO_IRQSTATUS);
 		dev_dbg(iss->dev, "CSI2: ComplexIO Error IRQ "
 			"%x\n", cpxio1_irqstatus);
-		retval = -EIO;
+		pipe->error = true;
 	}
 
 	if (csi2_irqstatus & (CSI2_IRQ_OCP_ERR |
@@ -779,11 +777,11 @@ int omap4iss_csi2_isr(struct iss_csi2_device *csi2)
 			 CSI2_IRQ_COMPLEXIO_ERR) ? 1 : 0,
 			(csi2_irqstatus &
 			 CSI2_IRQ_FIFO_OVF) ? 1 : 0);
-		retval = -EIO;
+		pipe->error = true;
 	}
 
 	if (omap4iss_module_sync_is_stopping(&csi2->wait, &csi2->stopping))
-		return 0;
+		return;
 
 	/* Successful cases */
 	if (csi2_irqstatus & CSI2_IRQ_CONTEXT0)
@@ -791,8 +789,6 @@ int omap4iss_csi2_isr(struct iss_csi2_device *csi2)
 
 	if (csi2_irqstatus & CSI2_IRQ_ECC_CORRECTION)
 		dev_dbg(iss->dev, "CSI2: ECC correction done\n");
-
-	return retval;
 }
 
 /* -----------------------------------------------------------------------------

@@ -145,7 +145,7 @@ struct iss_csi2_device {
 	atomic_t stopping;
 };
 
-int omap4iss_csi2_isr(struct iss_csi2_device *csi2);
+void omap4iss_csi2_isr(struct iss_csi2_device *csi2);
 int omap4iss_csi2_reset(struct iss_csi2_device *csi2);
 int omap4iss_csi2_init(struct iss_device *iss);
 void omap4iss_csi2_cleanup(struct iss_device *iss);
