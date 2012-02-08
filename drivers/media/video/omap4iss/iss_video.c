@@ -1151,6 +1151,11 @@ int omap4iss_video_init(struct iss_video *video, const char *name)
 	return 0;
 }
 
+void omap4iss_video_cleanup(struct iss_video *video)
+{
+	media_entity_cleanup(&video->video.entity);
+}
+
 int omap4iss_video_register(struct iss_video *video, struct v4l2_device *vdev)
 {
 	int ret;
@@ -1167,8 +1172,6 @@ int omap4iss_video_register(struct iss_video *video, struct v4l2_device *vdev)
 
 void omap4iss_video_unregister(struct iss_video *video)
 {
-	if (video_is_registered(&video->video)) {
-		media_entity_cleanup(&video->video.entity);
+	if (video_is_registered(&video->video))
 		video_unregister_device(&video->video);
-	}
 }
