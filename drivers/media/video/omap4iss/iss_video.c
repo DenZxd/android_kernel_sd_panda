@@ -125,13 +125,13 @@ static unsigned int iss_video_mbus_to_pix(const struct iss_video *video,
 	pix->width = mbus->width;
 	pix->height = mbus->height;
 
-	for (i = 0; i < ARRAY_SIZE(formats); ++i) {
+	/* Skip the last format in the loop so that it will be selected if no
+	 * match is found.
+	 */
+	for (i = 0; i < ARRAY_SIZE(formats) - 1; ++i) {
 		if (formats[i].code == mbus->code)
 			break;
 	}
-
-	if (WARN_ON(i == ARRAY_SIZE(formats)))
-		return 0;
 
 	min_bpl = pix->width * ALIGN(formats[i].bpp, 8) / 8;
 
