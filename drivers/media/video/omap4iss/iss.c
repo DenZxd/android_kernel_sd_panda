@@ -353,7 +353,7 @@ static int iss_pipeline_enable(struct iss_pipeline *pipe,
 	struct media_pad *pad;
 	struct v4l2_subdev *subdev;
 	unsigned long flags;
-	int ret = 0;
+	int ret;
 
 	spin_lock_irqsave(&pipe->lock, flags);
 	pipe->state &= ~(ISS_PIPELINE_IDLE_INPUT | ISS_PIPELINE_IDLE_OUTPUT);
@@ -377,10 +377,10 @@ static int iss_pipeline_enable(struct iss_pipeline *pipe,
 
 		ret = v4l2_subdev_call(subdev, video, s_stream, mode);
 		if (ret < 0 && ret != -ENOIOCTLCMD)
-			break;
+			return ret;
 	}
 
-	return ret;
+	return 0;
 }
 
 /*
