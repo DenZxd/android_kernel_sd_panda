@@ -838,6 +838,7 @@ static int iss_register_entities(struct iss_device *iss)
 	iss->media_dev.dev = iss->dev;
 	strlcpy(iss->media_dev.model, "TI OMAP4 ISS",
 		sizeof(iss->media_dev.model));
+	iss->media_dev.hw_revision = iss->revision;
 	iss->media_dev.link_notify = iss_pipeline_link_notify;
 	ret = media_device_register(&iss->media_dev);
 	if (ret < 0) {
