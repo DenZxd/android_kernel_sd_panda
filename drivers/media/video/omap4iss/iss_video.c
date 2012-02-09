@@ -1005,6 +1005,9 @@ static int iss_video_release(struct file *file)
 
 	omap4iss_pipeline_pm_use(&video->video.entity, 0);
 
+	/* Release the videobuf2 queue */
+	vb2_queue_release(&handle->queue);
+
 	/* Release the file handle. */
 	v4l2_fh_del(vfh);
 	kfree(handle);
