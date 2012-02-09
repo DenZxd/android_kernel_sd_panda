@@ -813,6 +813,9 @@ iss_video_streamon(struct file *file, void *fh, enum v4l2_buf_type type)
 	pipe->external_rate = 0;
 	pipe->external_bpp = 0;
 
+	if (video->iss->pdata->set_constraints)
+		video->iss->pdata->set_constraints(video->iss, true);
+
 	ret = media_entity_pipeline_start(&video->video.entity, &pipe->pipe);
 	if (ret < 0)
 		goto err_media_entity_pipeline_start;
@@ -846,9 +849,6 @@ iss_video_streamon(struct file *file, void *fh, enum v4l2_buf_type type)
 		pipe->input = video;
 		pipe->output = far_end;
 	}
-
-	if (video->iss->pdata->set_constraints)
-		video->iss->pdata->set_constraints(video->iss, true);
 
 	/* Validate the pipeline and update its state. */
 	ret = iss_video_validate_pipeline(pipe);
