@@ -1016,6 +1016,23 @@ static int csi2_set_format(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 	return 0;
 }
 
+static int csi2_link_validate(struct v4l2_subdev *sd, struct media_link *link,
+			      struct v4l2_subdev_format *source_fmt,
+			      struct v4l2_subdev_format *sink_fmt)
+{
+	struct iss_csi2_device *csi2 = v4l2_get_subdevdata(sd);
+	struct iss_pipeline *pipe = to_iss_pipeline(&csi2->subdev.entity);
+	int rval;
+
+	pipe->external = media_entity_to_v4l2_subdev(link->source->entity);
+	rval = omap4iss_get_external_info(pipe, link);
+	if (rval < 0)
+		return rval;
+
+	return v4l2_subdev_link_validate_default(sd, link, source_fmt,
+						 sink_fmt);
+}
+
 /*
  * csi2_init_formats - Initialize formats on all pads
  * @sd: ISS CSI2 V4L2 subdevice
@@ -1116,6 +1133,7 @@ static const struct v4l2_subdev_pad_ops csi2_pad_ops = {
 	.enum_frame_size = csi2_enum_frame_size,
 	.get_fmt = csi2_get_format,
 	.set_fmt = csi2_set_format,
+	.link_validate = csi2_link_validate,
 };
 
 /* subdev operations */
@@ -1190,6 +1208,7 @@ static int csi2_link_setup(struct media_entity *entity,
 /* media operations */
 static const struct media_entity_operations csi2_media_ops = {
 	.link_setup = csi2_link_setup,
+	.link_validate = v4l2_subdev_link_validate,
 };
 
 void omap4iss_csi2_unregister_entities(struct iss_csi2_device *csi2)
