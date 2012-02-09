@@ -88,6 +88,9 @@ struct iss_pipeline {
 	bool do_propagation; /* of frame number */
 	bool error;
 	struct v4l2_fract max_timeperframe;
+	struct v4l2_subdev *external;
+	unsigned int external_rate;
+	int external_bpp;
 };
 
 #define to_iss_pipeline(__e) \
