@@ -52,7 +52,7 @@ void omap4iss_flush(struct iss_device *iss)
  */
 static void iss_enable_interrupts(struct iss_device *iss)
 {
-	static const u32 irq = ISS_HL_IRQ_CSIA;
+	static const u32 irq = ISS_HL_IRQ_CSIA | ISS_HL_IRQ_CSIA;
 
 	/* Enable HL interrupts */
 	writel(irq, iss->regs[OMAP4_ISS_MEM_TOP] + ISS_HL_IRQSTATUS_5);
@@ -183,6 +183,9 @@ static irqreturn_t iss_isr(int irq, void *_iss)
 
 	if (irqstatus & ISS_HL_IRQ_CSIA)
 		omap4iss_csi2_isr(&iss->csi2a);
+
+	if (irqstatus & ISS_HL_IRQ_CSIB)
+		omap4iss_csi2_isr(&iss->csi2b);
 
 	omap4iss_flush(iss);
 
@@ -620,7 +623,7 @@ int omap4iss_module_sync_is_stopping(wait_queue_head_t *wait,
  * Clock management
  */
 
-#define ISS_CLKCTRL_MASK	(ISS_CLKCTRL_CSI2_A)
+#define ISS_CLKCTRL_MASK	(ISS_CLKCTRL_CSI2_A | ISS_CLKCTRL_CSI2_B)
 
 static int __iss_subclk_update(struct iss_device *iss)
 {
@@ -629,6 +632,9 @@ static int __iss_subclk_update(struct iss_device *iss)
 
 	if (iss->subclk_resources & OMAP4_ISS_SUBCLK_CSI2_A)
 		clk |= ISS_CLKCTRL_CSI2_A;
+
+	if (iss->subclk_resources & OMAP4_ISS_SUBCLK_CSI2_B)
+		clk |= ISS_CLKCTRL_CSI2_B;
 
 	writel((readl(iss->regs[OMAP4_ISS_MEM_TOP] + ISS_CLKCTRL) &
 		~ISS_CLKCTRL_MASK) | clk,
@@ -909,6 +915,10 @@ static int iss_register_entities(struct iss_device *iss)
 	if (ret < 0)
 		goto done;
 
+	ret = omap4iss_csi2_register_entities(&iss->csi2b, &iss->v4l2_dev);
+	if (ret < 0)
+		goto done;
+
 	/* Register external entities */
 	for (subdevs = pdata->subdevs; subdevs && subdevs->subdevs; ++subdevs) {
 		struct v4l2_subdev *sensor;
@@ -923,11 +933,19 @@ static int iss_register_entities(struct iss_device *iss)
 		sensor->host_priv = subdevs;
 
 		/* Connect the sensor to the correct interface module.
-		 * CSI2a receiver through CSIPHY1.
+		 * CSI2a receiver through CSIPHY1, or
+		 * CSI2b receiver through CSIPHY2
 		 */
 		switch (subdevs->interface) {
 		case ISS_INTERFACE_CSI2A_PHY1:
 			input = &iss->csi2a.subdev.entity;
+			pad = CSI2_PAD_SINK;
+			flags = MEDIA_LNK_FL_IMMUTABLE
+			      | MEDIA_LNK_FL_ENABLED;
+			break;
+
+		case ISS_INTERFACE_CSI2B_PHY2:
+			input = &iss->csi2b.subdev.entity;
 			pad = CSI2_PAD_SINK;
 			flags = MEDIA_LNK_FL_IMMUTABLE
 			      | MEDIA_LNK_FL_ENABLED;
