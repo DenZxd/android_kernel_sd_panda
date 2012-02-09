@@ -52,7 +52,7 @@ void omap4iss_flush(struct iss_device *iss)
  */
 static void iss_enable_interrupts(struct iss_device *iss)
 {
-	static const u32 irq = ISS_HL_IRQ_CSIA | ISS_HL_IRQ_CSIA;
+	static const u32 irq = ISS_HL_IRQ_CSIA | ISS_HL_IRQ_CSIB;
 
 	/* Enable HL interrupts */
 	writel(irq, iss->regs[OMAP4_ISS_MEM_TOP] + ISS_HL_IRQSTATUS_5);
