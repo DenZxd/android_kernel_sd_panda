@@ -1184,6 +1184,7 @@ add_children(struct twl4030_platform_data *pdata, unsigned long features,
 
 	}
 
+#if !(defined(CONFIG_TWL6030_GPADC) || defined(CONFIG_TWL6030_GPADC_MODULE))
 	if (twl_has_bci() && pdata->bci &&
 			!(features & (TPS_SUBSET | TWL5031)) && (features & TWL6030_CLASS)) {
 		child = add_child(3, "twl4030_bci",
@@ -1194,6 +1195,7 @@ add_children(struct twl4030_platform_data *pdata, unsigned long features,
 		if (IS_ERR(child))
 			return PTR_ERR(child);
 	}
+#endif
 
 	return 0;
 }
