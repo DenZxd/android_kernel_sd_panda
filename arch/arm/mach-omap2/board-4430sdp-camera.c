@@ -24,7 +24,7 @@
 static struct clk *sdp4430_cam_aux_clk;
 static struct regulator *sdp4430_cam2pwr_reg;
 
-static int sdp4430_ov5640_power(struct v4l2_subdev *subdev, int on)
+static int sdp4430_ov_cam2_power(struct v4l2_subdev *subdev, int on)
 {
 	struct device *dev = subdev->v4l2_dev->dev;
 	int ret;
@@ -80,28 +80,38 @@ static int sdp4430_ov5640_power(struct v4l2_subdev *subdev, int on)
 }
 
 #define OV5640_I2C_ADDRESS   (0x3C)
+
+static struct ov5640_platform_data ov5640_platform_data = {
+      .s_power = sdp4430_ov_cam2_power,
+};
+
+static struct i2c_board_info ov5640_camera_i2c_device = {
+	I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
+	.platform_data = &ov5640_platform_data,
+};
+
 #define OV5650_I2C_ADDRESS   (0x36)
 
-#ifdef CONFIG_MACH_OMAP_4430SDP_CAM_OV5650
-static struct ov5650_platform_data ov_platform_data = {
-#elif defined(CONFIG_MACH_OMAP_4430SDP_CAM_OV5640)
-static struct ov5640_platform_data ov_platform_data = {
-#endif
-      .s_power = sdp4430_ov5640_power,
+static struct ov5650_platform_data ov5650_platform_data = {
+      .s_power = sdp4430_ov_cam2_power,
 };
 
-static struct i2c_board_info ov_camera_i2c_device = {
-#ifdef CONFIG_MACH_OMAP_4430SDP_CAM_OV5650
+static struct i2c_board_info ov5650_camera_i2c_device = {
 	I2C_BOARD_INFO("ov5650", OV5650_I2C_ADDRESS),
-#elif defined(CONFIG_MACH_OMAP_4430SDP_CAM_OV5640)
-	I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
-#endif
-	.platform_data = &ov_platform_data,
+	.platform_data = &ov5650_platform_data,
 };
 
-static struct iss_subdev_i2c_board_info ov_camera_subdevs[] = {
+static struct iss_subdev_i2c_board_info ov5640_cam2_subdevs[] = {
 	{
-		.board_info = &ov_camera_i2c_device,
+		.board_info = &ov5640_camera_i2c_device,
+		.i2c_adapter_id = 3,
+	},
+	{ NULL, 0, },
+};
+
+static struct iss_subdev_i2c_board_info ov5650_cam2_subdevs[] = {
+	{
+		.board_info = &ov5650_camera_i2c_device,
 		.i2c_adapter_id = 3,
 	},
 	{ NULL, 0, },
@@ -109,7 +119,7 @@ static struct iss_subdev_i2c_board_info ov_camera_subdevs[] = {
 
 static struct iss_v4l2_subdevs_group sdp4430_camera_subdevs[] = {
 	{
-		.subdevs = ov_camera_subdevs,
+		.subdevs = ov5640_cam2_subdevs,
 		.interface = ISS_INTERFACE_CSI2A_PHY1,
 		.bus = { .csi2 = {
 			.lanecfg	= {
@@ -121,12 +131,26 @@ static struct iss_v4l2_subdevs_group sdp4430_camera_subdevs[] = {
 					.pol = 0,
 					.pos = 2,
 				},
-#ifdef CONFIG_MACH_OMAP_4430SDP_CAM_OV5650
+			},
+		} },
+	},
+	{
+		.subdevs = ov5650_cam2_subdevs,
+		.interface = ISS_INTERFACE_CSI2A_PHY1,
+		.bus = { .csi2 = {
+			.lanecfg	= {
+				.clk = {
+					.pol = 0,
+					.pos = 1,
+				},
+				.data[0] = {
+					.pol = 0,
+					.pos = 2,
+				},
 				.data[1] = {
 					.pol = 0,
 					.pos = 3,
 				},
-#endif
 			},
 		} },
 	},
