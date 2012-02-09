@@ -23,48 +23,15 @@ static struct clk *panda_cam_aux_clk;
 
 static int panda_ov5640_power(struct v4l2_subdev *subdev, int on)
 {
-	struct iss_device *iss = v4l2_dev_to_iss_device(subdev->v4l2_dev);
-	struct iss_csiphy_dphy_cfg dphy;
-	struct iss_csiphy_lanes_cfg lanes;
-#ifdef CONFIG_MACH_OMAP4_PANDA_CAM_OV5650
-	unsigned int ddr_freq = 480; /* FIXME: Do an actual query for this */
-#elif defined(CONFIG_MACH_OMAP4_PANDA_CAM_OV5640)
-	unsigned int ddr_freq = 336; /* FIXME: Do an actual query for this */
-#endif
-
-	memset(&lanes, 0, sizeof(lanes));
-	memset(&dphy, 0, sizeof(dphy));
-
-	lanes.clk.pos = 1;
-	lanes.clk.pol = 0;
-	lanes.data[0].pos = 2;
-	lanes.data[0].pol = 0;
-#ifdef CONFIG_MACH_OMAP4_PANDA_CAM_OV5650
-	lanes.data[1].pos = 3;
-	lanes.data[1].pol = 0;
-#endif
-
-	dphy.ths_term = ((((12500 * ddr_freq + 1000000) / 1000000) - 1) & 0xFF);
-	dphy.ths_settle = ((((90000 * ddr_freq + 1000000) / 1000000) + 3) & 0xFF);
-	dphy.tclk_term = 0;
-	dphy.tclk_miss = 1;
-	dphy.tclk_settle = 14;
+	struct device *dev = subdev->v4l2_dev->dev;
 
 	if (on) {
 		int ret;
 
-		ret = iss->platform_cb.csiphy_config(&iss->csiphy1, &dphy, &lanes);
-		if (ret) {
-			dev_err(iss->dev,
-				"Error in configuring CSIPHY in %s(%d)\n",
-				__func__, on);
-			return ret;
-		}
-
 		gpio_set_value(PANDA_GPIO_CAM_PWRDN, 0);
 		ret = clk_enable(panda_cam_aux_clk);
 		if (ret) {
-			dev_err(iss->dev,
+			dev_err(dev,
 				"Error in clk_enable() in %s(%d)\n",
 				__func__, on);
 			gpio_set_value(PANDA_GPIO_CAM_PWRDN, 1);
@@ -111,6 +78,24 @@ static struct iss_v4l2_subdevs_group panda_camera_subdevs[] = {
 	{
 		.subdevs = ov_camera_subdevs,
 		.interface = ISS_INTERFACE_CSI2A_PHY1,
+		.bus = { .csi2 = {
+			.lanecfg	= {
+				.clk = {
+					.pol = 0,
+					.pos = 1,
+				},
+				.data[0] = {
+					.pol = 0,
+					.pos = 2,
+				},
+#ifdef CONFIG_MACH_OMAP4_PANDA_CAM_OV5650
+				.data[1] = {
+					.pol = 0,
+					.pos = 3,
+				},
+#endif
+			},
+		} },
 	},
 	{ },
 };
