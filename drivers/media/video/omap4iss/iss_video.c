@@ -225,72 +225,6 @@ iss_video_far_end(struct iss_video *video)
 	return far_end;
 }
 
-/*
- * Validate a pipeline by checking both ends of all links for format
- * discrepancies.
- *
- * Compute the minimum time per frame value as the maximum of time per frame
- * limits reported by every block in the pipeline.
- *
- * Return 0 if all formats match, or -EPIPE if at least one link is found with
- * different formats on its two ends or if the pipeline doesn't start with a
- * video source (either a subdev with no input pad, or a non-subdev entity).
- */
-static int iss_video_validate_pipeline(struct iss_pipeline *pipe)
-{
-	struct v4l2_subdev_format fmt_source;
-	struct v4l2_subdev_format fmt_sink;
-	struct media_pad *pad;
-	struct v4l2_subdev *subdev;
-	int ret;
-
-	subdev = iss_video_remote_subdev(pipe->output, NULL);
-	if (subdev == NULL)
-		return -EPIPE;
-
-	while (1) {
-		/* Retrieve the sink format */
-		pad = &subdev->entity.pads[0];
-		if (!(pad->flags & MEDIA_PAD_FL_SINK))
-			break;
-
-		fmt_sink.pad = pad->index;
-		fmt_sink.which = V4L2_SUBDEV_FORMAT_ACTIVE;
-		ret = v4l2_subdev_call(subdev, pad, get_fmt, NULL, &fmt_sink);
-		if (ret < 0 && ret != -ENOIOCTLCMD)
-			return -EPIPE;
-
-		/* Retrieve the source format. Return an error if no source
-		 * entity can be found, and stop checking the pipeline if the
-		 * source entity isn't a subdev.
-		 */
-		pad = media_entity_remote_source(pad);
-		if (pad == NULL)
-			return -EPIPE;
-
-		if (media_entity_type(pad->entity) != MEDIA_ENT_T_V4L2_SUBDEV)
-			break;
-
-		subdev = media_entity_to_v4l2_subdev(pad->entity);
-
-		fmt_source.pad = pad->index;
-		fmt_source.which = V4L2_SUBDEV_FORMAT_ACTIVE;
-		ret = v4l2_subdev_call(subdev, pad, get_fmt, NULL, &fmt_source);
-		if (ret < 0 && ret != -ENOIOCTLCMD)
-			return -EPIPE;
-
-		/* Check if the two ends match */
-		if (fmt_source.format.width != fmt_sink.format.width ||
-		    fmt_source.format.height != fmt_sink.format.height)
-			return -EPIPE;
-
-		if (fmt_source.format.code != fmt_sink.format.code)
-			return -EPIPE;
-	}
-
-	return 0;
-}
-
 static int
 __iss_video_get_format(struct iss_video *video, struct v4l2_format *format)
 {
@@ -849,13 +783,6 @@ iss_video_streamon(struct file *file, void *fh, enum v4l2_buf_type type)
 		pipe->input = video;
 		pipe->output = far_end;
 	}
-
-	/* Validate the pipeline and update its state. */
-	ret = iss_video_validate_pipeline(pipe);
-	if (ret < 0)
-		goto err_iss_video_check_format;
-
-	pipe->error = false;
 
 	spin_lock_irqsave(&pipe->lock, flags);
 	pipe->state &= ~ISS_PIPELINE_STREAM;
