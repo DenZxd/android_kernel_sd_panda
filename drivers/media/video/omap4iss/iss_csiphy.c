@@ -14,6 +14,8 @@
 #include <linux/delay.h>
 #include <linux/device.h>
 
+#include "../../../../arch/arm/mach-omap2/control.h"
+
 #include "iss.h"
 #include "iss_regs.h"
 #include "iss_csiphy.h"
@@ -107,15 +109,74 @@ static void csiphy_dphy_config(struct iss_csiphy *phy)
 	writel(reg, phy->phy_regs + REGISTER1);
 }
 
-static int csiphy_config(struct iss_csiphy *phy,
-			 struct iss_csiphy_dphy_cfg *dphy,
-			 struct iss_csiphy_lanes_cfg *lanes)
+/*
+ * TCLK values are OK at their reset values
+ */
+#define TCLK_TERM	0
+#define TCLK_MISS	1
+#define TCLK_SETTLE	14
+
+int omap4iss_csiphy_config(struct iss_device *iss,
+			   struct v4l2_subdev *csi2_subdev)
 {
+	struct iss_csi2_device *csi2 = v4l2_get_subdevdata(csi2_subdev);
+	struct iss_pipeline *pipe = to_iss_pipeline(&csi2_subdev->entity);
+	struct iss_v4l2_subdevs_group *subdevs = pipe->external->host_priv;
+	struct iss_csiphy_dphy_cfg csi2phy;
+	int csi2_ddrclk_khz;
+	struct iss_csiphy_lanes_cfg *lanes;
 	unsigned int used_lanes = 0;
 	unsigned int i;
 
+	lanes = &subdevs->bus.csi2.lanecfg;
+
+	if (cpu_is_omap44xx()) {
+		u32 cam_rx_ctrl = omap4_ctrl_pad_readl(
+				OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_CAMERA_RX);
+
+		/*
+		 * SCM.CONTROL_CAMERA_RX
+		 * - bit [31] : CSIPHY2 lane 2 enable (4460+ only)
+		 * - bit [30:29] : CSIPHY2 per-lane enable (1 to 0)
+		 * - bit [28:24] : CSIPHY1 per-lane enable (4 to 0)
+		 * - bit [21] : CSIPHY2 CTRLCLK enable
+		 * - bit [20:19] : CSIPHY2 config: 00 d-phy, 01/10 ccp2
+		 * - bit [18] : CSIPHY1 CTRLCLK enable
+		 * - bit [17:16] : CSIPHY1 config: 00 d-phy, 01/10 ccp2
+		 */
+
+		cam_rx_ctrl &= ~(OMAP4_CAMERARX_CSI21_LANEENABLE_MASK |
+					OMAP4_CAMERARX_CSI21_CAMMODE_MASK);
+
+		if (subdevs->interface == ISS_INTERFACE_CSI2A_PHY1) {
+			/* NOTE: Leave CSIPHY1 config to 0x0: D-PHY mode */
+			/* Enable all lanes for now */
+			cam_rx_ctrl |=
+				0x7 << OMAP4_CAMERARX_CSI21_LANEENABLE_SHIFT;
+			/* Enable CTRLCLK */
+			cam_rx_ctrl |= OMAP4_CAMERARX_CSI21_CTRLCLKEN_MASK;
+		}
+
+		omap4_ctrl_pad_writel(cam_rx_ctrl,
+			 OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_CAMERA_RX);
+	}
+
+	csi2_ddrclk_khz = pipe->external_rate / 1000
+		/ (2 * csi2->phy->num_data_lanes)
+		* pipe->external_bpp;
+
+	/*
+	 * THS_TERM: Programmed value = ceil(12.5 ns/DDRClk period) - 1.
+	 * THS_SETTLE: Programmed value = ceil(90 ns/DDRClk period) + 3.
+	 */
+	csi2phy.ths_term = DIV_ROUND_UP(25 * csi2_ddrclk_khz, 2000000) - 1;
+	csi2phy.ths_settle = DIV_ROUND_UP(90 * csi2_ddrclk_khz, 1000000) + 3;
+	csi2phy.tclk_term = TCLK_TERM;
+	csi2phy.tclk_miss = TCLK_MISS;
+	csi2phy.tclk_settle = TCLK_SETTLE;
+
 	/* Clock and data lanes verification */
-	for (i = 0; i < phy->num_data_lanes; i++) {
+	for (i = 0; i < csi2->phy->num_data_lanes; i++) {
 		if (lanes->data[i].pos == 0)
 			continue;
 
@@ -134,10 +195,10 @@ static int csiphy_config(struct iss_csiphy *phy,
 	if (lanes->clk.pos == 0 || used_lanes & (1 << lanes->clk.pos))
 		return -EINVAL;
 
-	mutex_lock(&phy->mutex);
-	phy->dphy = *dphy;
-	phy->lanes = *lanes;
-	mutex_unlock(&phy->mutex);
+	mutex_lock(&csi2->phy->mutex);
+	csi2->phy->dphy = csi2phy;
+	csi2->phy->lanes = *lanes;
+	mutex_unlock(&csi2->phy->mutex);
 
 	return 0;
 }
@@ -182,8 +243,6 @@ void omap4iss_csiphy_release(struct iss_csiphy *phy)
 int omap4iss_csiphy_init(struct iss_device *iss)
 {
 	struct iss_csiphy *phy1 = &iss->csiphy1;
-
-	iss->platform_cb.csiphy_config = csiphy_config;
 
 	phy1->iss = iss;
 	phy1->csi2 = &iss->csi2a;

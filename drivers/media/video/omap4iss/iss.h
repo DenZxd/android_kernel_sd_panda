@@ -57,12 +57,6 @@ struct iss_reg {
 	u32 val;
 };
 
-struct iss_platform_callback {
-	int (*csiphy_config)(struct iss_csiphy *phy,
-			     struct iss_csiphy_dphy_cfg *dphy,
-			     struct iss_csiphy_lanes_cfg *lanes);
-};
-
 struct iss_device {
 	struct v4l2_device v4l2_dev;
 	struct media_device media_dev;
@@ -90,8 +84,6 @@ struct iss_device {
 	struct iss_csiphy csiphy1;
 
 	unsigned int subclk_resources;
-
-	struct iss_platform_callback platform_cb;
 };
 
 #define v4l2_dev_to_iss_device(dev) \

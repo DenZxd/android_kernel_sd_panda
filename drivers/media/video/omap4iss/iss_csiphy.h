@@ -41,6 +41,8 @@ struct iss_csiphy {
 	struct iss_csiphy_dphy_cfg dphy;
 };
 
+int omap4iss_csiphy_config(struct iss_device *iss,
+			   struct v4l2_subdev *csi2_subdev);
 int omap4iss_csiphy_acquire(struct iss_csiphy *phy);
 void omap4iss_csiphy_release(struct iss_csiphy *phy);
 int omap4iss_csiphy_init(struct iss_device *iss);
