@@ -809,14 +809,16 @@ iss_video_streamon(struct file *file, void *fh, enum v4l2_buf_type type)
 	 */
 	pipe = video->video.entity.pipe
 	     ? to_iss_pipeline(&video->video.entity) : &video->pipe;
-	media_entity_pipeline_start(&video->video.entity, &pipe->pipe);
+	ret = media_entity_pipeline_start(&video->video.entity, &pipe->pipe);
+	if (ret < 0)
+		goto err_media_entity_pipeline_start;
 
 	/* Verify that the currently configured format matches the output of
 	 * the connected subdev.
 	 */
 	ret = iss_video_check_format(video, vfh);
 	if (ret < 0)
-		goto error;
+		goto err_iss_video_check_format;
 
 	video->bpl_padding = ret;
 	video->bpl_value = vfh->format.fmt.pix.bytesperline;
@@ -833,7 +835,7 @@ iss_video_streamon(struct file *file, void *fh, enum v4l2_buf_type type)
 	} else {
 		if (far_end == NULL) {
 			ret = -EPIPE;
-			goto error;
+			goto err_iss_video_check_format;
 		}
 
 		state = ISS_PIPELINE_STREAM_INPUT | ISS_PIPELINE_IDLE_INPUT;
@@ -847,7 +849,7 @@ iss_video_streamon(struct file *file, void *fh, enum v4l2_buf_type type)
 	/* Validate the pipeline and update its state. */
 	ret = iss_video_validate_pipeline(pipe);
 	if (ret < 0)
-		goto error;
+		goto err_iss_video_check_format;
 
 	pipe->error = false;
 
@@ -870,7 +872,7 @@ iss_video_streamon(struct file *file, void *fh, enum v4l2_buf_type type)
 
 	ret = vb2_streamon(&vfh->queue, type);
 	if (ret < 0)
-		goto error;
+		goto err_iss_video_check_format;
 
 	/* In sensor-to-memory mode, the stream can be started synchronously
 	 * to the stream on command. In memory-to-memory mode, it will be
@@ -881,19 +883,21 @@ iss_video_streamon(struct file *file, void *fh, enum v4l2_buf_type type)
 		ret = omap4iss_pipeline_set_stream(pipe,
 					      ISS_PIPELINE_STREAM_CONTINUOUS);
 		if (ret < 0)
-			goto error;
+			goto err_omap4iss_set_stream;
 		spin_lock_irqsave(&video->qlock, flags);
 		if (list_empty(&video->dmaqueue))
 			video->dmaqueue_flags |= ISS_VIDEO_DMAQUEUE_UNDERRUN;
 		spin_unlock_irqrestore(&video->qlock, flags);
 	}
 
-error:
 	if (ret < 0) {
+err_omap4iss_set_stream:
 		vb2_streamoff(&vfh->queue, type);
+err_iss_video_check_format:
+		media_entity_pipeline_stop(&video->video.entity);
+err_media_entity_pipeline_start:
 		if (video->iss->pdata->set_constraints)
 			video->iss->pdata->set_constraints(video->iss, false);
-		media_entity_pipeline_stop(&video->video.entity);
 		video->queue = NULL;
 	}
 
