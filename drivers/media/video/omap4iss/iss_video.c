@@ -809,6 +809,10 @@ iss_video_streamon(struct file *file, void *fh, enum v4l2_buf_type type)
 	 */
 	pipe = video->video.entity.pipe
 	     ? to_iss_pipeline(&video->video.entity) : &video->pipe;
+	pipe->external = NULL;
+	pipe->external_rate = 0;
+	pipe->external_bpp = 0;
+
 	ret = media_entity_pipeline_start(&video->video.entity, &pipe->pipe);
 	if (ret < 0)
 		goto err_media_entity_pipeline_start;
