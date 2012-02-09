@@ -14,19 +14,9 @@
 #ifndef OMAP4_ISS_CSI_PHY_H
 #define OMAP4_ISS_CSI_PHY_H
 
+#include <media/omap4iss.h>
+
 struct iss_csi2_device;
-
-struct csiphy_lane {
-	u8 pos;
-	u8 pol;
-};
-
-#define ISS_CSIPHY1_NUM_DATA_LANES	4
-
-struct iss_csiphy_lanes_cfg {
-	struct csiphy_lane data[ISS_CSIPHY1_NUM_DATA_LANES];
-	struct csiphy_lane clk;
-};
 
 struct iss_csiphy_dphy_cfg {
 	u8 ths_term;
