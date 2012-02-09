@@ -1079,7 +1079,13 @@ static int csi2_set_stream(struct v4l2_subdev *sd, int enable)
 	}
 
 	switch (enable) {
-	case ISS_PIPELINE_STREAM_CONTINUOUS:
+	case ISS_PIPELINE_STREAM_CONTINUOUS: {
+		int ret;
+
+		ret = omap4iss_csiphy_config(iss, sd);
+		if (ret < 0)
+			return ret;
+
 		if (omap4iss_csiphy_acquire(csi2->phy) < 0)
 			return -ENODEV;
 		csi2->use_fs_irq = pipe->do_propagation;
@@ -1101,7 +1107,7 @@ static int csi2_set_stream(struct v4l2_subdev *sd, int enable)
 		csi2_if_enable(csi2, 1);
 		iss_video_dmaqueue_flags_clr(video_out);
 		break;
-
+	}
 	case ISS_PIPELINE_STREAM_STOPPED:
 		if (csi2->state == ISS_PIPELINE_STREAM_STOPPED)
 			return 0;
