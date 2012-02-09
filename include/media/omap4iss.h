@@ -10,6 +10,28 @@ enum iss_interface_type {
 };
 
 /**
+ * struct iss_csiphy_lane: CSI2 lane position and polarity
+ * @pos: position of the lane
+ * @pol: polarity of the lane
+ */
+struct iss_csiphy_lane {
+	u8 pos;
+	u8 pol;
+};
+
+#define ISS_CSIPHY1_NUM_DATA_LANES	4
+
+/**
+ * struct iss_csiphy_lanes_cfg - CSI2 lane configuration
+ * @data: Configuration of one or two data lanes
+ * @clk: Clock lane configuration
+ */
+struct iss_csiphy_lanes_cfg {
+	struct iss_csiphy_lane data[ISS_CSIPHY1_NUM_DATA_LANES];
+	struct iss_csiphy_lane clk;
+};
+
+/**
  * struct iss_csi2_platform_data - CSI2 interface platform data
  * @crc: Enable the cyclic redundancy check
  * @vpclk_div: Video port output clock control
@@ -17,6 +39,7 @@ enum iss_interface_type {
 struct iss_csi2_platform_data {
 	unsigned crc:1;
 	unsigned vpclk_div:2;
+	struct iss_csiphy_lanes_cfg lanecfg;
 };
 
 struct iss_subdev_i2c_board_info {
