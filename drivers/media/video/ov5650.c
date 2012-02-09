@@ -22,6 +22,7 @@
 
 #include <media/v4l2-device.h>
 #include <media/v4l2-subdev.h>
+#include <media/v4l2-ctrls.h>
 
 #include <media/ov5650.h>
 
@@ -64,7 +65,11 @@ struct ov5650 {
 
 	struct v4l2_mbus_framefmt format;
 
+	struct v4l2_ctrl_handler ctrl_handler;
+
 	const struct ov5650_platform_data *pdata;
+
+	struct v4l2_ctrl *pixel_rate;
 };
 
 static inline struct ov5650 *to_ov5650(struct v4l2_subdev *sd)
@@ -369,6 +374,7 @@ static int ov5650_s_power(struct v4l2_subdev *sd, int on)
 static int ov5650_registered(struct v4l2_subdev *subdev)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(subdev);
+	struct ov5650 *ov5650 = to_ov5650(subdev);
 	int ret = 0;
 	u8 chipid[2];
 
@@ -401,6 +407,17 @@ static int ov5650_registered(struct v4l2_subdev *subdev)
 			chipid[0], chipid[1],
 			(chipid[1] == 0x50) ? "1A": "1B/1C");
 
+	/* Init controls */
+	ret = v4l2_ctrl_handler_init(&ov5650->ctrl_handler, 1);
+	if (ret)
+		goto out;
+
+	ov5650->pixel_rate = v4l2_ctrl_new_std(
+		&ov5650->ctrl_handler, NULL,
+		V4L2_CID_IMAGE_PROC_PIXEL_RATE,
+		0, 0, 1, 0);
+
+	subdev->ctrl_handler = &ov5650->ctrl_handler;
 out:
 	ov5650_s_power(subdev, 0);
 
@@ -544,6 +561,16 @@ static int ov5650_s_fmt(struct v4l2_subdev *sd,
 
 	*__format = format->format;
 
+	/* NOTE: This is always true for now, revisit later. */
+	/* For RAW10, pixelrate is 80% lower, since the same
+	 * Mbps ratio is preserved, but more bits per pixel are
+	 * transmitted.
+	 */
+	if (__format->code == V4L2_MBUS_FMT_SGRBG10_1X10)
+		ov5650->pixel_rate->cur.val64 = 384000000;
+	else if (__format->code == V4L2_MBUS_FMT_SGRBG8_1X8)
+		ov5650->pixel_rate->cur.val64 = 480000000;
+
 	return 0;
 }
 
@@ -653,6 +680,7 @@ static int ov5650_remove(struct i2c_client *client)
 	struct v4l2_subdev *subdev = i2c_get_clientdata(client);
 	struct ov5650 *ov5650 = to_ov5650(subdev);
 
+	v4l2_ctrl_handler_free(&ov5650->ctrl_handler);
 	v4l2_device_unregister_subdev(subdev);
 	media_entity_cleanup(&subdev->entity);
 	kfree(ov5650);
