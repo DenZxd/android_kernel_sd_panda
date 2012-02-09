@@ -22,6 +22,7 @@
 
 #include <media/v4l2-device.h>
 #include <media/v4l2-subdev.h>
+#include <media/v4l2-ctrls.h>
 
 #include <media/ov5640.h>
 
@@ -87,7 +88,12 @@ struct ov5640 {
 	struct v4l2_subdev subdev;
 	struct media_pad pad;
 	struct v4l2_mbus_framefmt format;
+
+	struct v4l2_ctrl_handler ctrl_handler;
+
 	const struct ov5640_platform_data *pdata;
+
+	struct v4l2_ctrl *pixel_rate;
 };
 
 static inline struct ov5640 *to_ov5640(struct v4l2_subdev *sd)
@@ -621,6 +627,9 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 
 	*__format = format->format;
 
+	/* NOTE: This is always true for now, revisit later. */
+	ov5640->pixel_rate->cur.val64 = 168000000;
+
 	return 0;
 }
 
@@ -764,6 +773,7 @@ static struct v4l2_subdev_ops ov5640_subdev_ops = {
 static int ov5640_registered(struct v4l2_subdev *subdev)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(subdev);
+	struct ov5640 *ov5640 = to_ov5640(subdev);
 	int ret = 0;
 	u8 revision = 0;
 
@@ -810,6 +820,17 @@ static int ov5640_registered(struct v4l2_subdev *subdev)
 	if (ret)
 		goto out;
 
+	/* Init controls */
+	ret = v4l2_ctrl_handler_init(&ov5640->ctrl_handler, 1);
+	if (ret)
+		goto out;
+
+	ov5640->pixel_rate = v4l2_ctrl_new_std(
+				&ov5640->ctrl_handler, NULL,
+				V4L2_CID_IMAGE_PROC_PIXEL_RATE,
+				0, 0, 1, 0);
+
+	subdev->ctrl_handler = &ov5640->ctrl_handler;
 out:
 	ov5640_s_power(subdev, 0);
 
@@ -887,6 +908,7 @@ static int ov5640_remove(struct i2c_client *client)
 	struct v4l2_subdev *subdev = i2c_get_clientdata(client);
 	struct ov5640 *ov5640 = to_ov5640(subdev);
 
+	v4l2_ctrl_handler_free(&ov5640->ctrl_handler);
 	v4l2_device_unregister_subdev(subdev);
 	media_entity_cleanup(&subdev->entity);
 	kfree(ov5640);
