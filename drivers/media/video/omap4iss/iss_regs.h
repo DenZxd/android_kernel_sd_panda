@@ -33,6 +33,7 @@ extern phys_addr_t omap_cam_get_mempool_size(void);
 
 #define ISS_HL_IRQ_BTE					(1 << 11)
 #define ISS_HL_IRQ_CBUFF				(1 << 10)
+#define ISS_HL_IRQ_CSIB					(1 << 5)
 #define ISS_HL_IRQ_CSIA					(1 << 4)
 
 #define ISS_CTRL					0x80

@@ -7,6 +7,7 @@ struct iss_device;
 
 enum iss_interface_type {
 	ISS_INTERFACE_CSI2A_PHY1,
+	ISS_INTERFACE_CSI2B_PHY2,
 };
 
 /**
@@ -20,6 +21,7 @@ struct iss_csiphy_lane {
 };
 
 #define ISS_CSIPHY1_NUM_DATA_LANES	4
+#define ISS_CSIPHY2_NUM_DATA_LANES	1
 
 /**
  * struct iss_csiphy_lanes_cfg - CSI2 lane configuration

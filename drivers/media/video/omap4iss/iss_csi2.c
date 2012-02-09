@@ -1075,7 +1075,10 @@ static int csi2_set_stream(struct v4l2_subdev *sd, int enable)
 		if (enable == ISS_PIPELINE_STREAM_STOPPED)
 			return 0;
 
-		omap4iss_subclk_enable(iss, OMAP4_ISS_SUBCLK_CSI2_A);
+		if (csi2 == &iss->csi2a)
+			omap4iss_subclk_enable(iss, OMAP4_ISS_SUBCLK_CSI2_A);
+		else if (csi2 == &iss->csi2b)
+			omap4iss_subclk_enable(iss, OMAP4_ISS_SUBCLK_CSI2_B);
 	}
 
 	switch (enable) {
@@ -1119,7 +1122,10 @@ static int csi2_set_stream(struct v4l2_subdev *sd, int enable)
 		csi2_if_enable(csi2, 0);
 		csi2_irq_ctx_set(csi2, 0);
 		omap4iss_csiphy_release(csi2->phy);
-		omap4iss_subclk_disable(iss, OMAP4_ISS_SUBCLK_CSI2_A);
+		if (csi2 == &iss->csi2a)
+			omap4iss_subclk_disable(iss, OMAP4_ISS_SUBCLK_CSI2_A);
+		else if (csi2 == &iss->csi2b)
+			omap4iss_subclk_disable(iss, OMAP4_ISS_SUBCLK_CSI2_B);
 		iss_video_dmaqueue_flags_clr(video_out);
 		break;
 	}
@@ -1253,16 +1259,19 @@ error:
  * @csi2: Pointer to csi2 structure.
  * return -ENOMEM or zero on success
  */
-static int csi2_init_entities(struct iss_csi2_device *csi2)
+static int csi2_init_entities(struct iss_csi2_device *csi2, const char *subname)
 {
 	struct v4l2_subdev *sd = &csi2->subdev;
 	struct media_pad *pads = csi2->pads;
 	struct media_entity *me = &sd->entity;
 	int ret;
+	char name[V4L2_SUBDEV_NAME_SIZE];
 
 	v4l2_subdev_init(sd, &csi2_ops);
 	sd->internal_ops = &csi2_internal_ops;
-	strlcpy(sd->name, "OMAP4 ISS CSI2a", sizeof(sd->name));
+	sprintf(name, "CSI2%s", subname);
+	strlcpy(sd->name, "", sizeof(sd->name));
+	sprintf(sd->name, "OMAP4 ISS %s", name);
 
 	sd->grp_id = 1 << 16;	/* group ID for iss subdevs */
 	v4l2_set_subdevdata(sd, csi2);
@@ -1287,7 +1296,7 @@ static int csi2_init_entities(struct iss_csi2_device *csi2)
 	csi2->video_out.iss = csi2->iss;
 	csi2->video_out.capture_mem = PAGE_ALIGN(4096 * 4096) * 3;
 
-	ret = omap4iss_video_init(&csi2->video_out, "CSI2a");
+	ret = omap4iss_video_init(&csi2->video_out, name);
 	if (ret < 0)
 		goto error_video;
 
@@ -1312,6 +1321,7 @@ error_video:
 int omap4iss_csi2_init(struct iss_device *iss)
 {
 	struct iss_csi2_device *csi2a = &iss->csi2a;
+	struct iss_csi2_device *csi2b = &iss->csi2b;
 	int ret;
 
 	csi2a->iss = iss;
@@ -1321,7 +1331,18 @@ int omap4iss_csi2_init(struct iss_device *iss)
 	csi2a->state = ISS_PIPELINE_STREAM_STOPPED;
 	init_waitqueue_head(&csi2a->wait);
 
-	ret = csi2_init_entities(csi2a);
+	ret = csi2_init_entities(csi2a, "a");
+	if (ret < 0)
+		return ret;
+
+	csi2b->iss = iss;
+	csi2b->available = 1;
+	csi2b->regs1 = iss->regs[OMAP4_ISS_MEM_CSI2_B_REGS1];
+	csi2b->phy = &iss->csiphy2;
+	csi2b->state = ISS_PIPELINE_STREAM_STOPPED;
+	init_waitqueue_head(&csi2b->wait);
+
+	ret = csi2_init_entities(csi2b, "b");
 	if (ret < 0)
 		return ret;
 
@@ -1334,7 +1355,11 @@ int omap4iss_csi2_init(struct iss_device *iss)
 void omap4iss_csi2_cleanup(struct iss_device *iss)
 {
 	struct iss_csi2_device *csi2a = &iss->csi2a;
+	struct iss_csi2_device *csi2b = &iss->csi2b;
 
 	omap4iss_video_cleanup(&csi2a->video_out);
 	media_entity_cleanup(&csi2a->subdev.entity);
+
+	omap4iss_video_cleanup(&csi2b->video_out);
+	media_entity_cleanup(&csi2b->subdev.entity);
 }

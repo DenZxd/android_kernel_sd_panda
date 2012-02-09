@@ -145,16 +145,26 @@ int omap4iss_csiphy_config(struct iss_device *iss,
 		 * - bit [17:16] : CSIPHY1 config: 00 d-phy, 01/10 ccp2
 		 */
 
-		cam_rx_ctrl &= ~(OMAP4_CAMERARX_CSI21_LANEENABLE_MASK |
-					OMAP4_CAMERARX_CSI21_CAMMODE_MASK);
-
 		if (subdevs->interface == ISS_INTERFACE_CSI2A_PHY1) {
+			cam_rx_ctrl &= ~(OMAP4_CAMERARX_CSI21_LANEENABLE_MASK |
+					OMAP4_CAMERARX_CSI21_CAMMODE_MASK);
 			/* NOTE: Leave CSIPHY1 config to 0x0: D-PHY mode */
 			/* Enable all lanes for now */
 			cam_rx_ctrl |=
 				0x7 << OMAP4_CAMERARX_CSI21_LANEENABLE_SHIFT;
 			/* Enable CTRLCLK */
 			cam_rx_ctrl |= OMAP4_CAMERARX_CSI21_CTRLCLKEN_MASK;
+		}
+
+		if (subdevs->interface == ISS_INTERFACE_CSI2B_PHY2) {
+			cam_rx_ctrl &= ~(OMAP4_CAMERARX_CSI22_LANEENABLE_MASK |
+					OMAP4_CAMERARX_CSI22_CAMMODE_MASK);
+			/* NOTE: Leave CSIPHY2 config to 0x0: D-PHY mode */
+			/* Enable all lanes for now */
+			cam_rx_ctrl |=
+				0x3 << OMAP4_CAMERARX_CSI22_LANEENABLE_SHIFT;
+			/* Enable CTRLCLK */
+			cam_rx_ctrl |= OMAP4_CAMERARX_CSI22_CTRLCLKEN_MASK;
 		}
 
 		omap4_ctrl_pad_writel(cam_rx_ctrl,
@@ -169,7 +179,7 @@ int omap4iss_csiphy_config(struct iss_device *iss,
 		if (lanes->data[i].pos == 0)
 			continue;
 
-		if (lanes->data[i].pol > 1 || lanes->data[i].pos > 5)
+		if (lanes->data[i].pol > 1 || lanes->data[i].pos > (csi2->phy->max_data_lanes + 1))
 			return -EINVAL;
 
 		if (used_lanes & (1 << lanes->data[i].pos))
@@ -179,7 +189,7 @@ int omap4iss_csiphy_config(struct iss_device *iss,
 		csi2->phy->used_data_lanes++;
 	}
 
-	if (lanes->clk.pol > 1 || lanes->clk.pos > 4)
+	if (lanes->clk.pol > 1 || lanes->clk.pos > (csi2->phy->max_data_lanes + 1))
 		return -EINVAL;
 
 	if (lanes->clk.pos == 0 || used_lanes & (1 << lanes->clk.pos))
@@ -247,6 +257,7 @@ void omap4iss_csiphy_release(struct iss_csiphy *phy)
 int omap4iss_csiphy_init(struct iss_device *iss)
 {
 	struct iss_csiphy *phy1 = &iss->csiphy1;
+	struct iss_csiphy *phy2 = &iss->csiphy2;
 
 	phy1->iss = iss;
 	phy1->csi2 = &iss->csi2a;
@@ -255,6 +266,14 @@ int omap4iss_csiphy_init(struct iss_device *iss)
 	phy1->cfg_regs = iss->regs[OMAP4_ISS_MEM_CSI2_A_REGS1];
 	phy1->phy_regs = iss->regs[OMAP4_ISS_MEM_CAMERARX_CORE1];
 	mutex_init(&phy1->mutex);
+
+	phy2->iss = iss;
+	phy2->csi2 = &iss->csi2b;
+	phy2->max_data_lanes = ISS_CSIPHY2_NUM_DATA_LANES;
+	phy2->used_data_lanes = 0;
+	phy2->cfg_regs = iss->regs[OMAP4_ISS_MEM_CSI2_B_REGS1];
+	phy2->phy_regs = iss->regs[OMAP4_ISS_MEM_CAMERARX_CORE2];
+	mutex_init(&phy2->mutex);
 
 	return 0;
 }

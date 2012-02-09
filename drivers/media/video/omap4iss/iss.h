@@ -35,6 +35,8 @@ enum iss_mem_resources {
 	OMAP4_ISS_MEM_TOP,
 	OMAP4_ISS_MEM_CSI2_A_REGS1,
 	OMAP4_ISS_MEM_CAMERARX_CORE1,
+	OMAP4_ISS_MEM_CSI2_B_REGS1,
+	OMAP4_ISS_MEM_CAMERARX_CORE2,
 	OMAP4_ISS_MEM_LAST,
 };
 
@@ -81,7 +83,9 @@ struct iss_device {
 
 	/* ISS modules */
 	struct iss_csi2_device csi2a;
+	struct iss_csi2_device csi2b;
 	struct iss_csiphy csiphy1;
+	struct iss_csiphy csiphy2;
 
 	unsigned int subclk_resources;
 };
