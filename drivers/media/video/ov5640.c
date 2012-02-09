@@ -25,16 +25,6 @@
 
 #include <media/ov5640.h>
 
-#define OV5640_BRIGHTNESS_MIN				0
-#define OV5640_BRIGHTNESS_MAX				200
-#define OV5640_BRIGHTNESS_STEP				100
-#define OV5640_BRIGHTNESS_DEF				100
-
-#define OV5640_CONTRAST_MIN				0
-#define OV5640_CONTRAST_MAX				200
-#define OV5640_CONTRAST_STEP				100
-#define OV5640_CONTRAST_DEF				100
-
 /* OV5640 has only one fixed colorspace per pixelcode */
 struct ov5640_datafmt {
 	enum v4l2_mbus_pixelcode	code;
@@ -98,9 +88,6 @@ struct ov5640 {
 	struct media_pad pad;
 	struct v4l2_mbus_framefmt format;
 	const struct ov5640_platform_data *pdata;
-	int brightness;
-	int contrast;
-	int colorlevel;
 };
 
 static inline struct ov5640 *to_ov5640(struct v4l2_subdev *sd)
@@ -854,23 +841,6 @@ static struct v4l2_subdev_internal_ops ov5640_subdev_internal_ops = {
 	.close = ov5640_close,
 };
 
-static int ov5640_init(struct v4l2_subdev *sd)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct ov5640 *ov5640 = to_ov5640(sd);
-	int ret = 0;
-
-	/* default brightness and contrast */
-	ov5640->brightness = OV5640_BRIGHTNESS_DEF;
-	ov5640->contrast = OV5640_CONTRAST_DEF;
-
-	ov5640->colorlevel = V4L2_COLORFX_NONE;
-
-	dev_dbg(&client->dev, "Sensor initialized\n");
-
-	return ret;
-}
-
 static int ov5640_probe(struct i2c_client *client,
 			 const struct i2c_device_id *did)
 {
@@ -904,18 +874,10 @@ static int ov5640_probe(struct i2c_client *client,
 	if (ret < 0)
 		goto err_mediainit;
 
-	/* init the sensor here */
-	ret = ov5640_init(&ov5640->subdev);
-	if (ret) {
-		dev_err(&client->dev, "Failed to initialize sensor\n");
-		goto err_sensorinit;
-	}
-
 	return ret;
-err_sensorinit:
-	v4l2_device_unregister_subdev(&ov5640->subdev);
+
 err_mediainit:
-	media_entity_cleanup(&ov5640->subdev.entity);
+	v4l2_device_unregister_subdev(&ov5640->subdev);
 	kfree(ov5640);
 	return ret;
 }
