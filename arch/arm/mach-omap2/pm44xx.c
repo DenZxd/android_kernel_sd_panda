@@ -874,9 +874,17 @@ static int omap4_restore_pwdms_after_suspend(void)
 	return ret;
 }
 
+//#define CONFIG_OMAP4_SUSPEND_LPMODE	1	// XXX:
+
 static int omap4_pm_suspend(void)
 {
 	int ret = 0;
+#ifdef CONFIG_VENDOR_HHTECH
+	unsigned gpio_bak;
+#endif
+#ifdef CONFIG_OMAP4_SUSPEND_LPMODE
+	unsigned dpll_m5_div_bak, dpll_clk_mode[5];
+#endif
 
 	/*
 	 * If any device was in the middle of a scale operation
@@ -900,6 +908,61 @@ static int omap4_pm_suspend(void)
 	if (off_mode_enabled)
 		omap4_device_set_state_off(1);
 
+#ifdef CONFIG_VENDOR_HHTECH
+#define GPIO_CAMERA_POWER	83
+#define GPIO_POWER_AUDIO_AMP	119
+
+	gpio_bak  = gpio_get_value(GPIO_POWER_AUDIO_AMP) << 0;
+	gpio_bak |= gpio_get_value(GPIO_CAMERA_POWER)	 << 1;
+
+	// power off some power control GPIOs
+	gpio_set_value(GPIO_POWER_AUDIO_AMP, 0);
+	gpio_set_value(GPIO_CAMERA_POWER, 0);	    // CAMERA_POWER power off
+#endif
+#ifdef CONFIG_OMAP4_SUSPEND_LPMODE
+	dpll_clk_mode[0] = __raw_readl(OMAP4430_CM_CLKMODE_DPLL_USB);
+	dpll_clk_mode[1] = __raw_readl(OMAP4430_CM_CLKMODE_DPLL_ABE);
+	dpll_clk_mode[2] = __raw_readl(OMAP4430_CM_CLKMODE_DPLL_IVA);
+	dpll_clk_mode[3] = __raw_readl(OMAP4430_CM_CLKMODE_DPLL_PER);
+	dpll_clk_mode[4] = __raw_readl(OMAP4430_CM_CLKMODE_DPLL_MPU);
+
+#if 0
+	dpll_clk_mode[5] = __raw_readl(OMAP4430_CM_CLKMODE_DPLL_DDRPHY);
+	dpll_clk_mode[6] = __raw_readl(OMAP4430_CM_CLKMODE_DPLL_UNIPRO);
+	//dpll_clk_mode[7] = __raw_readl(OMAP4430_CM_CLKMODE_DPLL_CORE);
+#endif
+
+	dpll_m5_div_bak  = __raw_readl(OMAP4430_CM_DIV_M5_DPLL_CORE);
+
+	__raw_writel(dpll_m5_div_bak | 0x1f, OMAP4430_CM_DIV_M5_DPLL_CORE);
+
+#define OMAP4430_DPLL_IDLE_BYPASS_LPMODE \
+	(0x05 | OMAP4430_DPLL_LPMODE_EN_MASK)
+	// | (dpll_clk_mode[i] & ~OMAP4430_DPLL_EN_MASK)
+
+	// set all DPLLs to idle bypass low-power mode
+    if (0) {
+	__raw_writel(OMAP4430_DPLL_IDLE_BYPASS_LPMODE,
+		OMAP4430_CM_CLKMODE_DPLL_DDRPHY);
+	__raw_writel(OMAP4430_DPLL_IDLE_BYPASS_LPMODE,
+		OMAP4430_CM_CLKMODE_DPLL_UNIPRO);
+	// XXX: fail to resume back system
+	if (0) __raw_writel(OMAP4430_DPLL_IDLE_BYPASS_LPMODE,
+		OMAP4430_CM_CLKMODE_DPLL_CORE);
+	// XXX: break audio system after resume on 4460
+	if (0) __raw_writel(OMAP4430_DPLL_IDLE_BYPASS_LPMODE,
+		OMAP4430_CM_CLKMODE_DPLL_ABE);
+    }
+	__raw_writel(OMAP4430_DPLL_IDLE_BYPASS_LPMODE,
+		OMAP4430_CM_CLKMODE_DPLL_USB);
+	__raw_writel(OMAP4430_DPLL_IDLE_BYPASS_LPMODE,
+		OMAP4430_CM_CLKMODE_DPLL_IVA);
+	__raw_writel(OMAP4430_DPLL_IDLE_BYPASS_LPMODE,
+		OMAP4430_CM_CLKMODE_DPLL_PER);
+	__raw_writel(OMAP4430_DPLL_IDLE_BYPASS_LPMODE,
+		OMAP4430_CM_CLKMODE_DPLL_MPU);
+#endif
+
 	/*
 	 * For MPUSS to hit power domain retention(CSWR or OSWR),
 	 * CPU0 and CPU1 power domain needs to be in OFF or DORMANT
@@ -913,6 +976,26 @@ static int omap4_pm_suspend(void)
 	omap4_enter_sleep(0, PWRDM_POWER_OFF, true);
 	omap4_print_wakeirq();
 	prcmdebug_dump(PRCMDEBUG_LASTSLEEP);
+
+#ifdef CONFIG_OMAP4_SUSPEND_LPMODE
+	__raw_writel(dpll_m5_div_bak,  OMAP4430_CM_DIV_M5_DPLL_CORE);
+
+	__raw_writel(dpll_clk_mode[4], OMAP4430_CM_CLKMODE_DPLL_MPU);
+	__raw_writel(dpll_clk_mode[3], OMAP4430_CM_CLKMODE_DPLL_PER);
+	__raw_writel(dpll_clk_mode[2], OMAP4430_CM_CLKMODE_DPLL_IVA);
+	__raw_writel(dpll_clk_mode[1], OMAP4430_CM_CLKMODE_DPLL_ABE);
+	__raw_writel(dpll_clk_mode[0], OMAP4430_CM_CLKMODE_DPLL_USB);
+
+#if 0
+	__raw_writel(dpll_clk_mode[5], OMAP4430_CM_CLKMODE_DPLL_DDRPHY);
+	__raw_writel(dpll_clk_mode[6], OMAP4430_CM_CLKMODE_DPLL_UNIPRO);
+	//__raw_writel(dpll_clk_mode[7], OMAP4430_CM_CLKMODE_DPLL_CORE);
+#endif
+#endif
+#ifdef CONFIG_VENDOR_HHTECH
+	gpio_set_value(GPIO_POWER_AUDIO_AMP, (gpio_bak >> 0) & 0x01);
+	gpio_set_value(GPIO_CAMERA_POWER,    (gpio_bak >> 1) & 0x01);
+#endif
 
 	/* Disable Device OFF state*/
 	if (off_mode_enabled)
