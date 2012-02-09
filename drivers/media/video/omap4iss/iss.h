@@ -97,6 +97,9 @@ struct iss_device {
 #define v4l2_dev_to_iss_device(dev) \
 	container_of(dev, struct iss_device, v4l2_dev)
 
+int omap4iss_get_external_info(struct iss_pipeline *pipe,
+			       struct media_link *link);
+
 int omap4iss_module_sync_idle(struct media_entity *me, wait_queue_head_t *wait,
 			      atomic_t *stopping);
 

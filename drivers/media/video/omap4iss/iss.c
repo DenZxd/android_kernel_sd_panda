@@ -25,6 +25,7 @@
 
 #include <media/v4l2-common.h>
 #include <media/v4l2-device.h>
+#include <media/v4l2-ctrls.h>
 
 #include "iss.h"
 #include "iss_regs.h"
@@ -65,6 +66,54 @@ static void iss_enable_interrupts(struct iss_device *iss)
 static void iss_disable_interrupts(struct iss_device *iss)
 {
 	writel(-1, iss->regs[OMAP4_ISS_MEM_TOP] + ISS_HL_IRQENABLE_5_CLR);
+}
+
+int omap4iss_get_external_info(struct iss_pipeline *pipe,
+			       struct media_link *link)
+{
+	struct iss_device *iss =
+		container_of(pipe, struct iss_video, pipe)->iss;
+	struct v4l2_subdev_format fmt;
+	struct v4l2_ext_controls ctrls;
+	struct v4l2_ext_control ctrl;
+	int ret;
+
+	if (!pipe->external)
+		return 0;
+
+	if (pipe->external_rate)
+		return 0;
+
+	memset(&fmt, 0, sizeof(fmt));
+
+	fmt.pad = link->source->index;
+	fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
+	ret = v4l2_subdev_call(media_entity_to_v4l2_subdev(link->sink->entity),
+			       pad, get_fmt, NULL, &fmt);
+	if (ret < 0)
+		return -EPIPE;
+
+	pipe->external_bpp = omap4iss_video_format_info(fmt.format.code)->bpp;
+
+	memset(&ctrls, 0, sizeof(ctrls));
+	memset(&ctrl, 0, sizeof(ctrl));
+
+	ctrl.id = V4L2_CID_IMAGE_PROC_PIXEL_RATE;
+
+	ctrls.ctrl_class = V4L2_CTRL_ID2CLASS(ctrl.id);
+	ctrls.count = 1;
+	ctrls.controls = &ctrl;
+
+	ret = v4l2_g_ext_ctrls(pipe->external->ctrl_handler, &ctrls);
+	if (ret < 0) {
+		dev_warn(iss->dev, "no pixel rate control in subdev %s\n",
+			 pipe->external->name);
+		return ret;
+	}
+
+	pipe->external_rate = ctrl.value64;
+
+	return 0;
 }
 
 static inline void iss_isr_dbg(struct iss_device *iss, u32 irqstatus)
