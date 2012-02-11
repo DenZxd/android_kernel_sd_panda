@@ -36,7 +36,8 @@ struct iss_csiphy {
 	void __iomem *cfg_regs;
 	void __iomem *phy_regs;
 
-	u8 num_data_lanes;	/* number of CSI2 Data Lanes supported */
+	u8 max_data_lanes;	/* number of CSI2 Data Lanes supported */
+	u8 used_data_lanes;	/* number of CSI2 Data Lanes used */
 	struct iss_csiphy_lanes_cfg lanes;
 	struct iss_csiphy_dphy_cfg dphy;
 };
