@@ -802,8 +802,8 @@ void omap4iss_csi2_isr(struct iss_csi2_device *csi2)
  */
 static int csi2_queue(struct iss_video *video, struct iss_buffer *buffer)
 {
-	struct iss_device *iss = video->iss;
-	struct iss_csi2_device *csi2 = &iss->csi2a;
+	struct iss_csi2_device *csi2 = container_of(video,
+				struct iss_csi2_device, video_out);
 
 	csi2_set_outaddr(csi2, buffer->iss_addr);
 
