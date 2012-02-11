@@ -188,20 +188,6 @@ static int __init panda_camera_init(void)
 			clk_round_rate(panda_cam_aux_clk, 24000000)))
 		return -EINVAL;
 
-	/*
-	 * CSI2 1(A):
-	 *   LANEENABLE[4:0] = 00111(0x7) - Lanes 0, 1 & 2 enabled
-	 *   CTRLCLKEN = 1 - Active high enable for CTRLCLK
-	 *   CAMMODE = 0 - DPHY mode
-	 */
-	omap4_ctrl_pad_writel((omap4_ctrl_pad_readl(
-				OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_CAMERA_RX) &
-			  ~(OMAP4_CAMERARX_CSI21_LANEENABLE_MASK |
-			    OMAP4_CAMERARX_CSI21_CAMMODE_MASK)) |
-			 (0x7 << OMAP4_CAMERARX_CSI21_LANEENABLE_SHIFT) |
-			 OMAP4_CAMERARX_CSI21_CTRLCLKEN_MASK,
-			 OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_CAMERA_RX);
-
 	/* Select GPIO 45 */
 	omap_mux_init_gpio(PANDA_GPIO_CAM_PWRDN, OMAP_PIN_OUTPUT);
 
