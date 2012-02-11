@@ -567,9 +567,9 @@ static int ov5650_s_fmt(struct v4l2_subdev *sd,
 	 * transmitted.
 	 */
 	if (__format->code == V4L2_MBUS_FMT_SGRBG10_1X10)
-		ov5650->pixel_rate->cur.val64 = 384000000;
+		ov5650->pixel_rate->cur.val64 = 96000000;
 	else if (__format->code == V4L2_MBUS_FMT_SGRBG8_1X8)
-		ov5650->pixel_rate->cur.val64 = 480000000;
+		ov5650->pixel_rate->cur.val64 = 120000000;
 
 	return 0;
 }
