@@ -482,7 +482,7 @@ static int ov5650_s_stream(struct v4l2_subdev *sd, int enable)
 
 		switch ((u32)ov5650->format.code) {
 		case V4L2_MBUS_FMT_SGRBG8_1X8:
-			ret = ov5650_reg_write(client, 0x300f, 0x8e);
+			ret = ov5650_reg_write(client, 0x300f, 0x8a);
 			if (ret)
 				return ret;
 
@@ -500,7 +500,7 @@ static int ov5650_s_stream(struct v4l2_subdev *sd, int enable)
 
 			break;
 		case V4L2_MBUS_FMT_SGRBG10_1X10:
-			ret = ov5650_reg_write(client, 0x300f, 0x8f);
+			ret = ov5650_reg_write(client, 0x300f, 0x8b);
 			if (ret)
 				return ret;
 
