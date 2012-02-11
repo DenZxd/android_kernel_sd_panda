@@ -33,7 +33,7 @@ static void csiphy_lanes_config(struct iss_csiphy *phy)
 
 	reg = readl(phy->cfg_regs + CSI2_COMPLEXIO_CFG);
 
-	for (i = 0; i < phy->num_data_lanes; i++) {
+	for (i = 0; i < phy->max_data_lanes; i++) {
 		reg &= ~(CSI2_COMPLEXIO_CFG_DATA_POL(i + 1) |
 			 CSI2_COMPLEXIO_CFG_DATA_POSITION_MASK(i + 1));
 		reg |= (phy->lanes.data[i].pol ?
@@ -161,8 +161,32 @@ int omap4iss_csiphy_config(struct iss_device *iss,
 			 OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_CAMERA_RX);
 	}
 
+	/* Reset used lane count */
+	csi2->phy->used_data_lanes = 0;
+
+	/* Clock and data lanes verification */
+	for (i = 0; i < csi2->phy->max_data_lanes; i++) {
+		if (lanes->data[i].pos == 0)
+			continue;
+
+		if (lanes->data[i].pol > 1 || lanes->data[i].pos > 5)
+			return -EINVAL;
+
+		if (used_lanes & (1 << lanes->data[i].pos))
+			return -EINVAL;
+
+		used_lanes |= 1 << lanes->data[i].pos;
+		csi2->phy->used_data_lanes++;
+	}
+
+	if (lanes->clk.pol > 1 || lanes->clk.pos > 4)
+		return -EINVAL;
+
+	if (lanes->clk.pos == 0 || used_lanes & (1 << lanes->clk.pos))
+		return -EINVAL;
+
 	csi2_ddrclk_khz = pipe->external_rate / 1000
-		/ (2 * csi2->phy->num_data_lanes)
+		/ (2 * csi2->phy->used_data_lanes)
 		* pipe->external_bpp;
 
 	/*
@@ -174,26 +198,6 @@ int omap4iss_csiphy_config(struct iss_device *iss,
 	csi2phy.tclk_term = TCLK_TERM;
 	csi2phy.tclk_miss = TCLK_MISS;
 	csi2phy.tclk_settle = TCLK_SETTLE;
-
-	/* Clock and data lanes verification */
-	for (i = 0; i < csi2->phy->num_data_lanes; i++) {
-		if (lanes->data[i].pos == 0)
-			continue;
-
-		if (lanes->data[i].pol > 1 || lanes->data[i].pos > 5)
-			return -EINVAL;
-
-		if (used_lanes & (1 << lanes->data[i].pos))
-			return -EINVAL;
-
-		used_lanes |= 1 << lanes->data[i].pos;
-	}
-
-	if (lanes->clk.pol > 1 || lanes->clk.pos > 4)
-		return -EINVAL;
-
-	if (lanes->clk.pos == 0 || used_lanes & (1 << lanes->clk.pos))
-		return -EINVAL;
 
 	mutex_lock(&csi2->phy->mutex);
 	csi2->phy->dphy = csi2phy;
@@ -246,7 +250,8 @@ int omap4iss_csiphy_init(struct iss_device *iss)
 
 	phy1->iss = iss;
 	phy1->csi2 = &iss->csi2a;
-	phy1->num_data_lanes = ISS_CSIPHY1_NUM_DATA_LANES;
+	phy1->max_data_lanes = ISS_CSIPHY1_NUM_DATA_LANES;
+	phy1->used_data_lanes = 0;
 	phy1->cfg_regs = iss->regs[OMAP4_ISS_MEM_CSI2_A_REGS1];
 	phy1->phy_regs = iss->regs[OMAP4_ISS_MEM_CAMERARX_CORE1];
 	mutex_init(&phy1->mutex);
