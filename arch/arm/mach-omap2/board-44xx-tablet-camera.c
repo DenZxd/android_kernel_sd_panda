@@ -16,101 +16,199 @@
 #include "control.h"
 #include "mux.h"
 
-#define TABLET_GPIO_CAM_PWRDN		37
+#define TABLET_GPIO_CAM1_PWRDN		37
+#define TABLET_GPIO_CAM2_PWRDN		37
 #define TABLET_GPIO_CAM_RESET		83
 
-static struct clk *tablet_cam_aux_clk;
+static struct clk *tablet_cam1_aux_clk;
+static struct clk *tablet_cam2_aux_clk;
 
-static int tablet_ov5640_power(struct v4l2_subdev *subdev, int on)
+static int tablet_ov_cam1_power(struct v4l2_subdev *subdev, int on)
 {
-	struct iss_device *iss = v4l2_dev_to_iss_device(subdev->v4l2_dev);
-	struct iss_csiphy_dphy_cfg dphy;
-	struct iss_csiphy_lanes_cfg lanes;
-#ifdef CONFIG_MACH_OMAP_BLAZE_CAM_OV5650
-	unsigned int ddr_freq = 480; /* FIXME: Do an actual query for this */
-#elif defined(CONFIG_MACH_OMAP_BLAZE_CAM_OV5640)
-	unsigned int ddr_freq = 336; /* FIXME: Do an actual query for this */
-#endif
-
-	memset(&lanes, 0, sizeof(lanes));
-	memset(&dphy, 0, sizeof(dphy));
-
-	lanes.clk.pos = 1;
-	lanes.clk.pol = 0;
-	lanes.data[0].pos = 2;
-	lanes.data[0].pol = 0;
-#ifdef CONFIG_MACH_OMAP_BLAZE_CAM_OV5650
-	lanes.data[1].pos = 3;
-	lanes.data[1].pol = 0;
-#endif
-
-	dphy.ths_term = ((((12500 * ddr_freq + 1000000) / 1000000) - 1) & 0xFF);
-	dphy.ths_settle = ((((90000 * ddr_freq + 1000000) / 1000000) + 3) & 0xFF);
-	dphy.tclk_term = 0;
-	dphy.tclk_miss = 1;
-	dphy.tclk_settle = 14;
+	struct device *dev = subdev->v4l2_dev->dev;
 
 	if (on) {
 		int ret;
 
-		ret = iss->platform_cb.csiphy_config(&iss->csiphy1, &dphy, &lanes);
+		gpio_set_value(TABLET_GPIO_CAM1_PWRDN, 1);
+		ret = clk_enable(tablet_cam1_aux_clk);
 		if (ret) {
-			dev_err(iss->dev,
-				"Error in configuring CSIPHY in %s(%d)\n",
-				__func__, on);
-			return ret;
-		}
-
-		gpio_set_value(TABLET_GPIO_CAM_PWRDN, 1);
-		ret = clk_enable(tablet_cam_aux_clk);
-		if (ret) {
-			dev_err(iss->dev,
+			dev_err(dev,
 				"Error in clk_enable() in %s(%d)\n",
 				__func__, on);
-			gpio_set_value(TABLET_GPIO_CAM_PWRDN, 0);
+			gpio_set_value(TABLET_GPIO_CAM1_PWRDN, 0);
 			return ret;
 		}
 		mdelay(2);
 	} else {
-		clk_disable(tablet_cam_aux_clk);
-		gpio_set_value(TABLET_GPIO_CAM_PWRDN, 0);
+		clk_disable(tablet_cam1_aux_clk);
+		gpio_set_value(TABLET_GPIO_CAM1_PWRDN, 0);
+	}
+
+	return 0;
+}
+
+static int tablet_ov_cam2_power(struct v4l2_subdev *subdev, int on)
+{
+	struct device *dev = subdev->v4l2_dev->dev;
+
+	if (on) {
+		int ret;
+
+		gpio_set_value(TABLET_GPIO_CAM2_PWRDN, 1);
+		ret = clk_enable(tablet_cam2_aux_clk);
+		if (ret) {
+			dev_err(dev,
+				"Error in clk_enable() in %s(%d)\n",
+				__func__, on);
+			gpio_set_value(TABLET_GPIO_CAM2_PWRDN, 0);
+			return ret;
+		}
+		mdelay(2);
+	} else {
+		clk_disable(tablet_cam2_aux_clk);
+		gpio_set_value(TABLET_GPIO_CAM2_PWRDN, 0);
 	}
 
 	return 0;
 }
 
 #define OV5640_I2C_ADDRESS   (0x3C)
+
+static struct ov5640_platform_data ov5640_cam1_platform_data = {
+      .s_power = tablet_ov_cam1_power,
+};
+
+static struct i2c_board_info ov5640_cam1_i2c_device = {
+	I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
+	.platform_data = &ov5640_cam1_platform_data,
+};
+
+static struct ov5640_platform_data ov5640_cam2_platform_data = {
+      .s_power = tablet_ov_cam2_power,
+};
+
+static struct i2c_board_info ov5640_cam2_i2c_device = {
+	I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
+	.platform_data = &ov5640_cam2_platform_data,
+};
+
 #define OV5650_I2C_ADDRESS   (0x36)
 
-#ifdef CONFIG_MACH_OMAP_BLAZE_CAM_OV5650
-static struct ov5650_platform_data ov_platform_data = {
-#elif defined(CONFIG_MACH_OMAP_BLAZE_CAM_OV5640)
-static struct ov5640_platform_data ov_platform_data = {
-#endif
-      .s_power = tablet_ov5640_power,
+static struct ov5650_platform_data ov5650_cam1_platform_data = {
+      .s_power = tablet_ov_cam1_power,
 };
 
-static struct i2c_board_info ov_camera_i2c_device = {
-#ifdef CONFIG_MACH_OMAP_BLAZE_CAM_OV5650
+static struct i2c_board_info ov5650_cam1_i2c_device = {
 	I2C_BOARD_INFO("ov5650", OV5650_I2C_ADDRESS),
-#elif defined(CONFIG_MACH_OMAP_BLAZE_CAM_OV5640)
-	I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
-#endif
-	.platform_data = &ov_platform_data,
+	.platform_data = &ov5650_cam1_platform_data,
 };
 
-static struct iss_subdev_i2c_board_info ov_camera_subdevs[] = {
+static struct ov5650_platform_data ov5650_cam2_platform_data = {
+      .s_power = tablet_ov_cam2_power,
+};
+
+static struct i2c_board_info ov5650_cam2_i2c_device = {
+	I2C_BOARD_INFO("ov5650", OV5650_I2C_ADDRESS),
+	.platform_data = &ov5650_cam2_platform_data,
+};
+
+static struct iss_subdev_i2c_board_info ov5640_cam1_subdevs[] = {
 	{
-		.board_info = &ov_camera_i2c_device,
+		.board_info = &ov5640_cam1_i2c_device,
 		.i2c_adapter_id = 3,
+	},
+	{ NULL, 0, },
+};
+
+static struct iss_subdev_i2c_board_info ov5650_cam1_subdevs[] = {
+	{
+		.board_info = &ov5650_cam1_i2c_device,
+		.i2c_adapter_id = 3,
+	},
+	{ NULL, 0, },
+};
+
+static struct iss_subdev_i2c_board_info ov5640_cam2_subdevs[] = {
+	{
+		.board_info = &ov5640_cam2_i2c_device,
+		.i2c_adapter_id = 2,
+	},
+	{ NULL, 0, },
+};
+
+static struct iss_subdev_i2c_board_info ov5650_cam2_subdevs[] = {
+	{
+		.board_info = &ov5650_cam2_i2c_device,
+		.i2c_adapter_id = 2,
 	},
 	{ NULL, 0, },
 };
 
 static struct iss_v4l2_subdevs_group tablet_camera_subdevs[] = {
 	{
-		.subdevs = ov_camera_subdevs,
+		.subdevs = ov5640_cam1_subdevs,
 		.interface = ISS_INTERFACE_CSI2A_PHY1,
+		.bus = { .csi2 = {
+			.lanecfg	= {
+				.clk = {
+					.pol = 0,
+					.pos = 1,
+				},
+				.data[0] = {
+					.pol = 0,
+					.pos = 2,
+				},
+			},
+		} },
+	},
+	{
+		.subdevs = ov5650_cam1_subdevs,
+		.interface = ISS_INTERFACE_CSI2A_PHY1,
+		.bus = { .csi2 = {
+			.lanecfg	= {
+				.clk = {
+					.pol = 0,
+					.pos = 1,
+				},
+				.data[0] = {
+					.pol = 0,
+					.pos = 2,
+				},
+			},
+		} },
+	},
+	{
+		.subdevs = ov5640_cam2_subdevs,
+		.interface = ISS_INTERFACE_CSI2B_PHY2,
+		.bus = { .csi2 = {
+			.lanecfg	= {
+				.clk = {
+					.pol = 0,
+					.pos = 1,
+				},
+				.data[0] = {
+					.pol = 0,
+					.pos = 2,
+				},
+			},
+		} },
+	},
+	{
+		.subdevs = ov5650_cam2_subdevs,
+		.interface = ISS_INTERFACE_CSI2B_PHY2,
+		.bus = { .csi2 = {
+			.lanecfg	= {
+				.clk = {
+					.pol = 0,
+					.pos = 1,
+				},
+				.data[0] = {
+					.pol = 0,
+					.pos = 2,
+				},
+			},
+		} },
 	},
 	{ },
 };
@@ -132,6 +230,7 @@ static struct iss_platform_data tablet_iss_platform_data = {
 
 
 static struct omap_device_pad omap4iss_pads[] = {
+	/* CSI2-A */
 	{
 		.name   = "csi21_dx0.csi21_dx0",
 		.enable = OMAP_MUX_MODE0 | OMAP_INPUT_EN,
@@ -156,6 +255,23 @@ static struct omap_device_pad omap4iss_pads[] = {
 		.name   = "csi21_dy2.csi21_dy2",
 		.enable = OMAP_MUX_MODE0 | OMAP_INPUT_EN,
 	},
+	/* CSI2-B */
+	{
+		.name   = "csi22_dx0.csi22_dx0",
+		.enable = OMAP_MUX_MODE0 | OMAP_INPUT_EN,
+	},
+	{
+		.name   = "csi22_dy0.csi22_dy0",
+		.enable = OMAP_MUX_MODE0 | OMAP_INPUT_EN,
+	},
+	{
+		.name   = "csi22_dx1.csi22_dx1",
+		.enable = OMAP_MUX_MODE0 | OMAP_INPUT_EN,
+	},
+	{
+		.name   = "csi22_dy1.csi22_dy1",
+		.enable = OMAP_MUX_MODE0 | OMAP_INPUT_EN,
+	},
 };
 
 static struct omap_board_data omap4iss_data = {
@@ -169,32 +285,37 @@ static int __init tablet_camera_init(void)
 	if (!machine_is_omap_tabletblaze())
 		return 0;
 
-	tablet_cam_aux_clk = clk_get(NULL, "auxclk1_ck");
-	if (IS_ERR(tablet_cam_aux_clk)) {
+	tablet_cam1_aux_clk = clk_get(NULL, "auxclk1_ck");
+	if (IS_ERR(tablet_cam1_aux_clk)) {
 		printk(KERN_ERR "Unable to get auxclk1_ck\n");
 		return -ENODEV;
 	}
 
-	if (clk_set_rate(tablet_cam_aux_clk,
-			clk_round_rate(tablet_cam_aux_clk, 24000000)))
+	if (clk_set_rate(tablet_cam1_aux_clk,
+			clk_round_rate(tablet_cam1_aux_clk, 24000000))) {
+		clk_put(tablet_cam1_aux_clk);
 		return -EINVAL;
+	}
 
-	/*
-	 * CSI2 1(A):
-	 *   LANEENABLE[4:0] = 00111(0x7) - Lanes 0, 1 & 2 enabled
-	 *   CTRLCLKEN = 1 - Active high enable for CTRLCLK
-	 *   CAMMODE = 0 - DPHY mode
-	 */
-	omap4_ctrl_pad_writel((omap4_ctrl_pad_readl(
-				OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_CAMERA_RX) &
-			  ~(OMAP4_CAMERARX_CSI21_LANEENABLE_MASK |
-			    OMAP4_CAMERARX_CSI21_CAMMODE_MASK)) |
-			 (0x7 << OMAP4_CAMERARX_CSI21_LANEENABLE_SHIFT) |
-			 OMAP4_CAMERARX_CSI21_CTRLCLKEN_MASK,
-			 OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_CAMERA_RX);
+	tablet_cam2_aux_clk = clk_get(NULL, "auxclk2_ck");
+	if (IS_ERR(tablet_cam2_aux_clk)) {
+		printk(KERN_ERR "Unable to get auxclk2_ck\n");
+		clk_put(tablet_cam1_aux_clk);
+		return -ENODEV;
+	}
+
+	if (clk_set_rate(tablet_cam2_aux_clk,
+			clk_round_rate(tablet_cam2_aux_clk, 24000000))) {
+		clk_put(tablet_cam1_aux_clk);
+		clk_put(tablet_cam2_aux_clk);
+		return -EINVAL;
+	}
 
 	/* Select GPIO 37 */
-	omap_mux_init_gpio(TABLET_GPIO_CAM_PWRDN, OMAP_PIN_OUTPUT);
+	omap_mux_init_gpio(TABLET_GPIO_CAM1_PWRDN, OMAP_PIN_OUTPUT);
+
+	/* Select GPIO 38 */
+	omap_mux_init_gpio(TABLET_GPIO_CAM2_PWRDN, OMAP_PIN_OUTPUT);
 
 	/* Select GPIO 83 */
 	omap_mux_init_gpio(TABLET_GPIO_CAM_RESET, OMAP_PIN_OUTPUT);
@@ -202,10 +323,18 @@ static int __init tablet_camera_init(void)
 	/* Init FREF_CLK1_OUT */
 	omap_mux_init_signal("fref_clk1_out", OMAP_PIN_OUTPUT);
 
-	if (gpio_request_one(TABLET_GPIO_CAM_PWRDN, GPIOF_OUT_INIT_LOW,
-			     "CAM_PWRDN"))
+	/* Init FREF_CLK2_OUT */
+	omap_mux_init_signal("fref_clk2_out", OMAP_PIN_OUTPUT);
+
+	if (gpio_request_one(TABLET_GPIO_CAM1_PWRDN, GPIOF_OUT_INIT_LOW,
+			     "CAM1_PWRDN"))
 		printk(KERN_WARNING "Cannot request GPIO %d\n",
-			TABLET_GPIO_CAM_PWRDN);
+			TABLET_GPIO_CAM1_PWRDN);
+
+	if (gpio_request_one(TABLET_GPIO_CAM2_PWRDN, GPIOF_OUT_INIT_LOW,
+			     "CAM2_PWRDN"))
+		printk(KERN_WARNING "Cannot request GPIO %d\n",
+			TABLET_GPIO_CAM2_PWRDN);
 
 	if (gpio_request_one(TABLET_GPIO_CAM_RESET, GPIOF_OUT_INIT_HIGH,
 			     "CAM_RESET"))
