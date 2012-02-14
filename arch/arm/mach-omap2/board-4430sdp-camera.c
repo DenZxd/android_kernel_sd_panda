@@ -2,7 +2,7 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/i2c/twl.h>
-#include <linux/mfd/twl6040.h>
+#include <linux/mfd/twl6040-codec.h>
 #include <linux/regulator/consumer.h>
 
 #include <plat/i2c.h>
