@@ -16,7 +16,8 @@
 #include "control.h"
 #include "mux.h"
 
-#define TABLET_GPIO_CAM_PWRDN		39
+#define TABLET_GPIO_CAM_PWRDN		37
+#define TABLET_GPIO_CAM_RESET		83
 
 static struct clk *tablet_cam_aux_clk;
 
@@ -165,12 +166,12 @@ static struct omap_board_data omap4iss_data = {
 
 static int __init tablet_camera_init(void)
 {
-	if (!machine_is_omap4_panda())
+	if (!machine_is_omap_tabletblaze())
 		return 0;
 
-	tablet_cam_aux_clk = clk_get(NULL, "auxclk3_ck");
+	tablet_cam_aux_clk = clk_get(NULL, "auxclk1_ck");
 	if (IS_ERR(tablet_cam_aux_clk)) {
-		printk(KERN_ERR "Unable to get auxclk3_ck\n");
+		printk(KERN_ERR "Unable to get auxclk1_ck\n");
 		return -ENODEV;
 	}
 
@@ -192,16 +193,24 @@ static int __init tablet_camera_init(void)
 			 OMAP4_CAMERARX_CSI21_CTRLCLKEN_MASK,
 			 OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_CAMERA_RX);
 
-	/* Select GPIO 39 */
+	/* Select GPIO 37 */
 	omap_mux_init_gpio(TABLET_GPIO_CAM_PWRDN, OMAP_PIN_OUTPUT);
 
+	/* Select GPIO 83 */
+	omap_mux_init_gpio(TABLET_GPIO_CAM_RESET, OMAP_PIN_OUTPUT);
+
 	/* Init FREF_CLK1_OUT */
-	omap_mux_init_signal("fref_clk3_out", OMAP_PIN_OUTPUT);
+	omap_mux_init_signal("fref_clk1_out", OMAP_PIN_OUTPUT);
 
 	if (gpio_request_one(TABLET_GPIO_CAM_PWRDN, GPIOF_OUT_INIT_LOW,
 			     "CAM_PWRDN"))
 		printk(KERN_WARNING "Cannot request GPIO %d\n",
 			TABLET_GPIO_CAM_PWRDN);
+
+	if (gpio_request_one(TABLET_GPIO_CAM_RESET, GPIOF_OUT_INIT_HIGH,
+			     "CAM_RESET"))
+		printk(KERN_WARNING "Cannot request GPIO %d\n",
+			TABLET_GPIO_CAM_RESET);
 
 	omap4_init_camera(&tablet_iss_platform_data, &omap4iss_data);
 	return 0;
