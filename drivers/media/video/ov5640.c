@@ -628,7 +628,7 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 	*__format = format->format;
 
 	/* NOTE: This is always true for now, revisit later. */
-	ov5640->pixel_rate->cur.val64 = 168000000;
+	ov5640->pixel_rate->cur.val64 = 42000000;
 
 	return 0;
 }
