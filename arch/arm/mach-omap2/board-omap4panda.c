@@ -330,6 +330,78 @@ static struct platform_device hhcn_charger = {
 static void __init omap_charger_io_init(void) { }
 #endif
 
+#if defined(CONFIG_BT_BCM43XX) || defined(CONFIG_BT_BCM43XX_MODULE)
+#include <linux/bcm43xx-bluetooth.h>
+#include <mach/id.h>
+
+#define BT_RESET_GPIO 42
+#define BT_WAKE_GPIO  49
+
+/*
+ * this uses the unique per-cpu info from the cpu fuses set at factory to
+ * generate a 6-byte MAC address.  Two bits in the generated code are used
+ * to elaborate the generated address into four, so it can be used on multiple
+ * network interfaces.
+ *
+ * adopted from u-boot by mhfan
+ */
+static int omap4_die_id_to_ethernet_mac(u8 *mac, int subtype)
+{
+	unsigned idcode;
+	struct omap_die_id odi;
+	omap_get_die_id(&odi);
+
+	idcode  = odi.id_0;
+	idcode ^= odi.id_1;
+
+	mac[0] = idcode >> 4;
+	mac[1] = idcode >> 12;
+	mac[2] = idcode >> 20;
+
+	idcode  = odi.id_2;
+	idcode ^= odi.id_3;
+
+	mac[3] = idcode >> 4;
+	mac[4] = idcode >> 12;
+	mac[5] = idcode >> 20;
+
+	/* allow four MACs from this same basic data */
+	mac[1] = (mac[1] & ~0xc0) | ((subtype & 3) << 6);
+
+	/* mark it as not multicast and outside official 80211 MAC namespace */
+	mac[0] = (mac[0] & ~1) | 2;
+
+	return 0;
+}
+
+static void bcm43xx_bluetooth_set_power(int enable)
+{
+	if (enable) omap_uart_enable(2); else
+		    omap_uart_disable(2);
+}
+
+static struct bcm43xx_bt_platform_data bcm43xx_bluetooth_data = {
+	.reset_gpio = BT_RESET_GPIO,
+	.wake_gpio  = BT_WAKE_GPIO,
+	.set_power  = bcm43xx_bluetooth_set_power,
+	.get_addr   = omap4_die_id_to_ethernet_mac,
+};
+
+static struct platform_device bcm43xx_bluetooth = {
+	.dev.platform_data = &bcm43xx_bluetooth_data,
+	.name   = "bcm43xx_bluetooth",
+	.id     = -1,
+};
+
+static void __init bcm43xx_bluetooth_io_init(void)
+{
+	omap_mux_init_gpio(BT_RESET_GPIO, OMAP_PIN_OUTPUT);
+	omap_mux_init_gpio(BT_WAKE_GPIO, OMAP_PIN_OUTPUT);
+}
+#else
+static void __init bcm43xx_bluetooth_io_init(void) { }
+#endif
+
 static struct platform_device *panda_devices[] __initdata = {
 #if defined(CONFIG_BACKLIGHT_PWM) || defined(CONFIG_BACKLIGHT_PWM_MODULE)
 #ifdef CONFIG_OMAP_PWM
@@ -351,6 +423,9 @@ static struct platform_device *panda_devices[] __initdata = {
 #endif
 #if defined(CONFIG_SWITCH_GPIO) || defined(CONFIG_SWITCH_GPIO_MODULE)
 	&ts_key_switch_device,
+#endif
+#if defined(CONFIG_BT_BCM43XX) || defined(CONFIG_BT_BCM43XX_MODULE)
+	&bcm43xx_bluetooth,
 #endif
 };
 
@@ -1423,6 +1498,7 @@ static void __init omap4_panda_init(void)
 	omap_charger_io_init();
 	omap_encrypt_io_init();
 	omap4_panda_camera_mux_init();
+	bcm43xx_bluetooth_io_init();
 
 #ifdef CONFIG_VENDOR_HHTECH
 	panda_wlan_init();
