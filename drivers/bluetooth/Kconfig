@@ -81,6 +81,19 @@ config BT_HCIUART_LL
 
 	  Say Y here to compile support for HCILL protocol.
 
+config BT_BCM43XX
+	tristate "Broadcom BCM43xx serial support"
+	depends on BT_HCIUART
+	help
+	  HCIBCM43XX (HCI Broadcom BCM43xx) is a serial protocol for
+	  communication between host and Broadcom BCM43xx Bluetooth devices.
+	  This protocol enables BCM43XX chips to be enabled with
+	  power management support.
+	  Enable this if you have Broadcom BCM43xx serial Bluetooth device.
+
+	  Say Y here to compile support for HCI BCM43XX devices into the
+	  kernel or say M to compile it as module.
+
 config BT_HCIBCM203X
 	tristate "HCI BCM203x USB driver"
 	depends on USB
