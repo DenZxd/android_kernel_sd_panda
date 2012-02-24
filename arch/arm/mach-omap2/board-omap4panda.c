@@ -960,7 +960,7 @@ static int __init omap4_panda_i2c_init(void)
 
 
 	omap4_pmic_init("twl6030", &omap4_panda_twldata);
-	omap_register_i2c_bus(2, 400, panda_i2c_bus2_boardinfo,
+	omap_register_i2c_bus(2, 100, panda_i2c_bus2_boardinfo,
 					ARRAY_SIZE(panda_i2c_bus2_boardinfo));
 #ifdef CONFIG_TWL6040_UNBOUND
 	i2c_register_board_info(CONFIG_TWL6040_I2C_BUS_NO,
