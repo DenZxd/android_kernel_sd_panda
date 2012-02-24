@@ -31,6 +31,9 @@
 #include <linux/omapfb.h>
 #include <linux/wait.h>
 
+#include <linux/gpio.h>
+#include "../../../../arch/arm/mach-omap2/mux.h"
+
 #include <video/omapdss.h>
 #include <plat/vram.h>
 #include <plat/vrfb.h>
@@ -2665,6 +2668,22 @@ static int omapfb_probe(struct platform_device *pdev)
 		}
 	}
 
+#if 1
+#define GPIO_BL_PWM	94
+    if (0) omap_mux_init_signal("usbb1_ulpitll_dat6.dmtimer10_pwm_evt",
+	    OMAP_PIN_OUTPUT | OMAP_MUX_MODE3); else
+    omap_mux_init_gpio(GPIO_BL_PWM, OMAP_PIN_OUTPUT);
+
+    if (gpio_request_one(GPIO_BL_PWM,
+#if defined(CONFIG_SMARTQ_T20)
+	    GPIOF_OUT_INIT_LOW,
+#else
+	    GPIOF_OUT_INIT_HIGH,
+#endif
+	    "backlight_pwm")) ;
+    //else gpio_free(GPIO_BL_PWM);
+#endif
+
 	for (i = 0; i < fbdev->num_managers; i++) {
 		struct omap_overlay_manager *mgr;
 		mgr = fbdev->managers[i];
@@ -2706,9 +2725,26 @@ static int omapfb_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int omapfb_shutdown(struct platform_device *pdev)
+{
+	struct omapfb2_device *fbdev = platform_get_drvdata(pdev);
+	int i, blank = FB_BLANK_POWERDOWN;
+	struct fb_event event;
+
+	event.data = &blank;
+	for (i = 0; i < fbdev->num_fbs; ++i) {
+		event.info = fbdev->fbs[i];
+		fb_notifier_call_chain(FB_EVENT_BLANK, &event);
+break;
+	}
+
+	return 0;
+}
+
 static struct platform_driver omapfb_driver = {
 	.probe          = omapfb_probe,
 	.remove         = omapfb_remove,
+	.shutdown 	= omapfb_shutdown,
 	.driver         = {
 		.name   = "omapfb",
 		.owner  = THIS_MODULE,
