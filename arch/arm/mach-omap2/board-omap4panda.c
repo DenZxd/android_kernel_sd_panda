@@ -404,7 +404,11 @@ static struct omap_musb_board_data musb_board_data = {
 #else
 	.mode			= MUSB_PERIPHERAL,
 #endif
+#ifdef CONFIG_VENDOR_HHTECH
+	.power			= 500,
+#else
 	.power			= 100,
+#endif
 };
 
 #ifdef CONFIG_VENDOR_HHTECH
