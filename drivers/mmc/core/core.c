@@ -1614,6 +1614,11 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 #endif
 	mmc_power_up(host);
 
+	if (!strcmp(mmc_hostname(host), "mmc1")) {
+		pr_debug("delay initialization for card on mmc1\n");
+		mmc_delay(350);
+	}
+
 	/*
 	 * sdio_reset sends CMD52 to reset card.  Since we do not know
 	 * if the card is being re-initialized, just send it.  CMD52
