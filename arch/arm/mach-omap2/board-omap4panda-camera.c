@@ -114,10 +114,6 @@ static struct iss_v4l2_subdevs_group panda_camera_subdevs[] = {
 					.pol = 0,
 					.pos = 2,
 				},
-				.data[1] = {
-					.pol = 0,
-					.pos = 3,
-				},
 			},
 		} },
 	},
