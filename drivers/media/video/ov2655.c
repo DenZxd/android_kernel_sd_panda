@@ -32,6 +32,29 @@ struct ov2655_datafmt {
 	enum v4l2_colorspace		colorspace;
 };
 
+enum ov2655_size {
+	OV2655_SIZE_QVGA,
+	OV2655_SIZE_CIF,
+	OV2655_SIZE_VGA,
+	OV2655_SIZE_SVGA,
+	//OV2655_SIZE_XGA,
+	//OV2655_SIZE_720P,
+	OV2655_SIZE_SXGA,
+	OV2655_SIZE_UXGA,
+	OV2655_SIZE_LAST,
+};
+
+static const struct v4l2_frmsize_discrete ov2655_frmsizes[OV2655_SIZE_LAST] = {
+	{  320,  240 },
+	{  352,  288 },
+	{  640,  480 },
+	{  800,  600 },
+	//{ 1024,  768 },
+	//{ 1280,  720 },
+	{ 1280, 1024 },
+	{ 1600, 1200 },
+};
+
 struct ov2655_timing_cfg {
 	u16 x_addr_start;
 	u16 y_addr_start;
@@ -49,21 +72,39 @@ struct ov2655_timing_cfg {
 	u8 v_even_ss_inc;
 };
 
-enum ov2655_size {
-	OV2655_SIZE_QVGA,
-	OV2655_SIZE_VGA,
-	OV2655_SIZE_720P,
-	OV2655_SIZE_1080P,
-	OV2655_SIZE_5MP,
-	OV2655_SIZE_LAST,
-};
-
-static const struct v4l2_frmsize_discrete ov2655_frmsizes[OV2655_SIZE_LAST] = {
-	{  320,  240 },
-	{  640,  480 },
-	{ 1280,  720 },
-	{ 1920, 1080 },
-	{ 2592, 1944 },
+static const struct ov2655_timing_cfg timing_cfg[OV2655_SIZE_LAST] = {
+	[OV2655_SIZE_QVGA] = {
+		.x_addr_start = 0,
+		.y_addr_start = 0,
+		.x_addr_end = 2623,
+		.y_addr_end = 1951,
+		.h_output_size = 320,
+		.v_output_size = 240,
+		.h_total_size = 2844,
+		.v_total_size = 1968,
+		.isp_h_offset = 16,
+		.isp_v_offset = 6,
+		.h_odd_ss_inc = 1,
+		.h_even_ss_inc = 1,
+		.v_odd_ss_inc = 1,
+		.v_even_ss_inc = 1,
+	},
+	[OV2655_SIZE_VGA] = {
+		.x_addr_start = 0,
+		.y_addr_start = 0,
+		.x_addr_end = 2623,
+		.y_addr_end = 1951,
+		.h_output_size = 640,
+		.v_output_size = 480,
+		.h_total_size = 2844,
+		.v_total_size = 1968,
+		.isp_h_offset = 16,
+		.isp_v_offset = 6,
+		.h_odd_ss_inc = 1,
+		.h_even_ss_inc = 1,
+		.v_odd_ss_inc = 1,
+		.v_even_ss_inc = 1,
+	},
 };
 
 /* Find a frame size in an array */
@@ -116,204 +157,387 @@ struct ov2655_reg {
 
 /* TODO: Divide this properly */
 static const struct ov2655_reg configscript_common1[] = {
-	{ 0x3103, 0x03 },
-	{ 0x3017, 0x00 },
-	{ 0x3018, 0x00 },
-	{ 0x3630, 0x2e },
-	{ 0x3632, 0xe2 },
-	{ 0x3633, 0x23 },
-	{ 0x3634, 0x44 },
-	{ 0x3621, 0xe0 },
-	{ 0x3704, 0xa0 },
-	{ 0x3703, 0x5a },
-	{ 0x3715, 0x78 },
-	{ 0x3717, 0x01 },
-	{ 0x370b, 0x60 },
-	{ 0x3705, 0x1a },
-	{ 0x3905, 0x02 },
-	{ 0x3906, 0x10 },
-	{ 0x3901, 0x0a },
-	{ 0x3731, 0x12 },
-	{ 0x3600, 0x04 },
-	{ 0x3601, 0x22 },
-	{ 0x471c, 0x50 },
-	{ 0x3002, 0x1c },
-	{ 0x3006, 0xc3 },
-	{ 0x300e, 0x05 },
-	{ 0x302e, 0x08 },
-	{ 0x3612, 0x4b },
-	{ 0x3618, 0x04 },
-	{ 0x3034, 0x18 },
-	{ 0x3035, 0x11 },
-	{ 0x3036, 0x54 },
-	{ 0x3037, 0x13 },
-	{ 0x3708, 0x21 },
-	{ 0x3709, 0x12 },
-	{ 0x370c, 0x00 },
+	// IO & Clock & Analog Setup
+	{ 0x308c, 0x80 }, 	// disable MIPI
+	{ 0x308d, 0x0e }, 	// disable MIPI
+	{ 0x360b, 0x00 }, 	// test mode off
+	{ 0x30b0, 0xff }, 	// enable DVP
+	{ 0x30b1, 0xff }, 	// enable DVP
+	{ 0x30b2, 0x04 }, 	// enable DVP
+
+	{ 0x300e, 0x34 }, 	// PLL
+	{ 0x300f, 0xa6 }, 	// PLL
+	{ 0x3010, 0x81 }, 	// PLL
+	{ 0x3082, 0x01 },
+	{ 0x30f4, 0x01 },
+	{ 0x3090, 0x43 },
+	{ 0x3091, 0xc0 },
+	{ 0x30ac, 0x42 },
+
+	{ 0x30d1, 0x08 },
+	{ 0x30a8, 0x54 },
+	{ 0x3015, 0x02 }, 	// VAEC ceiling
+	{ 0x3093, 0x00 },
+	{ 0x307e, 0xe5 }, 	// digital gain if gain >= 8x
+	{ 0x3079, 0x00 },
+	{ 0x30aa, 0x52 },
+	{ 0x3017, 0x40 }, 	// disable drop frame
+	{ 0x30f3, 0x83 },
+	{ 0x306a, 0x0c },
+	{ 0x306d, 0x00 }, 	// BLC control
+	{ 0x336a, 0x3c }, 	// ISP CTRL
+	{ 0x3076, 0x6a }, 	// Vsunc is drop when frame drop
+	{ 0x30d9, 0x95 },
+	{ 0x3016, 0x52 }, 	// Max exposure = Tfrme -2x2 + 1
+	{ 0x3601, 0x30 }, 	// DVP output order D[9:2]
+	{ 0x304e, 0x88 },
+	{ 0x30f1, 0x82 },
+	{ 0x306f, 0x14 },
+	{ 0x302a, 0x02 },
+	{ 0x302b, 0x6a },
+
+	// XXX:
+	{ 0x3012, 0x10 },
+	{ 0x3011, 0x01 },	// 15 fps
+
+	// AEC/AGC
+	{ 0x3013, 0xf7 }, 	// AEC fast, big step, banding on, < band on
+				// extreme exposure off, AGC on, AEC on
+	{ 0x3018, 0x70 }, 	// stable high
+	{ 0x3019, 0x60 }, 	// stable low
+	{ 0x301a, 0xd4 }, 	// fast zone
+
+	// XXX:
+	{ 0x301c, 0x13 },
+	{ 0x301d, 0x17 },
+	{ 0x3070, 0x5d },
+	{ 0x3072, 0x4d },
+
+	// D5060
+	{ 0x30af, 0x00 },
+	{ 0x3048, 0x1f },
+	{ 0x3049, 0x4e },
+	{ 0x304a, 0x20 },
+	{ 0x304f, 0x20 },
+	{ 0x304b, 0x02 },
+	{ 0x304c, 0x00 },
+	{ 0x304d, 0x02 },
+	{ 0x304f, 0x20 },
+	{ 0x30a3, 0x10 },
+	{ 0x3014, 0x64 }, 	// Manual 60hz, 50/60 detect on,
+				// AddLT1F in AGC, Night mode off,
+				// AEC smooth between 50/60,
+				// extrem exposure auto,
+
+	// XXX:
+	{ 0x3071, 0x00 },
+	{ 0x3070, 0xb9 },	// 0x5d
+	{ 0x3073, 0x00 },
+	{ 0x3072, 0x4d },
+	{ 0x301c, 0x02 },	// 0x05
+	{ 0x301d, 0x06 },
+
+	{ 0x304d, 0x42 },
+	{ 0x304a, 0x40 },
+	{ 0x304f, 0x40 },
+	{ 0x3095, 0x07 },
+	{ 0x3096, 0x16 },
+	{ 0x3097, 0x1d },
+
+	// Window Setup XXX:
+	{ 0x3020, 0x01 },
+	{ 0x3021, 0x18 },
+	{ 0x3022, 0x00 },
+	{ 0x3023, 0x06 },
+	{ 0x3024, 0x06 },
+	{ 0x3025, 0x58 },
+	{ 0x3026, 0x02 },
+	{ 0x3027, 0x61 },
+	{ 0x3088, 0x01 },
+	{ 0x3089, 0x60 },
+	{ 0x308a, 0x01 },
+	{ 0x308b, 0x20 },
+	{ 0x3316, 0x64 },
+	{ 0x3317, 0x25 },
+	{ 0x3318, 0x80 },
+	{ 0x3319, 0x08 },
+	{ 0x331a, 0x28 },
+	{ 0x331b, 0x1e },
+	{ 0x331c, 0x00 },
+	{ 0x331d, 0x38 },
+	{ 0x3100, 0x00 },
+
+	// Lens correction
+	{ 0x3350, 0x32 },
+	{ 0x3351, 0x25 },
+	{ 0x3352, 0x80 },
+	{ 0x3353, 0x1e },
+	{ 0x3354, 0x00 },
+	{ 0x3355, 0x84 },
+	{ 0x3356, 0x32 },
+	{ 0x3357, 0x25 },
+	{ 0x3358, 0x80 },
+	{ 0x3359, 0x1b },
+	{ 0x335a, 0x00 },
+	{ 0x335b, 0x84 },
+	{ 0x335c, 0x32 },
+	{ 0x335d, 0x25 },
+	{ 0x335e, 0x80 },
+	{ 0x335f, 0x1b },
+	{ 0x3360, 0x00 },
+	{ 0x3361, 0x84 },
+	{ 0x3363, 0x70 },
+	{ 0x3364, 0x7f },
+	{ 0x3365, 0x00 },
+	{ 0x3366, 0x00 },
+
+	// AWB
+	{ 0x3320, 0xfa },
+	{ 0x3321, 0x11 },
+	{ 0x3322, 0x92 },
+	{ 0x3323, 0x01 },
+	{ 0x3324, 0x97 },
+	{ 0x3325, 0x02 },
+	{ 0x3326, 0xff },
+	{ 0x3327, 0x10 },
+	{ 0x3328, 0x10 },
+	{ 0x3329, 0x1f },
+	{ 0x332a, 0x58 },
+	{ 0x332b, 0x50 },
+	{ 0x332c, 0xbe },
+	{ 0x332d, 0xce },
+	{ 0x332e, 0x2e },
+	{ 0x332f, 0x36 },
+	{ 0x3330, 0x4d },
+	{ 0x3331, 0x44 },
+	{ 0x3332, 0xf0 },
+	{ 0x3333, 0x0a },
+	{ 0x3334, 0xf0 },
+	{ 0x3335, 0xf0 },
+	{ 0x3336, 0xf0 },
+	{ 0x3337, 0x40 },
+	{ 0x3338, 0x40 },
+	{ 0x3339, 0x40 },
+	{ 0x333a, 0x00 },
+	{ 0x333b, 0x00 },
+
+	// Gamma
+	{ 0x3340, 0x09 },
+	{ 0x3341, 0x19 },
+	{ 0x3342, 0x2f },
+	{ 0x3343, 0x45 },
+	{ 0x3344, 0x5a },
+	{ 0x3345, 0x69 },
+	{ 0x3346, 0x75 },
+	{ 0x3347, 0x7e },
+	{ 0x3348, 0x88 },
+	{ 0x3349, 0x96 },
+	{ 0x334a, 0xa3 },
+	{ 0x334b, 0xaf },
+	{ 0x334c, 0xc4 },
+	{ 0x334d, 0xd7 },
+	{ 0x334e, 0xe8 },
+	{ 0x334f, 0x20 },
+
+	// Color Matrix
+	{ 0x3380, 0x20 },
+	{ 0x3381, 0x5b },
+	{ 0x3382, 0x05 },
+	{ 0x3383, 0x22 },
+	{ 0x3384, 0x9d },
+	{ 0x3385, 0xc0 },
+	{ 0x3386, 0xb6 },
+	{ 0x3387, 0xb5 },
+	{ 0x3388, 0x02 },
+	{ 0x3389, 0x98 },
+	{ 0x338a, 0x00 },
+
+	// UVadjust
+	{ 0x3301, 0xff }, 	// SDE on, UV adjsut on, color matrix on,
+				// sharpen on de-noise on, CIP on, BC on, WC on
+	{ 0x338B, 0x1b },	// XXX:
+	{ 0x338c, 0x1f }, 	// UV adjust TH1
+	{ 0x338d, 0x40 },	// XXX:
+
+	// SDE
+	{ 0x3390, 0x45 }, 	// for brightness and sharpness
+	{ 0x3391, 0x06 }, 	// saturation on, brightness/sharpness on
+	{ 0x339a, 0x00 }, 	// brightness default
+	{ 0x3398, 0x20 }, 	// contrast default
+	{ 0x3399, 0x20 }, 	// contrast default
+	{ 0x3394, 0x40 }, 	// saturation default
+	{ 0x3395, 0x40 }, 	// saturation default
+
+	// Sharpness/De-noise
+	{ 0x3370, 0xd0 }, 	// de-noise threshold
+	{ 0x3371, 0x00 }, 	// sharpness
+	{ 0x3372, 0x00 }, 	// SHP TH Man
+	{ 0x3373, 0x40 }, 	// DNS offset
+	{ 0x3374, 0x10 }, 	// DNS th
+	{ 0x3375, 0x10 }, 	// DNS slop
+	{ 0x3376, 0x04 }, 	// SHP offset 1
+	{ 0x3377, 0x00 }, 	// SHP offset 2
+	{ 0x3378, 0x04 }, 	// SHP th1
+	{ 0x3379, 0x80 }, 	// SHP th2
+
+	// BLC
+	{ 0x3069, 0x86 }, 	// BLC target
+	{ 0x307c, 0x11 }, 	// mirror off, flip off, XXX: portrait
+	{ 0x3087, 0x02 }, 	// disable always BLC
+
+	// black sun
+#if 1
+	// Avdd 2.55~3.0V
+	{ 0x3090, 0x03 },
+	{ 0x30a8, 0x54 },
+	{ 0x30aa, 0x82 },
+	{ 0x30a3, 0x91 },
+	{ 0x30a1, 0x41 },	// XXX:
+#else
+	// Avdd 2.45~2.7V
+	{ 0x3090, 0x03 },
+	{ 0x30a8, 0x52 },
+	{ 0x30aa, 0x62 },
+	{ 0x30a3, 0x91 },
+	{ 0x30a1, 0x41 },
+#endif
+
+	// Other functions
+	{ 0x3300, 0xfc }, 	// ISP on, raw gamma on, AWB stat on,
+				// AWB gain on
+
+	{ 0x3302, 0x11 },
+
+	// lenc on, lenc low on, YUV output
+	{ 0x3400, 0x00 }, 	// YUV 422 YUYV
+	{ 0x3606, 0x20 }, 	// DVP enable
+	{ 0x3601, 0x30 }, 	// output D[9:2]
+	{ 0x300e, 0x34 }, 	// PLL
+	{ 0x30f3, 0x83 },
+	{ 0x304e, 0x88 },
+#if 0
+	{ 0x363b, 0x01 },
+	{ 0x363c, 0xf2 },
+	{ 0x3085, 0x20 },
+#else// XXX:
+	// MIPI
+	{ 0x363b, 0x01 },
+	{ 0x309e, 0x08 },
+	{ 0x3606, 0x00 },
+	{ 0x3630, 0x35 },
+
+	{ 0x304e, 0x04 },
+	{ 0x363b, 0x01 },
+	{ 0x309e, 0x08 },
+	{ 0x3606, 0x00 },
+	{ 0x3084, 0x01 },
+	{ 0x3010, 0x80 },	// 0x81
+	{ 0x3011, 0x00 },
+	{ 0x300e, 0x31 },	// 0x3a
+	{ 0x300f, 0xa6 },	//
+	{ 0x3634, 0x26 },
+#endif
+
+	{ 0x3086, 0x0f }, 	// sleep
+	{ 0x3086, 0x00 }, 	// wake up
 };
 
 /* TODO: Divide this properly */
 static const struct ov2655_reg configscript_common2[] = {
-	{ 0x3a02, 0x01 },
-	{ 0x3a03, 0xec },
-	{ 0x3a08, 0x01 },
-	{ 0x3a09, 0x27 },
-	{ 0x3a0a, 0x00 },
-	{ 0x3a0b, 0xf6 },
-	{ 0x3a0e, 0x06 },
-	{ 0x3a0d, 0x08 },
-	{ 0x3a14, 0x01 },
-	{ 0x3a15, 0xec },
-	{ 0x4001, 0x02 },
-	{ 0x4004, 0x06 },
-	{ 0x460b, 0x37 },
-	{ 0x4750, 0x00 },
-	{ 0x4751, 0x00 },
-	{ 0x4800, 0x24 },
-	{ 0x5a00, 0x08 },
-	{ 0x5a21, 0x00 },
-	{ 0x5a24, 0x00 },
-	{ 0x5000, 0x27 },
-	{ 0x5001, 0x87 },
-	{ 0x3820, 0x40 },
-	{ 0x3821, 0x06 },
-	{ 0x3824, 0x01 },
-	{ 0x5481, 0x08 },
-	{ 0x5482, 0x14 },
-	{ 0x5483, 0x28 },
-	{ 0x5484, 0x51 },
-	{ 0x5485, 0x65 },
-	{ 0x5486, 0x71 },
-	{ 0x5487, 0x7d },
-	{ 0x5488, 0x87 },
-	{ 0x5489, 0x91 },
-	{ 0x548a, 0x9a },
-	{ 0x548b, 0xaa },
-	{ 0x548c, 0xb8 },
-	{ 0x548d, 0xcd },
-	{ 0x548e, 0xdd },
-	{ 0x548f, 0xea },
-	{ 0x5490, 0x1d },
-	{ 0x5381, 0x20 },
-	{ 0x5382, 0x64 },
-	{ 0x5383, 0x08 },
-	{ 0x5384, 0x20 },
-	{ 0x5385, 0x80 },
-	{ 0x5386, 0xa0 },
-	{ 0x5387, 0xa2 },
-	{ 0x5388, 0xa0 },
-	{ 0x5389, 0x02 },
-	{ 0x538a, 0x01 },
-	{ 0x538b, 0x98 },
-	{ 0x5300, 0x08 },
-	{ 0x5301, 0x30 },
-	{ 0x5302, 0x10 },
-	{ 0x5303, 0x00 },
-	{ 0x5304, 0x08 },
-	{ 0x5305, 0x30 },
-	{ 0x5306, 0x08 },
-	{ 0x5307, 0x16 },
-	{ 0x5580, 0x00 },
-	{ 0x5587, 0x00 },
-	{ 0x5588, 0x00 },
-	{ 0x5583, 0x40 },
-	{ 0x5584, 0x10 },
-	{ 0x5589, 0x10 },
-	{ 0x558a, 0x00 },
-	{ 0x558b, 0xf8 },
-	{ 0x3a0f, 0x36 },
-	{ 0x3a10, 0x2e },
-	{ 0x3a1b, 0x38 },
-	{ 0x3a1e, 0x2c },
-	{ 0x3a11, 0x70 },
-	{ 0x3a1f, 0x18 },
-	{ 0x3a18, 0x00 },
-	{ 0x3a19, 0xf8 },
-	{ 0x3003, 0x03 },
-	{ 0x3003, 0x01 },
-};
+	// union1205 IQ Setting
+	// cmx
+	{ 0x3380, 0x27 },
+	{ 0x3381, 0x5c },
+	{ 0x3382, 0x0a },
+	{ 0x3383, 0x2f },
+	{ 0x3384, 0xc7 },
+	{ 0x3385, 0xf7 },
+	{ 0x3386, 0xea },
+	{ 0x3387, 0xe7 },
+	{ 0x3388, 0x03 },
+	{ 0x3389, 0x98 },
+	{ 0x338a, 0x01 },
+	// awb
+	{ 0x3320, 0xfa },
+	{ 0x3321, 0x11 },
+	{ 0x3322, 0x92 },
+	{ 0x3323, 0x01 },
+	{ 0x3324, 0x97 },
+	{ 0x3325, 0x02 },
+	{ 0x3326, 0xff },
+	{ 0x3327, 0x0c },
+	{ 0x3328, 0x10 },
+	{ 0x3329, 0x13 },
+	{ 0x332a, 0x58 },
+	{ 0x332b, 0x5f },
+	{ 0x332c, 0xbe },
+	{ 0x332d, 0x9b },
+	{ 0x332e, 0x3a },
+	{ 0x332f, 0x36 },
+	{ 0x3330, 0x4d },
+	{ 0x3331, 0x44 },
+	{ 0x3332, 0xf0 },
+	{ 0x3333, 0x0a },
+	{ 0x3334, 0xf0 },
+	{ 0x3335, 0xf0 },
+	{ 0x3336, 0xf0 },
+	{ 0x3337, 0x40 },
+	{ 0x3338, 0x40 },
+	{ 0x3339, 0x40 },
+	{ 0x333a, 0x00 },
+	{ 0x333b, 0x00 },
 
-static const struct ov2655_timing_cfg timing_cfg[OV2655_SIZE_LAST] = {
-	[OV2655_SIZE_QVGA] = {
-		.x_addr_start = 0,
-		.y_addr_start = 0,
-		.x_addr_end = 2623,
-		.y_addr_end = 1951,
-		.h_output_size = 320,
-		.v_output_size = 240,
-		.h_total_size = 2844,
-		.v_total_size = 1968,
-		.isp_h_offset = 16,
-		.isp_v_offset = 6,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-	},
-	[OV2655_SIZE_VGA] = {
-		.x_addr_start = 0,
-		.y_addr_start = 0,
-		.x_addr_end = 2623,
-		.y_addr_end = 1951,
-		.h_output_size = 640,
-		.v_output_size = 480,
-		.h_total_size = 2844,
-		.v_total_size = 1968,
-		.isp_h_offset = 16,
-		.isp_v_offset = 6,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-	},
-	[OV2655_SIZE_720P] = {
-		.x_addr_start = 336,
-		.y_addr_start = 434,
-		.x_addr_end = 2287,
-		.y_addr_end = 1522,
-		.h_output_size = 1280,
-		.v_output_size = 720,
-		.h_total_size = 2500,
-		.v_total_size = 1120,
-		.isp_h_offset = 16,
-		.isp_v_offset = 4,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-	},
-	[OV2655_SIZE_1080P] = {
-		.x_addr_start = 336,
-		.y_addr_start = 434,
-		.x_addr_end = 2287,
-		.y_addr_end = 1522,
-		.h_output_size = 1920,
-		.v_output_size = 1080,
-		.h_total_size = 2500,
-		.v_total_size = 1120,
-		.isp_h_offset = 16,
-		.isp_v_offset = 4,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-	},
-	[OV2655_SIZE_5MP] = {
-		.x_addr_start = 0,
-		.y_addr_start = 0,
-		.x_addr_end = 2623,
-		.y_addr_end = 1951,
-		.h_output_size = 2592,
-		.v_output_size = 1944,
-		.h_total_size = 2844,
-		.v_total_size = 1968,
-		.isp_h_offset = 16,
-		.isp_v_offset = 6,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-	},
+	// lens correction
+	{ 0x3300, 0xFC },
+	// R
+	{ 0x3350, 0x32 },
+	{ 0x3351, 0x2a },
+	{ 0x3352, 0x08 },
+	{ 0x3353, 0x27 },
+	{ 0x3354, 0x00 },
+	{ 0x3355, 0x85 },
+	// G
+	{ 0x3356, 0x33 },
+	{ 0x3357, 0x2a },
+	{ 0x3358, 0x08 },
+	{ 0x3359, 0x24 },
+	{ 0x335a, 0x00 },
+	{ 0x335b, 0x85 },
+	// B
+	{ 0x335c, 0x32 },
+	{ 0x335d, 0x2a },
+	{ 0x335e, 0x08 },
+	{ 0x335f, 0x20 },
+	{ 0x3360, 0x00 },
+	{ 0x3361, 0x85 },
+
+	{ 0x3363, 0x01 },
+	{ 0x3364, 0x03 },
+	{ 0x3365, 0x02 },
+	{ 0x3366, 0x00 },
+
+	// gamma
+	{ 0x334f, 0x20 },
+	{ 0x3340, 0x08 },
+	{ 0x3341, 0x16 },
+	{ 0x3342, 0x2f },
+	{ 0x3343, 0x45 },
+	{ 0x3344, 0x56 },
+	{ 0x3345, 0x66 },
+	{ 0x3346, 0x72 },
+	{ 0x3347, 0x7c },
+	{ 0x3348, 0x86 },
+	{ 0x3349, 0x96 },
+	{ 0x334a, 0xa3 },
+	{ 0x334b, 0xaf },
+	{ 0x334c, 0xc4 },
+	{ 0x334d, 0xd7 },
+	{ 0x334e, 0xe8 },
+
+	// ae
+	{ 0x3018, 0x80 },
+	{ 0x3019, 0x70 },
+	{ 0x301a, 0xd4 },
 };
 
 /**
@@ -439,137 +663,23 @@ static int ov2655_config_timing(struct v4l2_subdev *sd)
 
 	i = ov2655_find_framesize(ov2655->format.width, ov2655->format.height);
 
-	ret = ov2655_reg_write(client,
-			0x3800,
-			(timing_cfg[i].x_addr_start & 0xFF00) >> 8);
-	if (ret)
-		return ret;
+	ret = ov2655_reg_write(client, 0x3088,
+		(ov2655_frmsizes[i].width  >> 8) & 0x0f);
+	if (ret) return ret;
 
-	ret = ov2655_reg_write(client,
-			0x3801,
-			timing_cfg[i].x_addr_start & 0xFF);
-	if (ret)
-		return ret;
+	ret = ov2655_reg_write(client, 0x3089,
+		 ov2655_frmsizes[i].width  & 0xff);
+	if (ret) return ret;
 
-	ret = ov2655_reg_write(client,
-			0x3802,
-			(timing_cfg[i].y_addr_start & 0xFF00) >> 8);
-	if (ret)
-		return ret;
+	ret = ov2655_reg_write(client, 0x308a,
+		(ov2655_frmsizes[i].height >> 8) & 0x07);
+	if (ret) return ret;
 
-	ret = ov2655_reg_write(client,
-			0x3803,
-			timing_cfg[i].y_addr_start & 0xFF);
-	if (ret)
-		return ret;
+	ret = ov2655_reg_write(client, 0x308b,
+		 ov2655_frmsizes[i].height & 0xff);
+	if (ret) return ret;
 
-	ret = ov2655_reg_write(client,
-			0x3804,
-			(timing_cfg[i].x_addr_end & 0xFF00) >> 8);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x3805,
-			timing_cfg[i].x_addr_end & 0xFF);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x3806,
-			(timing_cfg[i].y_addr_end & 0xFF00) >> 8);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x3807,
-			timing_cfg[i].y_addr_end & 0xFF);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x3808,
-			(timing_cfg[i].h_output_size & 0xFF00) >> 8);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x3809,
-			timing_cfg[i].h_output_size & 0xFF);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x380A,
-			(timing_cfg[i].v_output_size & 0xFF00) >> 8);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x380B,
-			timing_cfg[i].v_output_size & 0xFF);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x380C,
-			(timing_cfg[i].h_total_size & 0xFF00) >> 8);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x380D,
-			timing_cfg[i].h_total_size & 0xFF);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x380E,
-			(timing_cfg[i].v_total_size & 0xFF00) >> 8);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x380F,
-			timing_cfg[i].v_total_size & 0xFF);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x3810,
-			(timing_cfg[i].isp_h_offset & 0xFF00) >> 8);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x3811,
-			timing_cfg[i].isp_h_offset & 0xFF);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x3812,
-			(timing_cfg[i].isp_v_offset & 0xFF00) >> 8);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x3813,
-			timing_cfg[i].isp_v_offset & 0xFF);
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x3814,
-			((timing_cfg[i].h_odd_ss_inc & 0xF) << 4) |
-			(timing_cfg[i].h_even_ss_inc & 0xF));
-	if (ret)
-		return ret;
-
-	ret = ov2655_reg_write(client,
-			0x3815,
-			((timing_cfg[i].v_odd_ss_inc & 0xF) << 4) |
-			(timing_cfg[i].v_even_ss_inc & 0xF));
+	// TODO:
 
 	return ret;
 }
@@ -595,8 +705,22 @@ __ov2655_get_pad_format(struct ov2655 *ov2655, struct v4l2_subdev_fh *fh,
 static int ov2655_s_power(struct v4l2_subdev *sd, int on)
 {
 	struct ov2655 *ov2655 = to_ov2655(sd);
+	int ret = 0;
 
-	return ov2655->pdata->s_power(sd, on);
+	if (0 && !on) {
+	    struct i2c_client *client = v4l2_get_subdevdata(sd);
+	    ov2655_reg_write(client, 0x30ab, 0x00);
+	    ov2655_reg_write(client, 0x30ad, 0x0a);
+	    ov2655_reg_write(client, 0x30ae, 0x27);
+	    //ov2655_reg_read(client, 0x363b, &saved);
+	    ov2655_reg_write(client, 0x363b, 0x01);
+	}
+
+	ret = ov2655->pdata->s_power(sd, on);
+
+	//if (on) ov2655_reg_write(client, 0x363b, saved);
+
+	return ret;
 }
 
 static struct v4l2_subdev_core_ops ov2655_subdev_core_ops = {
@@ -628,7 +752,7 @@ static int ov2655_s_fmt(struct v4l2_subdev *sd,
 	*__format = format->format;
 
 	/* NOTE: This is always true for now, revisit later. */
-	ov2655->pixel_rate->cur.val64 = 42000000;
+	ov2655->pixel_rate->cur.val64 = 42000000;	// FIXME:
 
 	return 0;
 }
@@ -675,17 +799,14 @@ static int ov2655_s_stream(struct v4l2_subdev *sd, int enable)
 	int ret = 0;
 
 	if (enable) {
-		u8 fmtreg = 0, fmtmuxreg = 0;
-		int i;
+		u8 fmtreg = 0;
 
 		switch ((u32)ov2655->format.code) {
 		case V4L2_MBUS_FMT_UYVY8_1X16:
-			fmtreg = 0x32;
-			fmtmuxreg = 0;
+			fmtreg = 0x02;
 			break;
 		case V4L2_MBUS_FMT_YUYV8_1X16:
-			fmtreg = 0x30;
-			fmtmuxreg = 0;
+			fmtreg = 0x00;
 			break;
 		default:
 			/* This shouldn't happen */
@@ -693,11 +814,7 @@ static int ov2655_s_stream(struct v4l2_subdev *sd, int enable)
 			return ret;
 		}
 
-		ret = ov2655_reg_write(client, 0x4300, fmtreg);
-		if (ret)
-			return ret;
-
-		ret = ov2655_reg_write(client, 0x501F, fmtmuxreg);
+		ret = ov2655_reg_write(client, 0x3400, fmtreg);
 		if (ret)
 			return ret;
 
@@ -705,33 +822,19 @@ static int ov2655_s_stream(struct v4l2_subdev *sd, int enable)
 		if (ret)
 			return ret;
 
-		i = ov2655_find_framesize(ov2655->format.width, ov2655->format.height);
-		if ((i == OV2655_SIZE_QVGA) ||
-		    (i == OV2655_SIZE_VGA) ||
-		    (i == OV2655_SIZE_720P)) {
-			ret = ov2655_reg_set(client, 0x5001, 0x20);
-			if (ret)
-				return ret;
-			ret = ov2655_reg_write(client, 0x3108,
-					(i == OV2655_SIZE_720P) ? 0x1 : 0);
-		} else {
-			ret = ov2655_reg_clr(client, 0x5001, 0x20);
-			if (ret)
-				return ret;
-			ret = ov2655_reg_write(client, 0x3108, 0x2);
-		}
-
-		ret = ov2655_reg_clr(client, 0x3008, 0x40);
+return ret;
+		ret = ov2655_reg_write(client, 0x30ad, 0x00);
+		if (ret)
+			goto out;
+		ret = ov2655_reg_write(client, 0x3086, 0x00);
 		if (ret)
 			goto out;
 	} else {
-		u8 tmpreg = 0;
-
-		ret = ov2655_reg_read(client, 0x3008, &tmpreg);
+return ret;
+		ret = ov2655_reg_write(client, 0x30ad, 0x0a);
 		if (ret)
 			goto out;
-
-		ret = ov2655_reg_write(client, 0x3008, tmpreg | 0x40);
+		ret = ov2655_reg_write(client, 0x3086, 0x0f);
 		if (ret)
 			goto out;
 	}
@@ -774,8 +877,8 @@ static int ov2655_registered(struct v4l2_subdev *subdev)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(subdev);
 	struct ov2655 *ov2655 = to_ov2655(subdev);
+	u8 revision[2] = { 0 };
 	int ret = 0;
-	u8 revision = 0;
 
 	ret = ov2655_s_power(subdev, 1);
 	if (ret < 0) {
@@ -783,32 +886,32 @@ static int ov2655_registered(struct v4l2_subdev *subdev)
 		return ret;
 	}
 
-	ret = ov2655_reg_read(client, 0x302A, &revision);
+	ret = ov2655_reg_read(client, 0x300A, &revision[0]);	// = 0x26
+	ret = ov2655_reg_read(client, 0x300B, &revision[1]);	// = 0x56
 	if (ret) {
 		dev_err(&client->dev, "Failure to detect OV2655 chip\n");
 		goto out;
 	}
 
-	revision &= 0xF;
-
-	dev_info(&client->dev, "Detected a OV2655 chip, revision %x\n",
-		 revision);
+	dev_info(&client->dev, "Detected a OV2655 chip, revision %x%x\n",
+		 revision[0], revision[1]);
 
 	/* SW Reset */
-	ret = ov2655_reg_set(client, 0x3008, 0x80);
+	ret = ov2655_reg_write(client, 0x3012, 0x80);
 	if (ret)
 		goto out;
 
-	msleep(2);
+	msleep(5);
 
-	ret = ov2655_reg_clr(client, 0x3008, 0x80);
+#if 0
+	/* sleep mode: SW Powerdown */
+	ret = ov2655_reg_write(client, 0x30ad, 0x00);
 	if (ret)
 		goto out;
-
-	/* SW Powerdown */
-	ret = ov2655_reg_set(client, 0x3008, 0x40);
+	ret = ov2655_reg_write(client, 0x3086, 0x00);
 	if (ret)
 		goto out;
+#endif
 
 	ret = ov2655_reg_writes(client, configscript_common1,
 			ARRAY_SIZE(configscript_common1));
