@@ -20,8 +20,8 @@ struct iss_csiphy_lane {
 	u8 pol;
 };
 
-#define ISS_CSIPHY1_NUM_DATA_LANES	4
-#define ISS_CSIPHY2_NUM_DATA_LANES	1
+#define ISS_CSIPHY1_NUM_DATA_LANES	4	// XXX: 5
+#define ISS_CSIPHY2_NUM_DATA_LANES	1	// XXX: 3
 
 /**
  * struct iss_csiphy_lanes_cfg - CSI2 lane configuration
