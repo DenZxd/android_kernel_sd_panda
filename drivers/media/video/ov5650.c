@@ -615,6 +615,14 @@ static int ov5650_enum_framesizes(struct v4l2_subdev *subdev,
 	return 0;
 }
 
+static int ov5650_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
+{
+	/* REVISIT */
+	*frames = 3;
+
+	return 0;
+}
+
 static struct v4l2_subdev_core_ops ov5650_subdev_core_ops = {
 	.s_power	= ov5650_s_power,
 };
@@ -630,10 +638,15 @@ static struct v4l2_subdev_pad_ops ov5650_subdev_pad_ops = {
 	.set_fmt = ov5650_s_fmt,
 };
 
+static struct v4l2_subdev_sensor_ops ov5650_subdev_sensor_ops = {
+	.g_skip_frames	= &ov5650_g_skip_frames,
+};
+
 static struct v4l2_subdev_ops ov5650_subdev_ops = {
 	.core	= &ov5650_subdev_core_ops,
 	.video	= &ov5650_subdev_video_ops,
 	.pad	= &ov5650_subdev_pad_ops,
+	.sensor	= &ov5650_subdev_sensor_ops,
 };
 
 static int ov5650_probe(struct i2c_client *client,
