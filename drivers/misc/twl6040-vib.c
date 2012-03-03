@@ -120,6 +120,7 @@ static void vib_set(int const new_power_state)
 {
 	struct twl6040 *twl6040 = misc_data->twl6040;
 	u8 speed = misc_data->pdata->voltage_raise_speed;
+	int channels = misc_data->pdata->channels;
 	int ret;
 
 	mutex_lock(&misc_data->io_mutex);
@@ -140,7 +141,9 @@ static void vib_set(int const new_power_state)
 		if (speed == 0x00)
 			speed = 0x32;
 
+	    if (channels & TWL6040_VIBRA_CHL)
 		twl6040_reg_write(twl6040, TWL6040_REG_VIBDATL, speed);
+	    if (channels & TWL6040_VIBRA_CHR)
 		twl6040_reg_write(twl6040, TWL6040_REG_VIBDATR, speed);
 
 		/*
@@ -148,23 +151,31 @@ static void vib_set(int const new_power_state)
 		 * 2.5ms when enabling vibrator drivers to avoid false
 		 * overcurrent detection
 		 */
+	    if (channels & TWL6040_VIBRA_CHL)
 		twl6040_set_bits(twl6040, TWL6040_REG_VIBCTLL,
 				 TWL6040_VIBENAL | TWL6040_VIBCTRLLP);
+	    if (channels & TWL6040_VIBRA_CHR)
 		twl6040_set_bits(twl6040, TWL6040_REG_VIBCTLR,
 				 TWL6040_VIBENAR | TWL6040_VIBCTRLRP);
 
 		mdelay(4);
 
+	    if (channels & TWL6040_VIBRA_CHL)
 		twl6040_clear_bits(twl6040, TWL6040_REG_VIBCTLL,
 				 TWL6040_VIBCTRLLP);
+	    if (channels & TWL6040_VIBRA_CHR)
 		twl6040_clear_bits(twl6040, TWL6040_REG_VIBCTLR,
 				 TWL6040_VIBCTRLRP);
 	} else {
+	    if (channels & TWL6040_VIBRA_CHL)
 		twl6040_reg_write(twl6040, TWL6040_REG_VIBDATL, 0x00);
+	    if (channels & TWL6040_VIBRA_CHR)
 		twl6040_reg_write(twl6040, TWL6040_REG_VIBDATR, 0x00);
 
+	    if (channels & TWL6040_VIBRA_CHL)
 		twl6040_clear_bits(twl6040, TWL6040_REG_VIBCTLL,
 				   TWL6040_VIBENAL);
+	    if (channels & TWL6040_VIBRA_CHR)
 		twl6040_clear_bits(twl6040, TWL6040_REG_VIBCTLR,
 				   TWL6040_VIBENAR);
 
