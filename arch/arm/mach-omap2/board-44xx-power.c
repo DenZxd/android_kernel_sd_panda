@@ -436,7 +436,13 @@ static struct twl4030_codec_audio_data twl6040_audio = {
 static struct twl4030_codec_vibra_data twl6040_vibra = {
 	.max_timeout	= 15000,
 	.initial_vibrate = 0,
+#ifdef CONFIG_VENDOR_HHTECH
+	.voltage_raise_speed = 0x32,
+	.channels = TWL6040_VIBRA_CHR,
+#else
 	.voltage_raise_speed = 0x26,
+	.channels = TWL6040_VIBRA_CHR | TWL6040_VIBRA_CHL,
+#endif
 };
 
 static int twl6040_init(void)

@@ -783,15 +783,19 @@ struct twl4030_codec_audio_data {
 	int vddhf_uV;
 };
 
-struct twl4030_codec_vibra_data {
-	unsigned int	coexist;
+enum {
+	TWL6040_VIBRA_CHL = (0x01 << 0),
+	TWL6040_VIBRA_CHR = (0x01 << 1),
+};
 
+struct twl4030_codec_vibra_data {
 	/* timed-output based implementations */
 	int max_timeout;
 	int initial_vibrate;
 	int (*init)(void);
 	void (*exit)(void);
 	u8  voltage_raise_speed;
+	u16 channels;
 };
 
 struct twl4030_codec_data {
