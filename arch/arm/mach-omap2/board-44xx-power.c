@@ -20,6 +20,7 @@
 #include <linux/regulator/tps6130x.h>
 #include "mux.h"
 #include <linux/i2c/twl.h>
+#include <linux/gpio.h>
 #include <plat/common.h>
 #include <plat/usb.h>
 #include <plat/omap-serial.h>
@@ -45,7 +46,7 @@ static struct regulator_init_data vmmc = {
 			.disabled       = true,
 		}
 	},
-	.num_consumer_supplies  = 1,
+	.num_consumer_supplies  = ARRAY_SIZE(vmmc_supply),
 	.consumer_supplies      = vmmc_supply,
 };
 
@@ -174,7 +175,11 @@ static struct regulator_consumer_supply vaux_supply[] = {
 static struct regulator_init_data vaux1 = {
 	.constraints = {
 		.min_uV			= 1000000,
+#ifdef CONFIG_VENDOR_HHTECH
+		.max_uV			= 3300000,
+#else
 		.max_uV			= 3000000,
+#endif
 		.apply_uV		= true,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL
 					| REGULATOR_MODE_STANDBY,
@@ -185,7 +190,7 @@ static struct regulator_init_data vaux1 = {
 			.disabled       = true,
 		},
 	},
-	.num_consumer_supplies  = 1,
+	.num_consumer_supplies  = ARRAY_SIZE(vaux_supply),
 	.consumer_supplies      = vaux_supply,
 };
 
@@ -207,11 +212,16 @@ static struct regulator_init_data vaux2 = {
 			.disabled       = true,
 		}
 	},
-	.num_consumer_supplies	= 1,
+	.num_consumer_supplies	= ARRAY_SIZE(vaux2_supply),
 	.consumer_supplies	= vaux2_supply,
 };
 
 static struct regulator_consumer_supply cam2_supply[] = {
+#ifdef CONFIG_VENDOR_HHTECH
+#define COMMIX_VCC_ALWAYS_ON 1
+
+	{	.supply = "commix_vcc",		},
+#endif
 	{
 		.supply = "cam2pwr",
 	},
@@ -219,8 +229,14 @@ static struct regulator_consumer_supply cam2_supply[] = {
 
 static struct regulator_init_data vaux3 = {
 	.constraints = {
+#ifdef COMMIX_VCC_ALWAYS_ON
+		.always_on		= true,
+		.min_uV			= 3300000,
+		.max_uV			= 3300000,
+#else
 		.min_uV			= 1000000,
 		.max_uV			= 3000000,
+#endif
 		.apply_uV		= true,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL
 					| REGULATOR_MODE_STANDBY,
@@ -232,7 +248,7 @@ static struct regulator_init_data vaux3 = {
 		},
 		.initial_state          = PM_SUSPEND_MEM,
 	},
-	.num_consumer_supplies = 1,
+	.num_consumer_supplies = ARRAY_SIZE(cam2_supply),
 	.consumer_supplies = cam2_supply,
 };
 
@@ -325,6 +341,7 @@ static struct regulator_init_data vmem = {
 	},
 };
 
+#ifndef CONFIG_VENDOR_HHTECH
 static int batt_table[] = {
 	/* adc code for temperature in degree C */
 	929, 925, /* -2 ,-1 */
@@ -336,24 +353,76 @@ static int batt_table[] = {
 	591, 583, 575, 567, 559, 551, 543, 535, 527, 519, /* 50 - 59 */
 	511, 504, 496 /* 60 - 62 */
 };
+#endif
 
-static struct twl4030_bci_platform_data bci_data = {
+/*static */struct twl4030_bci_platform_data bci_data = {
 	.monitoring_interval		= 10,
 	.max_charger_currentmA		= 1500,
 	.max_charger_voltagemV		= 4560,
 	.max_bat_voltagemV		= 4200,
 	.low_bat_voltagemV		= 3300,
+#ifndef CONFIG_VENDOR_HHTECH
 	.battery_tmp_tbl		= batt_table,
 	.tblsize			= ARRAY_SIZE(batt_table),
 	.sense_resistor_mohm		= 10,
+#endif
 };
 
+#ifdef CONFIG_VENDOR_HHTECH
+#define GPIO_USB_POWER 151
+#define GPIO_USB_VBUS  152
+
+static int hhtech_phy_init(struct device *dev)
+{
+	if (0) omap_mux_init_signal("mcspi4_clk.gpio_151",
+		OMAP_PIN_OUTPUT | OMAP_MUX_MODE3); else
+	omap_mux_init_gpio(GPIO_USB_POWER, OMAP_PIN_OUTPUT);
+	if (gpio_request(GPIO_USB_POWER, "USB power"))
+		pr_err("Fail to request GPIO %d\n", GPIO_USB_POWER);
+	else gpio_direction_output(GPIO_USB_POWER, 1);
+
+	if (0) omap_mux_init_signal("mcspi4_simo.gpio_152",
+		OMAP_PIN_OUTPUT | OMAP_MUX_MODE3); else
+	omap_mux_init_gpio(GPIO_USB_VBUS, OMAP_PIN_OUTPUT);
+	if (gpio_request(GPIO_USB_VBUS, "USB vbus"))
+		pr_err("Fail to request GPIO %d\n", GPIO_USB_VBUS);
+	else gpio_direction_output(GPIO_USB_VBUS, 0);
+
+	return omap4430_phy_init(dev);
+}
+
+static int hhtech_phy_exit(struct device *dev)
+{
+	gpio_free(GPIO_USB_VBUS);
+	gpio_free(GPIO_USB_POWER);
+
+	return omap4430_phy_exit(dev);
+}
+
+static int hhtech_phy_power(struct device *dev, int ID, int on)
+{
+	int value = on && ID;
+
+	gpio_set_value(GPIO_USB_VBUS, value);
+	gpio_set_value(GPIO_USB_POWER, !value);
+
+	return omap4430_phy_power(dev, ID, on);
+}
+
+static struct twl4030_usb_data omap4_usbphy_data = {
+	.phy_init	= hhtech_phy_init,
+	.phy_exit	= hhtech_phy_exit,
+	.phy_power	= hhtech_phy_power,
+	.phy_suspend	= omap4430_phy_suspend,
+};
+#else
 static struct twl4030_usb_data omap4_usbphy_data = {
 	.phy_init	= omap4430_phy_init,
 	.phy_exit	= omap4430_phy_exit,
 	.phy_power	= omap4430_phy_power,
 	.phy_suspend	= omap4430_phy_suspend,
 };
+#endif
 
 static struct twl4030_codec_audio_data twl6040_audio = {
 	/* single-step ramp for headset and handsfree */
@@ -408,6 +477,13 @@ static struct twl4030_codec_data twl6040_codec = {
 	.init		= twl6040_init,
 };
 
+#ifdef CONFIG_TWL6040_UNBOUND
+struct i2c_board_info __initdata twl6040_boardinfo = {
+	I2C_BOARD_INFO("twl6040", 0x4b),
+	.platform_data = &twl6040_codec,
+};
+#endif
+
 static struct twl4030_madc_platform_data twl6030_gpadc = {
 	.irq_line = -1,
 };
@@ -424,13 +500,17 @@ static struct twl4030_platform_data twldata = {
 	.vcxio		= &vcxio,
 	.vdac		= &vdac,
 	.vusb		= &vusb,
+#ifndef CONFIG_VENDOR_HHTECH
 	.vaux1		= &vaux1,
+#endif	// XXX:
 	.vaux2		= &vaux2,
 	.vaux3		= &vaux3,
 
 	/* TWL6032 regulators at OMAP447X based SOMs */
 	.ldo1		= &vpp,
+#ifndef CONFIG_VENDOR_HHTECH
 	.ldo2		= &vaux1,
+#endif	// XXX:
 	.ldo3		= &vaux3,
 	.ldo4		= &vaux2,
 	.ldo5		= &vmmc,
@@ -449,15 +529,44 @@ static struct twl4030_platform_data twldata = {
 	.v2v1		= &v2v1,
 
 	/* children */
+#if defined(CONFIG_TWL6030_BCI_BATTERY) || \
+    defined(CONFIG_TWL6030_BCI_BATTERY_MODULE)
 	.bci		= &bci_data,
+#endif
 	.usb		= &omap4_usbphy_data,
+#ifndef CONFIG_TWL6040_UNBOUND
 	.codec		= &twl6040_codec,
+#endif
+#if defined(CONFIG_TWL6030_GPADC) || defined(CONFIG_TWL6030_GPADC_MODULE)
 	.madc		= &twl6030_gpadc,
+#endif
 
 	/* External control pins */
 	.sysen		= &sysen,
 	.regen1		= &regen1,
 };
+
+#ifndef COMMIX_VCC_ALWAYS_ON
+void omap4_commix_vcc_power(int action)
+{
+	static struct regulator *omap4_commix_vcc_reg = NULL;
+
+	if (IS_ERR_OR_NULL(omap4_commix_vcc_reg)) {
+		omap4_commix_vcc_reg = regulator_get(NULL, "commix_vcc");
+		if (IS_ERR_OR_NULL(omap4_commix_vcc_reg)) {
+			pr_err("Can't get commix_vcc for system!\n");
+			return;
+		}
+	}
+
+	if (action < 0) {
+		regulator_put(omap4_commix_vcc_reg);
+		omap4_commix_vcc_reg = NULL;
+	} else
+	if (0 < action) regulator_enable(omap4_commix_vcc_reg);
+	else regulator_disable(omap4_commix_vcc_reg);
+}
+#endif
 
 void __init omap4_power_init(void)
 {
