@@ -420,6 +420,69 @@ config MACH_OMAP4_PANDA_CAMERA_SUPPORT
 	  This is for using the OMAP4 ISS CSI2A Camera sensor
 	  interface.
 
+choice
+	prompt "SmartQ product model"
+	depends on VENDOR_HHTECH
+	default SMARTQ_T15
+	help
+	  Select the model of SmartQ products
+
+	config SMARTQ_T15
+		bool "SmartQ T15"
+		select PANEL_LG_IPS_10
+
+	config SMARTQ_T16
+		bool "SmartQ T16"
+		select PANEL_LG_IPS_10
+
+	config SMARTQ_Q8
+		bool "SmartQ Q8"
+		select PANEL_QM_8
+
+	config SMARTQ_S7
+		bool "SmartQ S7"
+		select PANEL_LG_IPS_7
+
+	config SMARTQ_K7
+		bool "SmartQ K7"
+		select PANEL_LG_IPS_7
+
+	config SMARTQ_T20
+		bool "SmartQ T20"
+		select PANEL_HS_HSD101PWW1
+
+	config SMARTQ_X7
+		bool "SmartQ X7"
+		select PANEL_CLAA070WP03
+endchoice
+
+config SMARTQ_U7
+	bool "SmartQ U7"
+	depends on VENDOR_HHTECH
+	select SMARTQ_S7
+	help
+	  U7 has the most same PCB with S7.
+
+config SMARTQ_T19
+	bool "SmartQ T19"
+	depends on VENDOR_HHTECH
+	select SMARTQ_T20
+	help
+	  T19 has the same PCB with T20.
+
+config SMARTQ_T30
+	bool "SmartQ T30"
+	depends on VENDOR_HHTECH
+	select SMARTQ_T20
+	help
+	  T30 has the same PCB with T20.
+
+config SMARTQ_T40
+	bool "SmartQ T40"
+	select SMARTQ_T20
+	help
+	  T40 has the most same PCB with T20.
+
 config OMAP3_EMU
 	bool "OMAP3 debugging peripherals"
 	depends on ARCH_OMAP3
