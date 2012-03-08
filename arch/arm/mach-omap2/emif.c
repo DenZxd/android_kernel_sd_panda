@@ -428,6 +428,7 @@ static u32 get_temp_alert_config(const struct lpddr2_device_info *cs1_device,
 	mask_n_set(alert, OMAP44XX_REG_TA_CS0EN_SHIFT,
 		   OMAP44XX_REG_TA_CS0EN_MASK, 1);
 
+	if (0)	// XXX: to compatible with Samsung LPDDR2
 	mask_n_set(alert, OMAP44XX_REG_TA_CS1EN_SHIFT,
 		   OMAP44XX_REG_TA_CS1EN_MASK, (cs1_device ? 1 : 0));
 
@@ -567,8 +568,8 @@ static u32 get_temperature_level(u32 emif_nr)
 	tmp_temperature_level = (tmp_temperature_level &
 				 MR4_SDRAM_REF_RATE_MASK) >>
 	    MR4_SDRAM_REF_RATE_SHIFT;
-
-	if (cs1_used) {
+	if (0 && cs1_used) {
+		// XXX: to compatible with Samsung LPDDR2
 		__raw_writel(LPDDR2_MR4 | OMAP44XX_REG_CS_MASK,
 			     base + OMAP44XX_EMIF_LPDDR2_MODE_REG_CFG);
 		temp = __raw_readl(base + OMAP44XX_EMIF_LPDDR2_MODE_REG_DATA);
