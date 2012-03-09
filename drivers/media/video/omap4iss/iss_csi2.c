@@ -720,8 +720,11 @@ static void csi2_isr_ctx(struct iss_csi2_device *csi2,
 	 */
 	if (csi2->frame_skip) {
 		csi2->frame_skip--;
-		if (csi2->frame_skip == 0)
+		if (csi2->frame_skip == 0) {
+			ctx->format_id = csi2_ctx_map_format(csi2);
+			csi2_ctx_config(csi2, ctx);
 			csi2_ctx_enable(csi2, n, 1);
+		}
 		return;
 	}
 
