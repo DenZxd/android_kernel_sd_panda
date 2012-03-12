@@ -722,6 +722,17 @@ struct goodix_i2c_rmi_platform_data goodix_pdata = {
 };
 #endif
 
+#if defined(CONFIG_TOUCHSCREEN_PIXCIR) || \
+    defined(CONFIG_TOUCHSCREEN_PIXCIR_MODULE)
+#include <linux/pixcir_i2c_ts.h>
+
+struct pixcir_platform_data pixcir_pdata = {
+	.rst = touchscreen_rst,
+	.irq = OMAP_GPIO_IRQ(GPIO_TOUCHSCREEN_IRQ),
+	.init = touchscreen_irq_init,
+};
+#endif
+
 #if defined(CONFIG_TOUCHSCREEN_SSD2533) || \
     defined(CONFIG_TOUCHSCREEN_SSD2533_MODULE)
 #include <mach/ssd2533.h>
@@ -882,6 +893,13 @@ static struct i2c_board_info __initdata panda_i2c_bus4_boardinfo[] = {
                 I2C_BOARD_INFO(SSD2533_I2C_NAME, SSD2533_I2C_ADDR),
                 .platform_data = &ssd2533_pdata,
         },
+#endif
+#if defined(CONFIG_TOUCHSCREEN_PIXCIR) || \
+    defined(CONFIG_TOUCHSCREEN_PIXCIR_MODULE)
+	{
+		I2C_BOARD_INFO("pixcir_ts", 0x5c),
+		.platform_data = &pixcir_pdata,
+	},
 #endif
 };
 
