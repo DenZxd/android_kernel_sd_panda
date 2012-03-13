@@ -384,7 +384,11 @@ int __init omap_tps6236x_board_setup(bool use_62361, int gpio_vsel0,
 		goto out;
 	}
 
+#ifdef CONFIG_VENDOR_HHTECH
+	default_reg = 0;
+#else// XXX:
 	default_reg = ((pull1 & 0x1) << 1) | (pull0 & 0x1);
+#endif
 
 	if (use_62361) {
 		voltage_min = MIN_VOLTAGE_TPS62361_UV;
