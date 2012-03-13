@@ -67,7 +67,11 @@
 #define HDMI_GPIO_CT_CP_HPD 60 /* HPD mode enable/disable */
 #define HDMI_GPIO_LS_OE 41 /* Level shifter for HDMI */
 #define HDMI_GPIO_HPD  63 /* Hotplug detect */
+#ifdef CONFIG_VENDOR_HHTECH
+#define TPS62361_GPIO   8
+#else
 #define TPS62361_GPIO   7 /* VCORE1 power control */
+#endif
 
 #if defined(CONFIG_WL12XX_SDIO) || defined(CONFIG_WL12XX_SDIO_MODULE)
 /* wl127x BT, FM, GPS connectivity chip */
@@ -1420,7 +1424,12 @@ static void __init omap4_panda_init(void)
 	if (cpu_is_omap446x()) {
 		/* Vsel0 = gpio, vsel1 = gnd */
 		status = omap_tps6236x_board_setup(true, TPS62361_GPIO, -1,
-					OMAP_PIN_OFF_OUTPUT_HIGH, -1);
+#ifdef CONFIG_VENDOR_HHTECH
+					OMAP_PIN_OFF_OUTPUT_LOW,
+#else
+					OMAP_PIN_OFF_OUTPUT_HIGH,
+#endif
+					-1);
 		if (status)
 			pr_err("TPS62361 initialization failed: %d\n", status);
 	}
