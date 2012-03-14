@@ -928,6 +928,23 @@ struct ssd2533_platform_data ssd2533_pdata = {
 };
 #endif
 
+#if defined(CONFIG_BATTERY_BQ27410) || defined(CONFIG_BATTERY_BQ27x00_MODULE)
+#include <linux/power/bq27410_battery.h>
+#endif
+
+#if defined(CONFIG_CHARGER_BQ2416X) || defined(CONFIG_CHARGER_BQ2416X_MODULE)
+#include <linux/i2c/bq2416x.h>
+
+static struct bq2416x_platform_data bq2416x_pdata = {
+        .cin_limit = IN_ILIM_1,
+        .work_current = 550,
+	.standby_current = 1450,
+        .in_dpm = IN_VDPM_MAX,
+        .max_charger_voltagemV = 4200,
+        .termination_currentmA = 200,
+};
+#endif
+
 /*
  * Display monitor features are burnt in their EEPROM as EDID data. The EEPROM
  * is connected as I2C slave device, and can be accessed at address 0x50
@@ -969,6 +986,17 @@ static struct i2c_board_info __initdata panda_i2c_bus2_boardinfo[] = {
 #if defined(CONFIG_INPUT_ISL29023) || defined(CONFIG_INPUT_ISL29023_MODULE)
 	{
 		I2C_BOARD_INFO("isl29023", 0x44),
+	},
+#endif
+#if defined(CONFIG_CHARGER_BQ2416X) || defined(CONFIG_CHARGER_BQ2416X_MODULE)
+	{
+		I2C_BOARD_INFO("bq2416x", 0x6b),
+		.platform_data = &bq2416x_pdata,
+	},
+#endif
+#if defined(CONFIG_BATTERY_BQ27410) || defined(CONFIG_BATTERY_BQ27x00_MODULE)
+	{
+		I2C_BOARD_INFO("bq27410", 0x55),
 	},
 #endif
 
