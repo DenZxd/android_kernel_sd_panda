@@ -141,6 +141,12 @@ config CHARGER_BQ2416X
 	help
 	  Say Y to enable support for BQ2416x battery charger.
 
+config BATTERY_BQ27410
+        tristate "BQ27410 support"
+        depends on CHARGER_BQ2416X
+        help
+          Say Y here to enable support for batteries with BQ27410 chips.
+
 config BATTERY_BQ27x00
 	tristate "BQ27x00 battery driver"
 	help
