@@ -372,6 +372,10 @@ static int get_battery_info(void)
 				the_bq27410->capacity = 100;
 			}
 			bi->Capacity = the_bq27410->capacity;
+			if((bi->Voltage >= 3405) && (bi->Power == POWER_SUPPLY_STATUS_NOT_CHARGING) && \
+									    (the_bq27410->capacity == 0)){
+				bi->Capacity = the_bq27410->capacity = 1;
+			}
 			return 1;
 		}
 		return 0;
