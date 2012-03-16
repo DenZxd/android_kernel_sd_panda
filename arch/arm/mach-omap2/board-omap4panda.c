@@ -1052,6 +1052,11 @@ static struct i2c_board_info __initdata panda_i2c_bus2_boardinfo[] = {
 		I2C_BOARD_INFO("mma8452", 0x1C),
 	},
 #endif
+#if defined(CONFIG_INPUT_ISL29023) || defined(CONFIG_INPUT_ISL29023_MODULE)
+	{
+		I2C_BOARD_INFO("isl29023", 0x44),
+	},
+#endif
 
 };
 
