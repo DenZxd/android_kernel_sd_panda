@@ -569,4 +569,11 @@ config INPUT_TSL2771
 	  Say Y here if you want to use TSL2771 ALS/Proximity Sensor Driver
 	  through I2C interface.
 
+config INPUT_ISL29023
+        tristate "ISL29023 Light Sensor Driver"
+        depends on I2C && SYSFS
+        help
+          Say Y here if you want to use ISL29023 ALS Sensor Driver
+          through I2C interface.
+
 endif

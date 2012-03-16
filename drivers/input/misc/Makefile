@@ -59,5 +59,6 @@ obj-$(CONFIG_INPUT_BMA250) 		+= bma250.o
 obj-$(CONFIG_INPUT_MMA8452) 		+= mma8452.o
 obj-$(CONFIG_INPUT_MPU3050)		+= mpu3050.o
 obj-$(CONFIG_INPUT_TSL2771)		+= tsl2771.o
+obj-$(CONFIG_INPUT_ISL29023) 		+= isl29023.o
 
 
