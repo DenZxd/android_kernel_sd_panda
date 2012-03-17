@@ -29,6 +29,7 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 
+#include "omap4-sar-layout.h"
 #include "control.h"
 
 static ssize_t omap4_soc_family_show(struct kobject *kobj,
@@ -176,6 +177,32 @@ static OMAP4_SOC_ATTR_RO(die_id, omap4_die_id_show);
 
 static OMAP4_BOARD_ATTR_RO(board_rev, omap4_board_rev_show);
 
+static ssize_t omap4_reboot_reason_show(struct kobject *kobj,
+	struct kobj_attribute *attr, char *buf)
+{
+    extern char omap4_reboot_reason[OMAP_REBOOT_REASON_SIZE];
+    return sprintf(buf, "%s\n", omap4_reboot_reason);
+}
+
+static ssize_t omap4_reset_reason_show(struct kobject *kobj,
+	struct kobj_attribute *attr, char *buf)
+{
+    extern const char *omap4_get_resetreason(void);
+    const char* ptr =  omap4_get_resetreason() + 15;	// XXX:
+    return sprintf(buf, "%s\n", ptr);
+}
+
+static ssize_t omap4_hwpcb_rev_show(struct kobject *kobj,
+	struct kobj_attribute *attr, char *buf)
+{
+    unsigned char rev = 0x0f;
+    return sprintf(buf, "%x\n", rev);
+}
+
+static OMAP4_BOARD_ATTR_RO(reboot_reason, omap4_reboot_reason_show);
+static OMAP4_BOARD_ATTR_RO(reset_reason, omap4_reset_reason_show);
+static OMAP4_BOARD_ATTR_RO(hwpcb_rev, omap4_hwpcb_rev_show);
+
 static struct attribute *omap4_soc_prop_attrs[] = {
 	&omap4_soc_prop_attr_family.attr,
 	&omap4_soc_prop_attr_revision.attr,
@@ -190,6 +217,9 @@ static struct attribute *omap4_soc_prop_attrs[] = {
 
 static struct attribute *omap4_board_prop_attrs[] = {
 	&omap4_board_prop_attr_board_rev.attr,
+	&omap4_board_prop_attr_reset_reason.attr,
+	&omap4_board_prop_attr_reboot_reason.attr,
+	&omap4_board_prop_attr_hwpcb_rev.attr,
 	NULL,
 };
 
