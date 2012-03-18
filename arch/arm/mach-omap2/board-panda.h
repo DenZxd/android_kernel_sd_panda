@@ -22,6 +22,7 @@ void omap4_create_board_props(void);
 int panda_wlan_init(void);
 
 #if defined(CONFIG_BCM4329) || defined(CONFIG_BCM4329_MODULE) || \
+    defined(CONFIG_BCM4330) || defined(CONFIG_BCM4330_MODULE) || \
     defined(CONFIG_BCMDHD)  || defined(CONFIG_BCMDHD_MODULE)
 extern struct mmc_platform_data panda_wifi_data;
 #endif
