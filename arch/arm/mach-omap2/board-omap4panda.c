@@ -447,6 +447,7 @@ static struct omap2_hsmmc_info mmc[] = {
 		.gpio_cd	= -EINVAL,
 	},
 #if defined(CONFIG_BCM4329) || defined(CONFIG_BCM4329_MODULE) || \
+    defined(CONFIG_BCM4330) || defined(CONFIG_BCM4330_MODULE) || \
     defined(CONFIG_BCMDHD)  || defined(CONFIG_BCMDHD_MODULE)
 	{
 		.name		= "omap_wlan",

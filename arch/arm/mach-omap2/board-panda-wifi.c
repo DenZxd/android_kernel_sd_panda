@@ -37,6 +37,7 @@
 #include "board-panda.h"
 
 #if defined(CONFIG_BCM4329) || defined(CONFIG_BCM4329_MODULE) || \
+    defined(CONFIG_BCM4330) || defined(CONFIG_BCM4330_MODULE) || \
     defined(CONFIG_BCMDHD)  || defined(CONFIG_BCMDHD_MODULE)
 #define WL_RST_N 40
 #define GPIO_WLAN_IRQ	53
