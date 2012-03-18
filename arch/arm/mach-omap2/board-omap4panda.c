@@ -1142,13 +1142,24 @@ static inline void __init board_serial_init(void)
 
 static int smartq_lcd_enable(struct omap_dss_device *dssdev)
 {
+#ifdef CONFIG_SMARTQ_Q8
+#define GPIO_LCD_PWR_CTRL 113
+
+	gpio_set_value(GPIO_LCD_PWR_CTRL, 0);
+#endif
+
 	gpio_set_value(dssdev->reset_gpio >> 8, 1);
 	gpio_set_value(dssdev->reset_gpio & 0xFF, 1);
+
 	return 0;
 }
 
 static void smartq_lcd_disable(struct omap_dss_device *dssdev)
 {
+#ifdef CONFIG_SMARTQ_Q8
+	gpio_set_value(GPIO_LCD_PWR_CTRL, 1);
+#endif
+
 	gpio_set_value(dssdev->reset_gpio & 0xFF, 0);
 	gpio_set_value(dssdev->reset_gpio >> 8, 0);
 }
@@ -1157,6 +1168,12 @@ static void smartq_lcd_disable(struct omap_dss_device *dssdev)
 static int __init smartq_lcd_init(struct omap_dss_device *dssdev)
 {
 	int r, gpio;
+
+#ifdef CONFIG_SMARTQ_Q8
+	gpio = GPIO_LCD_PWR_CTRL;
+	omap_mux_init_gpio(gpio, OMAP_PIN_OUTPUT);
+	gpio_request_one(gpio, GPIOF_OUT_INIT_LOW, "LCD_a PD");
+#endif
 
 	gpio = dssdev->reset_gpio & 0xFF;
 	omap_mux_init_gpio(gpio, OMAP_PIN_OUTPUT);
@@ -1192,6 +1209,8 @@ err:	pr_err("Cannot request GPIO %d\n", gpio);
 static struct panel_generic_dpi_data smartq_lcd_panel = {
 #ifdef CONFIG_PANEL_LG_IPS_10
 	.name			= "lg_ips10",
+#elif defined(CONFIG_PANEL_QM_8)
+        .name                   = "qm_8",
 #elif defined(CONFIG_PANEL_HS_HSD101PWW1)
         .name                   = "hs_ips10.1",
 #endif
@@ -1206,6 +1225,8 @@ struct omap_dss_device smartq_lcd_device = {
 	.data			= &smartq_lcd_panel,
 #ifdef CONFIG_PANEL_LG_IPS_10
 	.phy.dpi.data_lines	= 18,
+#elif defined(CONFIG_PANEL_QM_8)
+	.phy.dpi.data_lines	= 24,
 #elif defined(CONFIG_PANEL_HS_HSD101PWW1)
         .phy.dpi.data_lines     = 18,
 #endif

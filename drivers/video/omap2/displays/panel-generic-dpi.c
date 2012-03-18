@@ -84,6 +84,32 @@ static struct panel_config generic_dpi_panels[] = {
 	},
 #endif
 
+#ifdef CONFIG_PANEL_QM_8
+	/* QM 8" */
+	{
+		{
+			.x_res		= 1024,
+			.y_res		= 768,
+
+			.pixel_clock	= 64000,	// XXX: 69839
+
+			.hfp		= 84,
+			.hsw		= 74,
+			.hbp		= 84,
+
+			.vfp		= 32,
+			.vsw		= 6,
+			.vbp		= 32,
+		},
+		.acbi			= 0x0,
+		.acb			= 0x0,
+		.config			= OMAP_DSS_LCD_TFT,
+		.power_on_delay		= 0,
+		.power_off_delay	= 0,
+		.name			= "qm_8",
+	},
+#endif
+
 #ifdef CONFIG_PANEL_HS_HSD101PWW1
         /* HannStar IPS 10.1" */
         {
