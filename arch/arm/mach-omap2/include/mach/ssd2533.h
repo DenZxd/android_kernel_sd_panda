@@ -68,16 +68,6 @@ typedef struct{
         unsigned long code;     //key code for simulated key
 }SKey_Info,*pSKey_Info;
 
-/****** define simulated button information ******/
-#ifdef SIMULATED_BUTTON
-SKey_Info ssd2533_SKeys[]={
-    {1095,560,32,32,BUTTON0},//580
-    {1095,380,32,32,BUTTON3},//580
-    {1095,200,32,32,BUTTON1},//580
-};
-#endif
-
-
 #define REG_DEVICE_ID               0x02
 #define FINGER_STATUS               0x79
 #define FINGER_DATA                 0x7C
