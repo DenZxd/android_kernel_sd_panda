@@ -919,9 +919,8 @@ struct goodix_i2c_rmi_platform_data goodix_pdata = {
 #include <mach/ssd2533.h>
 
 Reg_Item ssd2533_Init[]={
-        {CMD_1B,0x04,0x00},         // Exit sleep mode
-        {CMD_DELAY, 100},
-        {CMD_1B,0xAE,0x00},         // Disable self cap
+        {CMD_1B,0x04},         // Exit sleep mode
+        {CMD_DELAY, 30},
         {CMD_1B,0x06,0x16},         // Drive No: 23
         {CMD_1B,0x07,0x23},         // Sense No: 36
         {CMD_2B,0x08,0x00,0x16},    // Set 1st drive line reg
@@ -947,56 +946,61 @@ Reg_Item ssd2533_Init[]={
         {CMD_2B,0x1c,0x00,0x02},    // Set 21st drive line reg
         {CMD_2B,0x1d,0x00,0x01},    // Set 22st drive line reg
         {CMD_2B,0x1e,0x00,0x00},    // Set 23st drive line reg
-        {CMD_1B,0x2a,0x07},         // Sub-frame
+        {CMD_1B,0x27,0x1c},
+        {CMD_1B,0x28,0x20},
+        {CMD_1B,0x2a,0x03},
         {CMD_1B,0x2c,0x01},         // Median filter
-        {CMD_1B,0x2e,0x0b},         // Sub-frame drive pulse
+        {CMD_1B,0x2e,0x13},         // Sub-frame drive pulse
         {CMD_1B,0x2f,0x01},         // Integration gain
-        {CMD_1B,0xd5,0x03},         // Set driving voltage,5.5V
-        {CMD_1B,0x30,0x03},         // Start integrate
-        {CMD_1B,0x31,0x07},         // Stop integrate
-        {CMD_1B,0xd7,0x02},         // ADC range
-        {CMD_1B,0xd8,0x07},
-        {CMD_1B,0xdb,0x02},         // Set integration cap
+        {CMD_1B,0x30,0x02},         // Start integrate
+        {CMD_1B,0x31,0x09},         // Stop integrate
+        {CMD_1B,0xd5,0x03},
+        {CMD_1B,0xd7,0x04},         // ADC range
+        {CMD_1B,0xd8,0x04},
+        {CMD_1B,0xdb,0x04},         // Set integration cap
         {CMD_2B,0x33,0x00,0x01},    // min. finger area
-        {CMD_2B,0x34,0x00,0x30},    // min finger level
-        {CMD_2B,0x35,0x00,0x00},    // finger weight threshold
+        {CMD_2B,0x34,0x00,0x40},    // min finger level
+        {CMD_2B,0x35,0x00,0x20},    // finger weight threshold
         {CMD_2B,0x36,0x00,0x20},    // max. finger area
-        {CMD_1B,0x37,0x00},         // segmentation depth
+        {CMD_1B,0x37,0x05},         // segmentation depth
 
         {CMD_1B,0x39,0x02},         // CG method
-        {CMD_1B,0x3a,0x00},         // Hybrid mode select
-        {CMD_1B,0x53,0x20},         // Move tolerance
-        {CMD_2B,0x54,0x00,0x80},    // X tracking
-        {CMD_2B,0x55,0x00,0x80},    // Y tracking
+        {CMD_1B,0x3a,0x02},         // Hybrid mode select
+        {CMD_1B,0x3d,0x01},
+        {CMD_1B,0x40,0x50},
+        {CMD_1B,0x44,0x01},
+        {CMD_1B,0x53,0x04},         // Move tolerance
+        {CMD_2B,0x54,0x00,0xc0},    // X tracking
+        {CMD_2B,0x55,0x00,0xc0},    // Y tracking
 
-        {CMD_1B,0x56,0x00},         // Moing average filter
-        {CMD_1B,0x58,0x01},         // Finger weight scaling
-        {CMD_1B,0x59,0x00},         // Enable random walk
-        {CMD_1B,0x5a,0x20},         // Disable missing frame
-        {CMD_1B,0x5b,0x20},         // Set random walk window
+        {CMD_1B,0x56,0x03},         // Moing average filter
+        {CMD_1B,0x58,0x00},         // Finger weight scaling
+        {CMD_1B,0x59,0x01},         // Enable random walk
+        {CMD_1B,0x5a,0x00},         // Disable missing frame
+        {CMD_1B,0x5b,0x01},         // Set random walk window
 #ifdef CONFIG_SMARTQ_T15
-	{CMD_1B,0x65,0x02},         // Set X-Invert
-	{CMD_2B,0x66,0x7d,0xf0},    // X scaling
-	{CMD_2B,0x67,0x8d,0xb0},    // Y scaling
+        {CMD_1B,0x65,0x02},
+        {CMD_2B,0x66,0x79,0xc0},
+        {CMD_2B,0x67,0x85,0xe0},
 #else
 	{CMD_1B,0x65,0x01},         // Set X-Invert
-	{CMD_2B,0x66,0x8e,0x30},    // X scaling
-	{CMD_2B,0x67,0x8b,0x20},    // Y scaling
+	{CMD_2B,0x66,0x8f,0x10},    // X scaling
+	{CMD_2B,0x67,0x8c,0x80},    // Y scaling
 #endif
-        {CMD_1B,0x8a,0x0a},         // Max finger
-        {CMD_1B,0x3d,0x01},         // 2d filter
-
-//        {CMD_2B,0x7a,0xff,0xff},    // mask all events but finger leave
-//        {CMD_2B,0x7b,0xff,0xc3},    // mask IRQ: fifo overflow, large object.
-
-//        {CMD_1B,0xc4,0x01},         // Enable booster syn
-        {CMD_1B,0x40,0xff},
-        {CMD_1B,0x44,0x01},
-		{CMD_1B,0x8b,0x01},
-		{CMD_1B,0x8c,0xc0},
-		{CMD_1B,0x25,0x02},         // set scan mode, 100Hz
-        {CMD_DELAY, 300},
-        {CMD_1B,0xa2,0x00},         // reset init reference
+        {CMD_2B,0x7a,0xff,0xff},
+        {CMD_2B,0x7b,0xc0,0x0b},
+        {CMD_1B,0x8a,0x0a},
+        {CMD_1B,0x8b,0x01},
+        {CMD_1B,0x8c,0xc0},
+        {CMD_1B,0xac,0x00},
+        {CMD_1B,0xab,0x64},
+        {CMD_1B,0xad,0x02},
+        {CMD_1B,0xae,0x00},
+        {CMD_1B,0xaf,0x50},
+        {CMD_1B,0xb0,0x00},
+        {CMD_1B,0xbb,0x00},
+        {CMD_1B,0xbc,0x00},
+        {CMD_1B,0x25,0x02},         // set scan mode, 100Hz
 };
 
 struct ssd2533_platform_data ssd2533_pdata = {

@@ -29,6 +29,15 @@
 
 #include <mach/ssd2533.h>
 
+/****** define simulated button information ******/
+#ifdef SIMULATED_BUTTON
+SKey_Info ssd2533_SKeys[]={
+    {1092,220,20,20,BUTTON1},//580
+    {1092,388,20,20,BUTTON3},//580
+    {1092,556,20,20,BUTTON0},//580
+};
+#endif
+
 static int ssd2533_ts_open(struct input_dev *dev);
 static void ssd2533_ts_close(struct input_dev *dev);
 static irqreturn_t ssd2533_ts_isr(int irq, void *dev_id);
@@ -45,38 +54,41 @@ static int ssd2533_ts_resume(struct i2c_client *client);
 static struct workqueue_struct *ssd2533_wq;
 
 struct ssl_ts_priv {
-	struct i2c_client *client;
-	struct input_dev *input;
-	struct hrtimer timer;
-	struct work_struct  ssl_work;
-	u32 fingers;
-	u32 buttons;
-	int cal_counter;
-	int cal_tick;
-	int irq;
-	int prev_x[10];
-	int prev_y[10];
-	u8	keys[4];
-	u8	keyindex[4];
-	u32 fingerbits;
-	unsigned long touchtime[10];
-	u32	tp_id;
-	unsigned long cal_end_time;
-	int finger_count;
-	int working_mode;
-	int drives;
-	int senses;
+        struct i2c_client *client;
+        struct input_dev *input;
+        struct hrtimer timer;
+        struct work_struct  ssl_work;
+        u32 fingers;
+        u32 buttons;
+        int cal_counter;
+        int cal_tick;
+        int irq;
+        int prev_x[10];
+        int prev_y[10];
+        int est_en[10];
+        int est_x[10];
+        int est_y[10];
+        u8      keys[4];
+        u8      keyindex[4];
+        u32 fingerbits;
+        unsigned long touchtime[10];
+        u32     tp_id;
+        unsigned long cal_end_time;
+        int finger_count;
+        int working_mode;
+        int drives;
+        int senses;
 #ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend;
+        struct early_suspend early_suspend;
 #endif
-	u8	r25h;
-	u8	bsleep;
-	u8	binitialrun;
-	u8	bcalibrating;
-	u8	rawout;
+        u8      r25h;
+        u8      bsleep;
+        u8      binitialrun;
+        u8      bcalibrating;
+        u8      rawout;
 };
 
-#define PROCFS_NAME "ssd2533-mode"
+#define PROCFS_NAME "ssd253x-mode"
 static struct proc_dir_entry *TP_PROC_FILE;
 static struct proc_dir_entry proc_root;
 
@@ -162,7 +174,7 @@ static int ssd2533_read_id(struct i2c_client *client)
 	if(ic_id==0x2533)
 		return ic_id;
 	buf[0]=0x0;
-	ssd2533_write_cmd(client,0x23,buf,0);
+	ssd2533_write_cmd(client,0x23,buf,1);
 	mdelay(10);
 	buf[0]=0x02;
 	ssd2533_write_cmd(client,0x2b,buf,1);
@@ -234,8 +246,10 @@ int ssd2533_deviceInit(struct ssl_ts_priv *ssl_priv)
 				}
 				data_buf[0] = pReg->data1;
 				data_buf[1] = pReg->data2;
+				if(pReg->reg!=0x25){
 				err = ssd2533_write_cmd(client, pReg->reg, &data_buf[0], (int)(pReg->type));
 				//mdelay(1);
+				}
 				break;
 			}
 		}
@@ -325,7 +339,7 @@ static int ssd2533_Proc_Write(struct file *filp, const char *buffer,unsigned lon
 		break;
 	case 5:
 		if(count>=sizeof(cmdbuf))
-			len=255;
+			len=254;
 		else
 			len=count-2;
 		if(len<=0)
@@ -516,7 +530,7 @@ static int IsWrongReport(u32 oldflag,u32 newflag)
 
 	return 0;
 }
-
+#if 0
 #define X_COOR (reg_buff[0] + (((u16)reg_buff[2] & 0xF0) << 4))
 #define Y_COOR (reg_buff[1] + (((u16)reg_buff[2] & 0x0F) << 8))
 #define PRESS_PRESSURE ((reg_buff[3] >> 4) & 0x0F)
@@ -768,10 +782,11 @@ static void ssd2533_ts_work(struct work_struct *work)
 	}
 #endif
 	input_sync(ssl_priv->input);
+/*
 	if(IsWrongReport(old_flag,finger_flag)){
 		ssd2533_deviceWakeUp(ssl_priv);
         return;
-	}
+	}*/
 
     if((old_flag==0) && (finger_flag!=0) && (ssl_priv->binitialrun==1)){
         ssl_priv->binitialrun=2;
@@ -815,7 +830,403 @@ static void ssd2533_ts_work(struct work_struct *work)
 		hrtimer_start(&ssl_priv->timer, ktime_set(0, 30000000), HRTIMER_MODE_REL); //polling for finger up after 16.6ms.
 	}
 }
+#else
+#define X_COOR (reg_buff[0] + (((u16)reg_buff[2] & 0xF0) << 4))
+#define Y_COOR (reg_buff[1] + (((u16)reg_buff[2] & 0x0F) << 8))
+#define PRESS_PRESSURE ((reg_buff[3] >> 4) & 0x0F)
+#define PRESS_SPEED  (reg_buff[3]&0x0F)
+#define SPEED_LIMITATION1               50
+#define SPEED_LIMITATION2               15
+#define SPEED_EST_TH            3
+#define SPEED_EST_RATE  3
+static void ssd2533_ts_work(struct work_struct *work)
+{
+        static int wmode=0;
+        static int oldx[10],oldy[10];
+        int ret = 0;
+        int i,j,smode;
+        u8 reg_buff[4] = { 0 };
+        u32 finger_flag = 0;
+        u32 old_flag=0;
+        u32 button_flag=0;
+        u32 bitmask;
+        int px,py;
+        struct ssl_ts_priv *ssl_priv = container_of(work,struct ssl_ts_priv,ssl_work);
+        SSL_PRINT("Run into %s.\n",__FUNCTION__);
+        if(ssl_priv->bsleep)
+                return;
+        smode=ssl_priv->working_mode;
+        if(wmode!=smode){
+                if(ssl_priv->tp_id==0x2533){
+                        if(smode==0){
+                                reg_buff[0]=0;
+                                ssd2533_write_cmd(ssl_priv->client,0x8D,reg_buff,1);
+                                mdelay(50);
+                                reg_buff[0]=ssl_priv->r25h;
+                                ssd2533_write_cmd(ssl_priv->client,0x25,reg_buff,1);
+                                mdelay(300);
+                        }
+                        else{
+                                reg_buff[0]=0;
+                                ssd2533_write_cmd(ssl_priv->client,0x25,reg_buff,1);
+                                mdelay(100);
+                                reg_buff[0]=1;
+                                ssd2533_write_cmd(ssl_priv->client,0x8D,reg_buff,1);
+                                mdelay(50);
+                                reg_buff[0]=1;
+                                ssd2533_write_cmd(ssl_priv->client,0xC2,reg_buff,1);
+                                reg_buff[0]=3;
+                                ssd2533_write_cmd(ssl_priv->client,0xC3,reg_buff,1);
+                        }
+                }
+                else{
+                        if(smode==1)//raw
+                                reg_buff[0]=1;
+                        else
+                                reg_buff[0]=0;
+                        ssd2533_write_cmd(ssl_priv->client,0x8D,reg_buff,1);
+                        mdelay(50);
+                }
+                wmode=smode;
+        }
+        if(smode!=0){
+                if(smode==1)    //raw
+                        ssd2533_raw(ssl_priv);
+                else    //delta
+                        ssd2533_delta(ssl_priv,1);
+                hrtimer_start(&ssl_priv->timer, ktime_set(0, 100000000), HRTIMER_MODE_REL);
+                return;
+        }
 
+        if(ssl_priv->tp_id==0x2533){
+                ret = ssd2533_read_reg(ssl_priv->client, FINGER_STATUS, &reg_buff[0], 2,2);
+                finger_flag=reg_buff[0]<<8;
+                finger_flag+=reg_buff[1];
+                if(ssl_priv->rawout)
+                        printk("R79h:0x%04X.\n",finger_flag);
+                SSL_PRINT("R79h:0x%04X.\n",finger_flag);
+        }
+        else if(ssl_priv->tp_id==0x2531){
+                ret = ssd2533_read_reg(ssl_priv->client, FINGER_STATUS, &reg_buff[0], 1,1);
+                finger_flag=((reg_buff[0]&0xF0)>>4)|((reg_buff[0]&0x0F)<<4);
+                if(ssl_priv->rawout)
+                        printk("R79h:0x%02X.\n",finger_flag);
+                SSL_PRINT("R79h:0x%02X.\n",finger_flag);
+        }
+        else{
+                SSL_PRINT("Not IRQ from SSL CTP device!\n");
+                input_sync(ssl_priv->input);
+        }
+        if(ret){
+                finger_flag=0;
+                //I2C Device fail
+        }
+        else{
+                for(i=0;i<ssl_priv->finger_count;i++){
+                        bitmask=0x10<<i;
+                        if(finger_flag & bitmask) { /*finger exists*/
+                                ret = ssd2533_read_reg(ssl_priv->client, FINGER_DATA+i, reg_buff, 4,4);
+                                if(ret) {
+                                        //I2C device fail
+                                }
+                                else{
+                                        px=X_COOR;
+                                        py=Y_COOR;
+                                        if((px!=0xFFF)&&(py!=0xFFF)){
+                                                ssl_priv->prev_x[i]=px;
+                                                ssl_priv->prev_y[i]=py;
+                                        }
+#if (defined(HAS_BUTTON) && defined(SIMULATED_BUTTON))
+                                        if(ssl_priv->prev_x[i]>=(LCD_RANGE_X+8)||ssl_priv->prev_y[i]>=(LCD_RANGE_Y+8)){
+                                                //finger out of LCD range, regard as leave
+                                                if(ssl_priv->fingerbits&(1<<i)){
+                                                        SSL_PRINT("Finger%d at:(%d,%d), out of LCD range, report as finger leave\n",i,ssl_priv->prev_x[i],ssl_priv->prev_y[i]);
+                                                        if(i<FINGER_USED){
+                                                                input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
+                                                              input_report_abs(ssl_priv->input, ABS_MT_POSITION_X, ssl_priv->prev_x[i]);
+                                                              input_report_abs(ssl_priv->input, ABS_MT_POSITION_Y, ssl_priv->prev_y[i]);
+                                                              input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 0);
+                                                                input_report_key(ssl_priv->input, BTN_TOUCH, 0);
+                                                                input_mt_sync(ssl_priv->input);
+                                                        }
+                                                        ssl_priv->fingerbits&=~(1<<i);
+                                                }
+                                                for(j=0;j<sizeof(ssd2533_SKeys)/sizeof(SKey_Info);j++){
+                                                        if(ssl_priv->prev_x[i]>(ssd2533_SKeys[j].x-ssd2533_SKeys[j].dx) &&
+                                                           ssl_priv->prev_x[i]<(ssd2533_SKeys[j].x+ssd2533_SKeys[j].dx) &&
+                                                           ssl_priv->prev_y[i]>(ssd2533_SKeys[j].y-ssd2533_SKeys[j].dy) &&
+                                                           ssl_priv->prev_y[i]<(ssd2533_SKeys[j].y+ssd2533_SKeys[j].dy)){       //simulated button down
+                                                                SSL_PRINT("Finger%d at:(%d,%d), report as button%d down\n",i,ssl_priv->prev_x[i],ssl_priv->prev_y[i],j);
+                                                                if(i<FINGER_USED)
+                                                                        input_report_key(ssl_priv->input,ssl_priv->keys[j],1);
+                                                                ssl_priv->buttons|=(1<<j);
+                                                                ssl_priv->keyindex[j]=i;
+                                                                break;
+                                                        }
+                                                        else{   //finger is not in button area
+                                                                if((ssl_priv->buttons)&(1<<j)){ //but the button is down previously
+                                                                        if(ssl_priv->keyindex[j]==i){   //finger is the one caused button down and now is out of button area, report as button up
+                                                                                SSL_PRINT("Finger%d at:(%d,%d), moves out of button area, report as button%d up\n",i,ssl_priv->prev_x[i],ssl_priv->prev_y[i],j);
+                                                                                if(i<FINGER_USED)
+                                                                                        input_report_key(ssl_priv->input,ssl_priv->keys[j],0);
+                                                                                ssl_priv->buttons&=~(1<<j);
+                                                                        }
+                                                                }
+                                                        }
+                                                }
+                                                continue;
+                                        }
+#endif
+                                        if(finger_flag&0x04)    //don't report finger if there is large object
+                                                continue;
+                                        if(ssl_priv->prev_x[i]>=LCD_RANGE_X)
+                                                ssl_priv->prev_x[i]=LCD_RANGE_X-1;
+                                        if(ssl_priv->prev_y[i]>=LCD_RANGE_Y)
+                                                ssl_priv->prev_y[i]=LCD_RANGE_Y-1;
+                                        if(ssl_priv->fingerbits & (1<<i)){
+                                                SSL_PRINT("Finger%d move:(%d,%d)\n",i,ssl_priv->prev_x[i],ssl_priv->prev_y[i]);
+                                                px=abs(ssl_priv->prev_x[i]-oldx[i])+abs(ssl_priv->prev_y[i]-oldy[i]);
+                                                py=jiffies_to_msecs(jiffies-ssl_priv->touchtime[i]);
+                                                if(py==0)
+                                                        py=10;
+                                                px/=py;
+                                                if(/*(px<=SPEED_LIMITATION1)&&*/(px>SPEED_EST_TH)){
+                                                        ssl_priv->est_x[i]=ssl_priv->prev_x[i]+SPEED_EST_RATE*(ssl_priv->prev_x[i]-oldx[i]);
+                                                        if(ssl_priv->est_x[i]>=LCD_RANGE_X){
+                                                                ssl_priv->est_x[i]=LCD_RANGE_X-1;
+                                                        }
+                                                        else if(ssl_priv->est_x[i]<0){
+                                                                ssl_priv->est_x[i]=0;
+                                                        }
+                                                        if(ssl_priv->prev_x[i]==oldx[i])
+                                                                ssl_priv->est_y[i]=ssl_priv->prev_y[i]+SPEED_EST_RATE*(ssl_priv->prev_y[i]-oldy[i]);
+                                                        else
+                                                                ssl_priv->est_y[i]=ssl_priv->prev_y[i]+(ssl_priv->est_x[i]-ssl_priv->prev_x[i])*(ssl_priv->prev_y[i]-oldy[i])/(ssl_priv->prev_x[i]-oldx[i]);
+                                                        if(ssl_priv->est_y[i]>=LCD_RANGE_Y){
+                                                                ssl_priv->est_y[i]=LCD_RANGE_Y-1;
+                                                        }
+                                                        else if(ssl_priv->est_y[i]<0){
+                                                                ssl_priv->est_y[i]=0;
+                                                        }
+                                                        if(ssl_priv->prev_y[i]==oldy[i])
+                                                                ssl_priv->est_x[i]=ssl_priv->prev_x[i]+SPEED_EST_RATE*(ssl_priv->prev_x[i]-oldx[i]);
+                                                        else
+                                                                ssl_priv->est_x[i]=ssl_priv->prev_x[i]+(ssl_priv->est_y[i]-ssl_priv->prev_y[i])*(ssl_priv->prev_x[i]-oldx[i])/(ssl_priv->prev_y[i]-oldy[i]);
+                                                        ssl_priv->est_en[i]=1;
+                                                }
+                                                else{
+                                                                ssl_priv->est_en[i]=0;
+                                                }/*
+                                                if(px>SPEED_LIMITATION1||PRESS_SPEED>SPEED_LIMITATION2){
+                                                        SSL_PRINT("Switch: calculated speed=%d, reported speed=%d.\n",px,PRESS_SPEED);
+                                                        if(i<FINGER_USED){
+                                                                input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
+//                                                              input_report_abs(ssl_priv->input, ABS_MT_POSITION_X, ssl_priv->prev_x[i]);
+//                                                              input_report_abs(ssl_priv->input, ABS_MT_POSITION_Y, ssl_priv->prev_y[i]);
+//                                                              input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 0);
+                                                                input_report_key(ssl_priv->input, BTN_TOUCH, 0);
+                                                                input_mt_sync(ssl_priv->input);
+                                                        }
+                                                        ssl_priv->fingerbits&=~(1<<i);
+                                                        continue;
+                                                }*/
+                                                //finger[i] move
+                                        }
+                                        else{
+                                                SSL_PRINT("Finger%d enter:(%d,%d)\n",i,ssl_priv->prev_x[i],ssl_priv->prev_y[i]);
+                                                ssl_priv->fingerbits|=(1<<i);
+                                                //finger[i] enter
+                                        }
+                                        //report finger[i] coordinate here
+                                        ssl_priv->touchtime[i]=jiffies;
+                                        oldx[i]=ssl_priv->prev_x[i];
+                                        oldy[i]=ssl_priv->prev_y[i];
+                                        if(i<FINGER_USED){
+                                                input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
+                                                input_report_abs(ssl_priv->input, ABS_MT_POSITION_X, ssl_priv->prev_x[i]);
+                                                input_report_abs(ssl_priv->input, ABS_MT_POSITION_Y, ssl_priv->prev_y[i]);
+                                                /*case 1, report variable pressure and size*/
+                                                //input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, PRESS_PRESSURE+1);
+                                                //input_report_abs(ssl_priv->input, ABS_MT_WIDTH_MAJOR, PRESS_PRESSURE+1);
+                                                /*case 2, report variable pressure and fixed size*/
+                                                //input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, PRESS_PRESSURE+1);
+                                                //input_report_abs(ssl_priv->input, ABS_MT_WIDTH_MAJOR, 16);
+                                                /*case 3, only report variable pressure*/
+                                                input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, PRESS_PRESSURE+1);
+                                                input_report_key(ssl_priv->input, BTN_TOUCH, 1);
+                                                input_mt_sync(ssl_priv->input);
+                                        }
+                                }
+                        }
+                        else{
+                                if(ssl_priv->fingers & bitmask){
+                                        //finger[i] leave
+#if (defined(HAS_BUTTON) && defined(SIMULATED_BUTTON))
+                                        if(ssl_priv->prev_x[i]>=LCD_RANGE_X||ssl_priv->prev_y[i]>=LCD_RANGE_Y){
+                                                for(j=0;j<sizeof(ssd2533_SKeys)/sizeof(SKey_Info);j++){
+                                                        if(ssl_priv->prev_x[i]>(ssd2533_SKeys[j].x-ssd2533_SKeys[j].dx) &&
+                                                           ssl_priv->prev_x[i]<(ssd2533_SKeys[j].x+ssd2533_SKeys[j].dx) &&
+                                                           ssl_priv->prev_y[i]>(ssd2533_SKeys[j].y-ssd2533_SKeys[j].dy) &&
+                                                           ssl_priv->prev_y[i]<(ssd2533_SKeys[j].y+ssd2533_SKeys[j].dy)){       //simulated button up
+                                                                SSL_PRINT("Finger%d leave at:(%d,%d), report as button%d up\n",i,ssl_priv->prev_x[i],ssl_priv->prev_y[i],j);
+                                                                if(i<FINGER_USED)
+                                                                        input_report_key(ssl_priv->input,ssl_priv->keys[j],0);
+                                                                ssl_priv->buttons&=~(1<<j);
+                                                                break;
+                                                        }
+                                                }
+                                                continue;
+                                        }
+#endif
+                                        if(ssl_priv->est_en[i]){
+                                                finger_flag|=bitmask;
+                                                ssl_priv->est_en[i]=0;
+                                                if(i<FINGER_USED){
+                                                        input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
+                                                        SSL_PRINT("SSD253X: real leave coordinate (%d,%d), estimated leave coordinate (%d,%d).\n",\
+                                                                ssl_priv->prev_x[i],ssl_priv->prev_y[i],ssl_priv->est_x[i],ssl_priv->est_y[i]);
+                                                        ssl_priv->prev_x[i]=ssl_priv->est_x[i];
+                                                        ssl_priv->prev_y[i]=ssl_priv->est_y[i];
+                                                        input_report_abs(ssl_priv->input, ABS_MT_POSITION_X, ssl_priv->prev_x[i]);
+                                                        input_report_abs(ssl_priv->input, ABS_MT_POSITION_Y, ssl_priv->prev_y[i]);
+                                                        /*case 1, report variable pressure and size*/
+                                                        //input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, PRESS_PRESSURE+1);
+                                                        //input_report_abs(ssl_priv->input, ABS_MT_WIDTH_MAJOR, PRESS_PRESSURE+1);
+                                                        /*case 2, report variable pressure and fixed size*/
+                                                        //input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, PRESS_PRESSURE+1);
+                                                        //input_report_abs(ssl_priv->input, ABS_MT_WIDTH_MAJOR, 16);
+                                                        /*case 3, only report variable pressure*/
+                                                        input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 1);
+                                                        input_report_key(ssl_priv->input, BTN_TOUCH, 1);
+                                                        input_mt_sync(ssl_priv->input);
+                                                }
+                                        }
+                                        else{
+                                                SSL_PRINT("Finger%d leave:(%d,%d)\n",i,ssl_priv->prev_x[i],ssl_priv->prev_y[i]);
+                                                if(i<FINGER_USED){
+                                                        input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
+                                                      input_report_abs(ssl_priv->input, ABS_MT_POSITION_X, ssl_priv->prev_x[i]);
+                                                      input_report_abs(ssl_priv->input, ABS_MT_POSITION_Y, ssl_priv->prev_y[i]);
+                                                        input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 0);
+                                                        input_report_key(ssl_priv->input, BTN_TOUCH, 0);
+                                                        input_mt_sync(ssl_priv->input);
+                                                }
+                                                ssl_priv->fingerbits&=~(1<<i);
+                                        }
+                                }
+                        }
+                }
+                old_flag=ssl_priv->fingers;
+                ssl_priv->fingers=finger_flag;
+        }
+#if (defined(HAS_BUTTON) && !defined(SIMULATED_BUTTON))
+        ret = ssd2533_read_reg(ssl_priv->client, BUTTON_STATUS, &reg_buff[0], 1,1);
+        if(ret){
+                //I2C Device fail
+                button_flag=0;
+        }
+        else{
+                button_flag = reg_buff[0];
+                SSL_PRINT("RB9h:0x%02X.\n",button_flag);
+                for(i=0;i<4;i++){
+                        bitmask=1<<i;
+                        if(button_flag & bitmask) { /*button[i] on*/
+                                if(ssl_priv->buttons & bitmask){        //button[i] still on
+                                        //repeat button[i]
+                                        SSL_PRINT("Button%d repeat.\n",i);
+                                }
+                                else{
+                                        //button[i] down
+                                        SSL_PRINT("Button%d down.\n",i);
+                                        input_report_key(ssl_priv->input,ssl_priv->keys[i],1);
+                                }
+                        }
+                        else{
+                                if(ssl_priv->buttons & bitmask){
+                                        //button[i] up
+                                        SSL_PRINT("Button%d up.\n",i);
+                                        input_report_key(ssl_priv->input,ssl_priv->keys[i],0);
+                                }
+                        }
+                }
+                ssl_priv->buttons=button_flag;
+        }
+#endif
+        input_sync(ssl_priv->input);/*
+        if(IsWrongReport(old_flag,finger_flag)){
+                ssd2533_deviceWakeUp(ssl_priv);
+                return;
+        }*/
+        if((old_flag==0) && (finger_flag!=0) && (ssl_priv->binitialrun==1)){    //the first time finger on after sleep out
+                ssl_priv->binitialrun=2;
+                if(ssl_priv->tp_id==0x2531){    //only SSD2531 needs auto-calibration
+                        ssl_priv->bcalibrating=1;
+                        if(ssd2533_delta(ssl_priv,0)){  //oops, there is abnormal finger hole
+                                printk("SSD253X: Lens deformation detected, now calibrate!\n");
+                                reg_buff[0]=0x01;
+                                mdelay(BENDING_DELAY);
+                                ssd2533_write_cmd(ssl_priv->client,0xA2,reg_buff,1);
+                                ssl_priv->cal_tick=-1;
+                                hrtimer_start(&ssl_priv->timer, ktime_set(0, 300*1000000), HRTIMER_MODE_REL); //check again after 300ms
+                                return;
+                        }
+                        else{
+                                ssl_priv->bcalibrating=0;
+                        }
+                }
+        }
+        if(button_flag==0 && finger_flag ==0){  //no finger or button on, so no need to monitor status
+                SSL_PRINT("No finger or button on.\n");
+                if(ssl_priv->cal_tick>=1){
+                        ssl_priv->cal_tick=0;
+                        ret=ssd2533_read_reg(ssl_priv->client,0x26,reg_buff,1,1);
+                        if((ret!=0)||(reg_buff[0]==0)||(ssl_priv->tp_id==0)){   //oops, the TP was reset, need re-init
+                                printk("SSD253X: TP was reset, now restart it!\n");
+                                ssd2533_deviceWakeUp(ssl_priv);
+                        }
+                        else{
+                                if(ssl_priv->binitialrun){
+                                        if(time_before(jiffies,ssl_priv->cal_end_time)){        //only check when bootup/sleepout
+                                                if(ssl_priv->tp_id==0x2531){    //only SSD2531 needs auto-calibration
+                                                        ssl_priv->cal_counter++;
+                                                        ssl_priv->bcalibrating=1;
+                                                        if(ssd2533_delta(ssl_priv,0)){  //oops, there is abnormal finger hole
+                                                                printk("SSD253X: Finger hole detected, now calibrate!\n");
+                                                                reg_buff[0]=0x01;
+                                                                ssd2533_write_cmd(ssl_priv->client,0xA2,reg_buff,1);
+                                                                ssl_priv->cal_tick=-1;
+                                                                SSL_PRINT("Calibrate! ssl_priv->cal_counter=%d.\n",ssl_priv->cal_counter);
+                                                        }
+                                                        else{
+                                                                ssl_priv->bcalibrating=0;
+                                                        }
+                                                }
+                                        }
+                                        else{
+                                                printk("SSD253X: Totally checked finger hole for %d times.\n",ssl_priv->cal_counter);
+                                                ssl_priv->binitialrun=0;
+                                        }
+                                }
+                        }
+                }
+                ssl_priv->cal_tick++;
+                if(ssl_priv->bcalibrating==1){
+                        hrtimer_start(&ssl_priv->timer, ktime_set(0, 300*1000000), HRTIMER_MODE_REL); //check again after 300ms
+                        return;
+                }
+                if(ssl_priv->binitialrun==1)
+                        hrtimer_start(&ssl_priv->timer, ktime_set(0, CAL_INTERVAL*1000000), HRTIMER_MODE_REL); //check again after 30ms
+                else if(ssl_priv->binitialrun==2)
+                        hrtimer_start(&ssl_priv->timer, ktime_set(0, 500000000), HRTIMER_MODE_REL); //check again after 500ms
+                else
+                        hrtimer_start(&ssl_priv->timer, ktime_set(0, 1000000000), HRTIMER_MODE_REL); //check again after 1s
+        }
+        else{
+                ssl_priv->cal_tick=0;
+                hrtimer_start(&ssl_priv->timer, ktime_set(0, 16600000), HRTIMER_MODE_REL); //polling for finger up after 16.6ms.
+        }
+}
+#endif
 
 static int ssd2533_ts_probe(struct i2c_client *client,const struct i2c_device_id *idp)
 {
@@ -869,8 +1280,13 @@ static int ssd2533_ts_probe(struct i2c_client *client,const struct i2c_device_id
 #ifdef HAS_BUTTON
 #ifdef SIMULATED_BUTTON
 	for(i=0;i<sizeof(ssd2533_SKeys)/sizeof(SKey_Info);i++){
+#if 0
 		ssl_priv->keys[i]=ssd2533_SKeys[i].code;
 		ssl_input->keybit[BIT_WORD(ssl_priv->keys[i])] = BIT_MASK(ssl_priv->keys[i]);
+#else
+                ssl_priv->keys[i] = ssd2533_SKeys[i].code;
+                input_set_capability(ssl_input, EV_KEY, ssd2533_SKeys[i].code);
+#endif
 	}
 #else
 	ssl_priv->keys[0]=BUTTON0;
@@ -934,7 +1350,7 @@ static int ssd2533_ts_probe(struct i2c_client *client,const struct i2c_device_id
 	ssl_priv->early_suspend.resume = ssd2533_ts_late_resume;
 	register_early_suspend(&ssl_priv->early_suspend);
 #endif
-	TP_PROC_FILE = create_proc_entry(PROCFS_NAME,0644,&proc_root);
+	TP_PROC_FILE = create_proc_entry(PROCFS_NAME,0644,NULL);
 	if(TP_PROC_FILE == NULL){
 		remove_proc_entry(PROCFS_NAME, &proc_root);
 		printk("Error:could not initialize %s.\n",PROCFS_NAME);
