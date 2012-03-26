@@ -22,7 +22,6 @@
 #include <plat/vram.h>
 #include <plat/dsp.h>
 #include <plat/remoteproc.h>
-#include <plat/cam.h>
 
 #define NO_LENGTH_CHECK 0xffffffff
 
@@ -69,7 +68,6 @@ void __init omap_reserve(void)
 	omap_vram_reserve_sdram_memblock();
 	omap_dsp_reserve_sdram_memblock();
 	omap_ipu_reserve_sdram_memblock();
-	omap_cam_reserve_sdram_memblock();
 }
 
 void omap_init_ram_size(void)
