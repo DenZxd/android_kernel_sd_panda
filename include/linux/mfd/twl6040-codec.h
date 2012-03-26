@@ -187,7 +187,7 @@
 
 #define TWL6040_GPO1			0x01
 #define TWL6040_GPO2			0x02
-#define TWL6040_GPO3			0x04
+#define TWL6040_GPO3			0x03
 
 /* HSOTRIM (0x2B) fields */
 

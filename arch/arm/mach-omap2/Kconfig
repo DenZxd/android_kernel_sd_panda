@@ -339,22 +339,6 @@ config MACH_OMAP_4430SDP
 	select CDC_TCXO
 	select OMAP_RFKILL_STE_MODEM
 
-config MACH_OMAP_4430SDP_CAMERA_SUPPORT
-	bool "OMAP 4430 SDP board Camera support"
-	depends on MACH_OMAP_4430SDP
-	select MEDIA_SUPPORT
-	select MEDIA_CONTROLLER
-	select VIDEO_DEV
-	select VIDEO_V4L2_SUBDEV_API
-	select V4L_PLATFORM_DRIVERS
-	select VIDEO_OMAP4
-	select VIDEO_OV5640
-	select VIDEO_OV5650
-	help
-	  Enable Camera HW support for OMAP 4430 SDP board
-	  This is for using the OMAP4 ISS CSI2A Camera sensor
-	  interface.
-
 config MACH_OMAP_BLAZE
 	bool "OMAP 44xx Tablet2 Board"
 	default y
@@ -377,22 +361,6 @@ config MACH_OMAP_BLAZE
 	select OMAP_RAM_CONSOLE
 	select CDC_TCXO
 
-config MACH_OMAP_BLAZE_CAMERA_SUPPORT
-	bool "OMAP 44xx Tablet2 board Camera support"
-	depends on MACH_OMAP_BLAZE
-	select MEDIA_SUPPORT
-	select MEDIA_CONTROLLER
-	select VIDEO_DEV
-	select VIDEO_V4L2_SUBDEV_API
-	select V4L_PLATFORM_DRIVERS
-	select VIDEO_OMAP4
-	select VIDEO_OV5640
-	select VIDEO_OV5650
-	help
-	  Enable Camera HW support for OMAP 44xx Tablet2 board
-	  This is for using the OMAP4 ISS CSI2A Camera sensor
-	  interface.
-
 config MACH_OMAP4_PANDA
 	bool "OMAP4 Panda Board"
 	default y
@@ -403,22 +371,6 @@ config MACH_OMAP4_PANDA
 	select OMAP_TPS6236X
 	select OMAP_REBOOT_REASON
 	select OMAP_RAM_CONSOLE
-
-config MACH_OMAP4_PANDA_CAMERA_SUPPORT
-	bool "OMAP4 Panda Board Camera support"
-	depends on MACH_OMAP4_PANDA
-	#select MEDIA_SUPPORT
-	select MEDIA_CONTROLLER
-	#select VIDEO_DEV
-	select VIDEO_V4L2_SUBDEV_API
-	select V4L_PLATFORM_DRIVERS
-	#select VIDEO_OMAP4
-	#select VIDEO_OV5640
-	#select VIDEO_OV5650
-	help
-	  Enable Camera HW support for PandaBoard.
-	  This is for using the OMAP4 ISS CSI2A Camera sensor
-	  interface.
 
 choice
 	prompt "SmartQ product model"
