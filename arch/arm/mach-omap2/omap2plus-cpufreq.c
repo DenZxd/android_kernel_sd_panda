@@ -458,6 +458,14 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 	for (i = 0; freq_table[i].frequency != CPUFREQ_TABLE_END; i++)
 		max_freq = max(freq_table[i].frequency, max_freq);
 
+#ifdef CONFIG_VENDOR_HHTECH
+	if (cpu_is_omap443x() && policy->max == 1200000 &&
+		 !(omap4_features & OMAP4_HAS_MPU_1_2GHZ)) {
+	    max_thermal = max_freq;
+	    policy->max = omap_thermal_lower_speed();
+	}
+#endif
+
 	/*
 	 * On OMAP SMP configuartion, both processors share the voltage
 	 * and clock. So both CPUs needs to be scaled together and hence
