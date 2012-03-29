@@ -356,11 +356,22 @@ static struct platform_device *panda_devices[] __initdata = {
 
 static void __init omap4_panda_init_early(void)
 {
+	extern unsigned long lpj_fine;
+	char *mpu_clk_name;
+
 	omap2_init_common_infrastructure();
 	omap2_init_common_devices(NULL, NULL);
 #ifdef CONFIG_OMAP_32K_TIMER
 	omap2_gp_clockevent_set_gptimer(1);
 #endif
+
+	//if (cpu_is_omap24xx()) mpu_clk_name = "virt_prcm_set"; else
+	//if (cpu_is_omap34xx()) mpu_clk_name = "dpll1_ck"; else
+	if (cpu_is_omap443x()) mpu_clk_name = "dpll_mpu_ck"; else
+	if (cpu_is_omap446x() || cpu_is_omap447x())
+			       mpu_clk_name = "virt_dpll_mpu_ck";
+
+	lpj_fine = clk_get_rate(clk_get(NULL, mpu_clk_name)) / HZ;
 }
 
 #if defined(CONFIG_USB_EHCI_HCD_OMAP) || defined(CONFIG_USB_OHCI_HCD_OMAP3)
