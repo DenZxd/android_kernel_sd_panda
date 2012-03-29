@@ -612,7 +612,9 @@ int bcmsdh_register_oob_intr(void * dhdp)
 		if (error)
 			return -ENODEV;
 
+#if !(defined(CONFIG_SMARTQ_T20) || defined(CONFIG_SMARTQ_T30))
 		enable_irq_wake(sdhcinfo->oob_irq);
+#endif
 		sdhcinfo->oob_irq_registered = TRUE;
 		sdhcinfo->oob_irq_enable_flag = TRUE;
 	}
@@ -627,9 +629,13 @@ void bcmsdh_set_irq(int flag)
 		sdhcinfo->oob_irq_enable_flag = flag;
 		if (flag) {
 			enable_irq(sdhcinfo->oob_irq);
+#if !(defined(CONFIG_SMARTQ_T20) || defined(CONFIG_SMARTQ_T30))
 			enable_irq_wake(sdhcinfo->oob_irq);
+#endif
 		} else {
+#if !(defined(CONFIG_SMARTQ_T20) || defined(CONFIG_SMARTQ_T30))
 			disable_irq_wake(sdhcinfo->oob_irq);
+#endif
 			disable_irq(sdhcinfo->oob_irq);
 		}
 	}
