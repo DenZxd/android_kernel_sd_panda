@@ -13,6 +13,7 @@
 #include <linux/input.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
+#include <linux/input/mt.h>
 #include <linux/timer.h>
 #include <linux/hrtimer.h>
 #include <linux/i2c.h>
@@ -706,7 +707,7 @@ static void ssd2533_ts_work(struct work_struct *work)
 						//input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, PRESS_PRESSURE+1);
 						//input_report_abs(ssl_priv->input, ABS_MT_WIDTH_MAJOR, 16);
 						/*case 3, only report variable pressure*/
-						input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, PRESS_PRESSURE+1);
+						input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 4);
                                                 input_report_key(ssl_priv->input, BTN_TOUCH, 1);
 						input_mt_sync(ssl_priv->input);
 					}
@@ -942,12 +943,14 @@ static void ssd2533_ts_work(struct work_struct *work)
                                                 if(ssl_priv->fingerbits&(1<<i)){
                                                         SSL_PRINT("Finger%d at:(%d,%d), out of LCD range, report as finger leave\n",i,ssl_priv->prev_x[i],ssl_priv->prev_y[i]);
                                                         if(i<FINGER_USED){
-                                                                input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
-                                                              input_report_abs(ssl_priv->input, ABS_MT_POSITION_X, ssl_priv->prev_x[i]);
-                                                              input_report_abs(ssl_priv->input, ABS_MT_POSITION_Y, ssl_priv->prev_y[i]);
-                                                              input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 0);
-                                                                input_report_key(ssl_priv->input, BTN_TOUCH, 0);
-                                                                input_mt_sync(ssl_priv->input);
+                                                            input_mt_slot(ssl_priv->input, i);
+                                                            input_mt_report_slot_state(ssl_priv->input, MT_TOOL_FINGER,false);
+                                                          //      input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
+                                                              //input_report_abs(ssl_priv->input, ABS_MT_POSITION_X, ssl_priv->prev_x[i]);
+                                                             // input_report_abs(ssl_priv->input, ABS_MT_POSITION_Y, ssl_priv->prev_y[i]);
+                                                             // input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 0);
+                                                              //  input_report_key(ssl_priv->input, BTN_TOUCH, 0);
+                                                              //  input_mt_sync(ssl_priv->input);
                                                         }
                                                         ssl_priv->fingerbits&=~(1<<i);
                                                 }
@@ -1042,7 +1045,9 @@ static void ssd2533_ts_work(struct work_struct *work)
                                         oldx[i]=ssl_priv->prev_x[i];
                                         oldy[i]=ssl_priv->prev_y[i];
                                         if(i<FINGER_USED){
-                                                input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
+                                                input_mt_slot(ssl_priv->input, i);
+                                                input_mt_report_slot_state(ssl_priv->input, MT_TOOL_FINGER,true);
+                                                //input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
                                                 input_report_abs(ssl_priv->input, ABS_MT_POSITION_X, ssl_priv->prev_x[i]);
                                                 input_report_abs(ssl_priv->input, ABS_MT_POSITION_Y, ssl_priv->prev_y[i]);
                                                 /*case 1, report variable pressure and size*/
@@ -1052,9 +1057,9 @@ static void ssd2533_ts_work(struct work_struct *work)
                                                 //input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, PRESS_PRESSURE+1);
                                                 //input_report_abs(ssl_priv->input, ABS_MT_WIDTH_MAJOR, 16);
                                                 /*case 3, only report variable pressure*/
-                                                input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, PRESS_PRESSURE+1);
-                                                input_report_key(ssl_priv->input, BTN_TOUCH, 1);
-                                                input_mt_sync(ssl_priv->input);
+                                                //input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 4);
+                                                //input_report_key(ssl_priv->input, BTN_TOUCH, 1);
+                                                //input_mt_sync(ssl_priv->input);
                                         }
                                 }
                         }
@@ -1082,7 +1087,9 @@ static void ssd2533_ts_work(struct work_struct *work)
                                                 finger_flag|=bitmask;
                                                 ssl_priv->est_en[i]=0;
                                                 if(i<FINGER_USED){
-                                                        input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
+                                                        input_mt_slot(ssl_priv->input, i);
+                                                        input_mt_report_slot_state(ssl_priv->input, MT_TOOL_FINGER,true);
+                                                        //input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
                                                         SSL_PRINT("SSD253X: real leave coordinate (%d,%d), estimated leave coordinate (%d,%d).\n",\
                                                                 ssl_priv->prev_x[i],ssl_priv->prev_y[i],ssl_priv->est_x[i],ssl_priv->est_y[i]);
                                                         ssl_priv->prev_x[i]=ssl_priv->est_x[i];
@@ -1096,20 +1103,22 @@ static void ssd2533_ts_work(struct work_struct *work)
                                                         //input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, PRESS_PRESSURE+1);
                                                         //input_report_abs(ssl_priv->input, ABS_MT_WIDTH_MAJOR, 16);
                                                         /*case 3, only report variable pressure*/
-                                                        input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 1);
-                                                        input_report_key(ssl_priv->input, BTN_TOUCH, 1);
-                                                        input_mt_sync(ssl_priv->input);
+                                                        //input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 4);
+                                                        //input_report_key(ssl_priv->input, BTN_TOUCH, 1);
+                                                        //input_mt_sync(ssl_priv->input);
                                                 }
                                         }
                                         else{
                                                 SSL_PRINT("Finger%d leave:(%d,%d)\n",i,ssl_priv->prev_x[i],ssl_priv->prev_y[i]);
                                                 if(i<FINGER_USED){
-                                                        input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
-                                                      input_report_abs(ssl_priv->input, ABS_MT_POSITION_X, ssl_priv->prev_x[i]);
-                                                      input_report_abs(ssl_priv->input, ABS_MT_POSITION_Y, ssl_priv->prev_y[i]);
-                                                        input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 0);
-                                                        input_report_key(ssl_priv->input, BTN_TOUCH, 0);
-                                                        input_mt_sync(ssl_priv->input);
+                                                        input_mt_slot(ssl_priv->input, i);
+                                                        input_mt_report_slot_state(ssl_priv->input, MT_TOOL_FINGER,false);
+                                                        //input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
+                                                      //input_report_abs(ssl_priv->input, ABS_MT_POSITION_X, ssl_priv->prev_x[i]);
+                                                      //input_report_abs(ssl_priv->input, ABS_MT_POSITION_Y, ssl_priv->prev_y[i]);
+                                                        //input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 0);
+                                                        //input_report_key(ssl_priv->input, BTN_TOUCH, 0);
+                                                        //input_mt_sync(ssl_priv->input);
                                                 }
                                                 ssl_priv->fingerbits&=~(1<<i);
                                         }
@@ -1152,6 +1161,7 @@ static void ssd2533_ts_work(struct work_struct *work)
                 ssl_priv->buttons=button_flag;
         }
 #endif
+//        input_report_key(ssl_priv->input, BTN_TOUCH, finger_flag > 0);
         input_sync(ssl_priv->input);/*
         if(IsWrongReport(old_flag,finger_flag)){
                 ssd2533_deviceWakeUp(ssl_priv);
@@ -1276,7 +1286,7 @@ static int ssd2533_ts_probe(struct i2c_client *client,const struct i2c_device_id
 		goto	err1;
 	}
 	ssl_input->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS) | BIT_MASK(EV_SYN) ;
-	ssl_input->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH) | BIT_MASK(BTN_2);
+//	ssl_input->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH) | BIT_MASK(BTN_2);
 #ifdef HAS_BUTTON
 #ifdef SIMULATED_BUTTON
 	for(i=0;i<sizeof(ssd2533_SKeys)/sizeof(SKey_Info);i++){
@@ -1300,7 +1310,7 @@ static int ssd2533_ts_probe(struct i2c_client *client,const struct i2c_device_id
 #endif
 	set_bit(ABS_MT_POSITION_X, ssl_input->absbit);
 	set_bit(ABS_MT_POSITION_Y, ssl_input->absbit);
-	set_bit(ABS_MT_TRACKING_ID, ssl_input->absbit);
+//	set_bit(ABS_MT_TRACKING_ID, ssl_input->absbit);
 	/*case 1, report variable pressure and size*/
 	/*case 2, report variable pressure and fixed size*/
 	//set_bit(ABS_MT_TOUCH_MAJOR, ssl_input->absbit);
@@ -1308,12 +1318,13 @@ static int ssd2533_ts_probe(struct i2c_client *client,const struct i2c_device_id
 	//input_set_abs_params(ssl_input, ABS_MT_TOUCH_MAJOR, 0, 16, 0, 0);
 	//input_set_abs_params(ssl_input, ABS_MT_WIDTH_MAJOR, 0, 16, 0, 0);
 	/*case 3, only report variable pressure*/
-	set_bit(ABS_MT_TOUCH_MAJOR, ssl_input->absbit);
-	input_set_abs_params(ssl_input, ABS_MT_TOUCH_MAJOR, 0, 16, 0, 0);
+	//set_bit(ABS_MT_TOUCH_MAJOR, ssl_input->absbit);
+	//input_set_abs_params(ssl_input, ABS_MT_TOUCH_MAJOR, 0, 16, 0, 0);
 
-	input_set_abs_params(ssl_input, ABS_MT_POSITION_X, 0, LCD_RANGE_X, 0, 0);
-	input_set_abs_params(ssl_input, ABS_MT_POSITION_Y, 0, LCD_RANGE_Y, 0, 0);
-	input_set_abs_params(ssl_input, ABS_MT_TRACKING_ID, 0,ssl_priv->finger_count, 0, 0);
+        input_mt_init_slots(ssl_input, ssl_priv->finger_count);
+	input_set_abs_params(ssl_input, ABS_MT_POSITION_X, 0, LCD_RANGE_X-1, 0, 0);
+	input_set_abs_params(ssl_input, ABS_MT_POSITION_Y, 0, LCD_RANGE_Y-1, 0, 0);
+//	input_set_abs_params(ssl_input, ABS_MT_TRACKING_ID, 0,ssl_priv->finger_count, 0, 0);
 
 	ssl_input->name = client->name;
 	ssl_input->id.bustype = BUS_I2C;
