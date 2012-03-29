@@ -458,8 +458,8 @@ COORDINATE_POLL:
                         //input_report_abs(ts->input_dev, ABS_MT_TRACKING_ID, i);
                         input_report_abs(ts->input_dev, ABS_MT_POSITION_X, ts->prev_x[i]);
                         input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, ts->prev_y[i]);
-                        input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, input_w);
-                        input_report_key(ts->input_dev, BTN_TOUCH, 1);
+                        //input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, input_w);
+                        //input_report_key(ts->input_dev, BTN_TOUCH, 1);
                         //input_mt_sync(ts->input_dev);
                 }
                 else {
@@ -471,7 +471,7 @@ COORDINATE_POLL:
                                 //input_report_abs(ts->input_dev, ABS_MT_POSITION_X, ts->prev_x[i]);
                                 //input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, ts->prev_y[i]);
                                 //input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0);
-                                input_report_key(ts->input_dev, BTN_TOUCH, 0);
+                                //input_report_key(ts->input_dev, BTN_TOUCH, 0);
                                 //input_mt_sync(ts->input_dev);
                                 ts->fingerbits&=~(1<<i);
                         }
@@ -1018,8 +1018,8 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 	//pdata->rst();
 
 	ts->input_dev->evbit[0] = BIT_MASK(EV_SYN) | BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS) ;
-	ts->input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
-	ts->input_dev->absbit[0] = BIT(ABS_X) | BIT(ABS_Y) | BIT(ABS_PRESSURE);		// absolute coor (x,y)
+	//ts->input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
+	//ts->input_dev->absbit[0] = BIT(ABS_X) | BIT(ABS_Y) | BIT(ABS_PRESSURE);		// absolute coor (x,y)
 
 #ifdef HAVE_TOUCH_KEY
 	for (retry = 0; retry < MAX_KEY_NUM; retry++)
@@ -1028,14 +1028,14 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 	}
 #endif
 
-	input_set_abs_params(ts->input_dev, ABS_X, 0, ts->abs_x_max, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_Y, 0, ts->abs_y_max, 0, 0);
+	//input_set_abs_params(ts->input_dev, ABS_X, 0, ts->abs_x_max, 0, 0);
+	//input_set_abs_params(ts->input_dev, ABS_Y, 0, ts->abs_y_max, 0, 0);
 //	input_set_abs_params(ts->input_dev, ABS_PRESSURE, 0, 255, 0, 0);
 
 #ifdef GOODIX_MULTI_TOUCH
         input_mt_init_slots(ts->input_dev, ts->max_touch_num);
 //	input_set_abs_params(ts->input_dev, ABS_MT_WIDTH_MAJOR, 0, 255, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
+//	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, ts->abs_x_max, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, ts->abs_y_max, 0, 0);
 //	input_set_abs_params(ts->input_dev, ABS_MT_TRACKING_ID, 0, ts->max_touch_num, 0, 0);
