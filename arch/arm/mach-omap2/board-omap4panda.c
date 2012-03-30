@@ -1302,6 +1302,69 @@ static struct omapfb_platform_data panda_fb_pdata = {
 
 extern void __init omap4_panda_android_init(void);
 
+#ifdef CONFIG_VENDOR_HHTECH
+static void __init omap4_panda_camera_mux_init(void)
+{
+	u32 r = 0;
+
+#define GPIO_CAMERA_PWN_5640 	47
+#define GPIO_CAMERA_RESET_5640 	48
+#define GPIO_CAMERA_PWN_2655 	81
+#define GPIO_CAMERA_RESET_2655 	82
+#define GPIO_CAMERA_POWER	83
+
+	omap_mux_init_gpio(GPIO_CAMERA_POWER, OMAP_PIN_OUTPUT);
+	gpio_request_one(GPIO_CAMERA_POWER, GPIOF_OUT_INIT_HIGH,
+		"camera_power");
+
+	omap_mux_init_gpio(GPIO_CAMERA_PWN_5640, OMAP_PIN_OUTPUT);
+	omap_mux_init_gpio(GPIO_CAMERA_RESET_5640, OMAP_PIN_OUTPUT);
+	gpio_request_one(GPIO_CAMERA_RESET_5640, GPIOF_OUT_INIT_HIGH,
+		"camera_reset_5640");
+
+	omap_mux_init_gpio(GPIO_CAMERA_PWN_2655, OMAP_PIN_OUTPUT);
+	omap_mux_init_gpio(GPIO_CAMERA_RESET_2655, OMAP_PIN_OUTPUT);
+	gpio_request_one(GPIO_CAMERA_RESET_2655, GPIOF_OUT_INIT_HIGH,
+		"camera_reset_2655");
+
+	/* Enable CSI21 pads for T20 and T15 */
+	if (1) {
+		r = omap4_ctrl_pad_readl(
+			OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_CAMERA_RX);
+		r |= (0x7 << OMAP4_CAMERARX_CSI21_LANEENABLE_SHIFT);
+		r |= (0x3 << OMAP4_CAMERARX_CSI22_LANEENABLE_SHIFT);
+		omap4_ctrl_pad_writel(r,
+			OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_CAMERA_RX);
+
+		omap_mux_init_signal("csi21_dx0.csi21_dx0",
+				OMAP_PIN_INPUT | OMAP_MUX_MODE0);
+		omap_mux_init_signal("csi21_dy0.csi21_dy0",
+				OMAP_PIN_INPUT | OMAP_MUX_MODE0);
+		omap_mux_init_signal("csi21_dx1.csi21_dx1",
+				OMAP_PIN_INPUT | OMAP_MUX_MODE0);
+		omap_mux_init_signal("csi21_dy1.csi21_dy1",
+				OMAP_PIN_INPUT | OMAP_MUX_MODE0);
+		omap_mux_init_signal("csi21_dx2.csi21_dx2",
+				OMAP_PIN_INPUT | OMAP_MUX_MODE0);
+		omap_mux_init_signal("csi21_dy2.csi21_dy2",
+				OMAP_PIN_INPUT | OMAP_MUX_MODE0);
+
+		omap_mux_init_signal("csi22_dx0.csi22_dx0",
+				OMAP_PIN_INPUT | OMAP_MUX_MODE0);
+		omap_mux_init_signal("csi22_dy0.csi22_dy0",
+				OMAP_PIN_INPUT | OMAP_MUX_MODE0);
+		omap_mux_init_signal("csi22_dx1.csi22_dx1",
+				OMAP_PIN_INPUT | OMAP_MUX_MODE0);
+		omap_mux_init_signal("csi22_dy1.csi22_dy1",
+				OMAP_PIN_INPUT | OMAP_MUX_MODE0);
+	}
+
+	omap_mux_init_signal("fref_clk2_out.fref_clk2_out", OMAP_MUX_MODE0);
+}
+#else
+static void __init omap4_panda_camera_mux_init(void) { }
+#endif
+
 static void __init omap4_panda_init(void)
 {
 	int status;
@@ -1320,6 +1383,7 @@ static void __init omap4_panda_init(void)
 	touchscreen_gpio_init();
 	omap_charger_io_init();
 	omap_encrypt_io_init();
+	omap4_panda_camera_mux_init();
 
 #ifdef CONFIG_VENDOR_HHTECH
 	panda_wlan_init();
