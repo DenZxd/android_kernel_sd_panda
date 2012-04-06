@@ -272,6 +272,12 @@ done_calib:
 	omap_vp_disable(voltdm);
 	sr_disable(voltdm);
 
+	if (volt_data->volt_margin == 1) {	// XXX:
+		pr_warning("using nominal instead of calibrated: %d\n",
+			u_volt_safe);
+		u_volt_safe = volt_data->volt_nominal;
+	} else
+
 	/* Add margin if needed */
 	if (volt_data->volt_margin) {
 		struct omap_voltdm_pmic *pmic = voltdm->pmic;
