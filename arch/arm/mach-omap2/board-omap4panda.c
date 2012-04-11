@@ -973,11 +973,11 @@ Reg_Item ssd2533_Init[]={
         {CMD_2B,0x54,0x00,0xc0},    // X tracking
         {CMD_2B,0x55,0x00,0xc0},    // Y tracking
 
-        {CMD_1B,0x56,0x03},         // Moing average filter
+        {CMD_1B,0x56,0x01},         // Moing average filter
         {CMD_1B,0x58,0x00},         // Finger weight scaling
         {CMD_1B,0x59,0x01},         // Enable random walk
         {CMD_1B,0x5a,0x00},         // Disable missing frame
-        {CMD_1B,0x5b,0x01},         // Set random walk window
+        {CMD_1B,0x5b,0x10},         // Set random walk window
 #ifdef CONFIG_SMARTQ_T15
         {CMD_1B,0x65,0x02},
         {CMD_2B,0x66,0x79,0xc0},

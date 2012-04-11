@@ -39,6 +39,11 @@ SKey_Info ssd2533_SKeys[]={
 };
 #endif
 
+//#define USE_PREDICTION_ALGORITHM
+//#define USE_DYNAMIC_THRESHOLD
+
+static int threshold_flag = 0;
+
 static int ssd2533_ts_open(struct input_dev *dev);
 static void ssd2533_ts_close(struct input_dev *dev);
 static irqreturn_t ssd2533_ts_isr(int irq, void *dev_id);
@@ -531,7 +536,8 @@ static int IsWrongReport(u32 oldflag,u32 newflag)
 
 	return 0;
 }
-#if 0
+
+#ifndef USE_PREDICTION_ALGORITHM
 #define X_COOR (reg_buff[0] + (((u16)reg_buff[2] & 0xF0) << 4))
 #define Y_COOR (reg_buff[1] + (((u16)reg_buff[2] & 0x0F) << 8))
 #define PRESS_PRESSURE ((reg_buff[3] >> 4) & 0x0F)
@@ -551,6 +557,14 @@ static void ssd2533_ts_work(struct work_struct *work)
 	SSL_PRINT("Run into %s working_mode=%d.\n",__FUNCTION__,ssl_priv->working_mode);
 	if(ssl_priv->bsleep)
 		return;
+#ifdef USE_DYNAMIC_THRESHOLD
+        if (0 == threshold_flag) {
+                threshold_flag = 1;
+                reg_buff[0]=0x00;
+                reg_buff[1]=0x20;
+                ssd2533_write_cmd(ssl_priv->client,0x34,reg_buff,2);
+        }
+#endif
 	smode=ssl_priv->working_mode;
 	if(wmode!=smode){
 		if(ssl_priv->tp_id==0x2533){
@@ -618,6 +632,14 @@ static void ssd2533_ts_work(struct work_struct *work)
 		//I2C Device fail
 	}
 	else{
+#ifdef USE_DYNAMIC_THRESHOLD
+                if (finger_flag >> 4 && threshold_flag) {
+                        threshold_flag = 0;
+                        reg_buff[0]=0x00;
+                        reg_buff[1]=0x30;
+                        ssd2533_write_cmd(ssl_priv->client,0x34,reg_buff,2);
+                }
+#endif
 		for(i=0;i<ssl_priv->finger_count;i++){
 			bitmask=0x10<<i;
 			if(finger_flag & bitmask) { /*finger exists*/
@@ -644,12 +666,14 @@ static void ssd2533_ts_work(struct work_struct *work)
 						if(ssl_priv->fingerbits&(1<<i)){
 							SSL_PRINT("Finger%d at:(%d,%d), out of LCD range, report as finger leave\n",i,ssl_priv->prev_x[i],ssl_priv->prev_y[i]);
 							if(i<FINGER_USED){
-								input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
-								input_report_abs(ssl_priv->input, ABS_MT_POSITION_X, ssl_priv->prev_x[i]);
-								input_report_abs(ssl_priv->input, ABS_MT_POSITION_Y, ssl_priv->prev_y[i]);
-								input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 0);
-                                                                input_report_key(ssl_priv->input, BTN_TOUCH, 1);
-								input_mt_sync(ssl_priv->input);
+                                                                input_mt_slot(ssl_priv->input, i);
+                                                                input_mt_report_slot_state(ssl_priv->input, MT_TOOL_FINGER,false);
+								//input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
+								//input_report_abs(ssl_priv->input, ABS_MT_POSITION_X, ssl_priv->prev_x[i]);
+								//input_report_abs(ssl_priv->input, ABS_MT_POSITION_Y, ssl_priv->prev_y[i]);
+								//input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 0);
+                                                                //input_report_key(ssl_priv->input, BTN_TOUCH, 1);
+								//input_mt_sync(ssl_priv->input);
 							}
 							ssl_priv->fingerbits&=~(1<<i);
 						}
@@ -697,7 +721,9 @@ static void ssd2533_ts_work(struct work_struct *work)
 					}
 					//report finger[i] coordinate here
 					if(i<FINGER_USED){
-						input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
+                                                input_mt_slot(ssl_priv->input, i);
+                                                input_mt_report_slot_state(ssl_priv->input, MT_TOOL_FINGER,true);
+						//input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
 						input_report_abs(ssl_priv->input, ABS_MT_POSITION_X, ssl_priv->prev_x[i]);
 						input_report_abs(ssl_priv->input, ABS_MT_POSITION_Y, ssl_priv->prev_y[i]);
 						/*case 1, report variable pressure and size*/
@@ -707,9 +733,9 @@ static void ssd2533_ts_work(struct work_struct *work)
 						//input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, PRESS_PRESSURE+1);
 						//input_report_abs(ssl_priv->input, ABS_MT_WIDTH_MAJOR, 16);
 						/*case 3, only report variable pressure*/
-						input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 4);
-                                                input_report_key(ssl_priv->input, BTN_TOUCH, 1);
-						input_mt_sync(ssl_priv->input);
+						//input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 4);
+                                                //input_report_key(ssl_priv->input, BTN_TOUCH, 1);
+						//input_mt_sync(ssl_priv->input);
 					}
 				}
 			}
@@ -735,12 +761,14 @@ static void ssd2533_ts_work(struct work_struct *work)
 #endif
 					SSL_PRINT("Finger%d leave:(%d,%d)\n",i,ssl_priv->prev_x[i],ssl_priv->prev_y[i]);
 					if(i<FINGER_USED){
-						input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
-						input_report_abs(ssl_priv->input, ABS_MT_POSITION_X, ssl_priv->prev_x[i]);
-						input_report_abs(ssl_priv->input, ABS_MT_POSITION_Y, ssl_priv->prev_y[i]);
-						input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 0);
-                                                input_report_key(ssl_priv->input, BTN_TOUCH, 0);
-						input_mt_sync(ssl_priv->input);
+                                                input_mt_slot(ssl_priv->input, i);
+                                                input_mt_report_slot_state(ssl_priv->input, MT_TOOL_FINGER,false);
+						//input_report_abs(ssl_priv->input, ABS_MT_TRACKING_ID, i);
+						//input_report_abs(ssl_priv->input, ABS_MT_POSITION_X, ssl_priv->prev_x[i]);
+						//input_report_abs(ssl_priv->input, ABS_MT_POSITION_Y, ssl_priv->prev_y[i]);
+						//input_report_abs(ssl_priv->input, ABS_MT_TOUCH_MAJOR, 0);
+                                                //input_report_key(ssl_priv->input, BTN_TOUCH, 0);
+						//input_mt_sync(ssl_priv->input);
 					}
 					ssl_priv->fingerbits&=~(1<<i);
 				}
@@ -856,6 +884,14 @@ static void ssd2533_ts_work(struct work_struct *work)
         SSL_PRINT("Run into %s.\n",__FUNCTION__);
         if(ssl_priv->bsleep)
                 return;
+#ifdef USE_DYNAMIC_THRESHOLD
+        if (0 == threshold_flag) {
+                threshold_flag = 1;
+                reg_buff[0]=0x00;
+                reg_buff[1]=0x20;
+                ssd2533_write_cmd(ssl_priv->client,0x34,reg_buff,2);
+        }
+#endif
         smode=ssl_priv->working_mode;
         if(wmode!=smode){
                 if(ssl_priv->tp_id==0x2533){
@@ -923,6 +959,14 @@ static void ssd2533_ts_work(struct work_struct *work)
                 //I2C Device fail
         }
         else{
+#ifdef USE_DYNAMIC_THRESHOLD
+                if (finger_flag >> 4 && threshold_flag) {
+                        threshold_flag = 0;
+                        reg_buff[0]=0x00;
+                        reg_buff[1]=0x30;
+                        ssd2533_write_cmd(ssl_priv->client,0x34,reg_buff,2);
+                }
+#endif
                 for(i=0;i<ssl_priv->finger_count;i++){
                         bitmask=0x10<<i;
                         if(finger_flag & bitmask) { /*finger exists*/
