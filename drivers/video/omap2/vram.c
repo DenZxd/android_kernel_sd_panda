@@ -30,6 +30,7 @@
 #include <linux/debugfs.h>
 #include <linux/jiffies.h>
 #include <linux/module.h>
+#include <linux/delay.h>
 
 #include <asm/setup.h>
 
@@ -270,6 +271,7 @@ EXPORT_SYMBOL(omap_vram_reserve);
 static void _omap_vram_dma_cb(int lch, u16 ch_status, void *data)
 {
 	struct completion *compl = data;
+	if (!compl) omap_stop_dma(lch); else
 	complete(compl);
 }
 
@@ -325,7 +327,7 @@ static int _omap_vram_clear(u32 paddr, unsigned pages)
 
 	r = omap_request_dma(OMAP_DMA_NO_DEVICE, "VRAM DMA",
 			_omap_vram_dma_cb,
-			&compl, &lch);
+			NULL/*&compl*/, &lch);
 	if (r) {
 		pr_err("VRAM: request_dma failed for memory clear\n");
 		return -EBUSY;
@@ -346,6 +348,7 @@ static int _omap_vram_clear(u32 paddr, unsigned pages)
 
 	omap_start_dma(lch);
 
+msleep_interruptible(50);	return 0;	// XXX:
 	if (wait_for_completion_timeout(&compl, msecs_to_jiffies(1000)) == 0) {
 		omap_stop_dma(lch);
 		pr_err("VRAM: dma timeout while clearing memory\n");
