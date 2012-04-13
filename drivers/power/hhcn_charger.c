@@ -14,6 +14,8 @@
 
 #include <linux/power/hhcn_charger.h>
 #include "oz8806.h"
+
+#define TIME_POLL 14
 //----------------------------------------------------------
 
 typedef enum {
@@ -67,7 +69,7 @@ static int hhcn_get_battery_info(void)
 
 	if(!bi->PollCount)
 	{
-		bi->PollCount = 15;
+		bi->PollCount = TIME_POLL;
 		OZ8806_PollingLoop(pd);
 	}
 	else
@@ -79,14 +81,23 @@ static int hhcn_get_battery_info(void)
 	bi->Power = pd->charger_sts();
 	if(!bi->SuspendFlag)
 	{
-		bi->SuspendFlag = 1;
+		int count;
+		if(batt_info.fRSOC <= 0){
+			for(count = 0; count < 5; count++){
+				OZ8806_PollingLoop(pd);
+				if(batt_info.fRSOC > 0)
+					break;
+				msleep(800);
+			}
+		}
 		bi->Capacity = batt_info.fRSOC;
 		bi->PrevPower = bi->Power;
+		bi->SuspendFlag = 1;
 		return 1;
 	}
-	if((bi->Voltage <= 3400) && (!bi->Power))
+	if((bi->Voltage <= 3400) && (!bi->Power) && (bi->PollCount == TIME_POLL))
 	{
-		if(bi->LowCount >= 10)
+		if(bi->LowCount >= 3)
 		{
 			bi->Capacity = 0;
 			bi->LowCount = 0;
@@ -135,21 +146,22 @@ static int hhcn_get_battery_info(void)
 }
 
 //--------------------------------
-static int hhcn_get_battery_start(void)
+int hhcn_get_battery_start(void)
 {
     int ret;
     struct hhcn_battery_info *bi = &(hhcn_battery_data->battery_data);
 
     if(bi->Power)
-		if(bi->Capacity != 100)
-			ret = POWER_SUPPLY_STATUS_CHARGING;
-		else
-			ret = POWER_SUPPLY_STATUS_FULL;
+	    if(bi->Capacity != 100)
+		    ret = POWER_SUPPLY_STATUS_CHARGING;
+	    else
+		    ret = POWER_SUPPLY_STATUS_FULL;
     else
-		ret = POWER_SUPPLY_STATUS_NOT_CHARGING;
+	    ret = POWER_SUPPLY_STATUS_NOT_CHARGING;
 
-	return ret;
+    return ret;
 }
+EXPORT_SYMBOL(hhcn_get_battery_start);
 //--------------------------------
 static void hhcn_battery_timer(unsigned long time_data)
 {
@@ -208,53 +220,53 @@ static int hhcn_ac_get_property(struct power_supply *psy,
 //-------------------------------
 static void hhcn_work_func(struct work_struct *work)
 {
-		mutex_lock(&(hhcn_battery_data->battery_lock));
-		if(hhcn_get_battery_info())
-		{
-			power_supply_changed(&hhtech_power_supplies[CHARGER_BATTERY]);
-		}
-		power_supply_changed(&hhtech_power_supplies[CHARGER_AC]);
-		mutex_unlock(&(hhcn_battery_data->battery_lock));
+	mutex_lock(&(hhcn_battery_data->battery_lock));
+	if(hhcn_get_battery_info()){
+		power_supply_changed(&hhtech_power_supplies[CHARGER_BATTERY]);
+	}
+	power_supply_changed(&hhtech_power_supplies[CHARGER_AC]);
+	mutex_unlock(&(hhcn_battery_data->battery_lock));
 }
 //-------------------------------
 static int __devinit hhcn_battery_probe(struct platform_device *pdev)
 {
-    int i, err;
+	int i, err;
 	struct hhcn_battery_info *bi;
 
-    hhcn_battery_data = kmalloc(sizeof(*hhcn_battery_data),GFP_KERNEL);
-    if (!hhcn_battery_data) {
-        printk(KERN_ERR "%s : malloc failed\n",__func__);
-        return -1;
-    }
+	hhcn_battery_data = kmalloc(sizeof(*hhcn_battery_data),GFP_KERNEL);
+	if (!hhcn_battery_data) {
+	    printk(KERN_ERR "%s : malloc failed\n",__func__);
+	    return -1;
+	}
 	bi = &(hhcn_battery_data->battery_data);
 	hhcn_battery_data->pdata_chg = pdev->dev.platform_data;
 	bi->SuspendFlag = 0;
 	bi->PollCount = 0;
 	bi->LowCount = 0;
 
-    mutex_init(&(hhcn_battery_data->battery_lock));
+	mutex_init(&(hhcn_battery_data->battery_lock));
 
-    for (i = 0; i < ARRAY_SIZE(hhtech_power_supplies); i++) {
-	err = power_supply_register(&pdev->dev, &hhtech_power_supplies[i]);
-        if (err)
-	    printk(KERN_ERR "Failed to register power supply (%d)\n", err);
-    }
-    init_timer(&(hhcn_battery_data->battery_timer));
-    hhcn_battery_data->battery_timer.function = &hhcn_battery_timer;
-    hhcn_battery_data->battery_timer.expires = jiffies + HZ*1;
-    add_timer(&(hhcn_battery_data->battery_timer));
-    INIT_WORK(&(hhcn_battery_data->battery_work), hhcn_work_func);
+	for (i = 0; i < ARRAY_SIZE(hhtech_power_supplies); i++) {
+		err = power_supply_register(&pdev->dev, &hhtech_power_supplies[i]);
+		if (err)
+			printk(KERN_ERR "Failed to register power supply (%d)\n", err);
+	}
+	init_timer(&(hhcn_battery_data->battery_timer));
+	hhcn_battery_data->battery_timer.function = &hhcn_battery_timer;
+	hhcn_battery_data->battery_timer.expires = jiffies + HZ*1;
+	add_timer(&(hhcn_battery_data->battery_timer));
+	INIT_WORK(&(hhcn_battery_data->battery_work), hhcn_work_func);
 	bi->Power = hhcn_battery_data->pdata_chg->charger_sts();
 	power_supply_changed(&hhtech_power_supplies[CHARGER_BATTERY]);
-    return 0;
+
+	return 0;
 }
 //-----------------------------
 static int hhcn_battery_remove(struct platform_device *pdev)
 {
-    if (hhcn_battery_data)
-        kfree(hhcn_battery_data);
-    return 0;
+	if (hhcn_battery_data)
+	    kfree(hhcn_battery_data);
+	return 0;
 }
 //-----------------------------
 #ifdef CONFIG_PM
@@ -267,6 +279,7 @@ static int hhcn_bat_suspend(struct device *dev)
 	bi->PollCount = 0;
 	if(!pd->charger_sts())
 		pd->charger_crt(0);
+    del_timer(&(hhcn_battery_data->battery_timer));
     return 0;
 }
 
@@ -275,6 +288,9 @@ static int hhcn_bat_resume(struct device *dev)
 	struct pltdata_charger *pd = hhcn_battery_data->pdata_chg;
 
 	pd->charger_crt(1);
+    hhcn_battery_data->battery_timer.function = &hhcn_battery_timer;
+    hhcn_battery_data->battery_timer.expires = jiffies;
+    add_timer(&(hhcn_battery_data->battery_timer));
     return 0;
 }
 
@@ -286,26 +302,26 @@ static const struct dev_pm_ops charger_ops = {
 //----------------------------
 
 static struct platform_driver hhcn_bat_driver = {
-    .probe	= hhcn_battery_probe,
-    .remove	= __devexit_p(hhcn_battery_remove),
-    .driver	=	{
+	.probe	= hhcn_battery_probe,
+	.remove	= __devexit_p(hhcn_battery_remove),
+	.driver	=	{
         .name	= "hhcn-charger",
 #ifdef CONFIG_PM
 		.pm     = &charger_ops,
 #endif
-        .owner	= THIS_MODULE,
-    },
+		.owner	= THIS_MODULE,
+	},
 };
 
 //---------------------------
 static int __init hhcn_battery_init(void)
 {
-    return platform_driver_register(&hhcn_bat_driver);
+	return platform_driver_register(&hhcn_bat_driver);
 }
 //--------------------------
 static void __exit hhcn_battery_exit(void)
 {
-    platform_driver_unregister(&hhcn_bat_driver);
+	platform_driver_unregister(&hhcn_bat_driver);
 }
 
 

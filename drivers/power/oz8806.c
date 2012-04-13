@@ -21,9 +21,15 @@
 #include <linux/power/hhcn_charger.h>
 #include "oz8806.h"
 
+#ifdef CONFIG_SMARTQ_Q8
+#define UCAP	48
+#else
+#define UCAP	68
+#endif
+
 /*-------------------------------------------------------------------------*/
 struct struct_batt_data batt_info = {
-	0, ((20*107)/100), 5, 391, 250, 40, 6800, 345, 0, 0, 0, 0, 0, 0, 0, 68*10, 4140, 0, 5, 0, 100, 100, 1400, 0, 0, 3775, 100
+	0, ((20*107)/100), 5, 391, 250, 40, (100*UCAP), 345, 0, 0, 0, 0, 0, 0, 0, (UCAP*9), 4140, 0, 5, 0, 100, 100, 1400, 0, 0, 3775, 100
 };
 EXPORT_SYMBOL(batt_info);
 
@@ -88,11 +94,23 @@ struct SOCVPoint
 //To Customer: OCVtable[] is used when OS goes into Suspend and OZ8806 ever did SleepOCV detection
 //When OS resume from Suspend Mode, battery driver checks OZ8806 SleepOCV value, and use SleepOCV voltage to re-initialize battery capacity.
 struct SOCVPoint	OCVtable[OCVNPoints] = {
+#ifdef CONFIG_SMARTQ_T15
 				{3000, 00},	{3400, 05},	{3475, 10},	{3518, 15},	{3557, 20},
 				{3590, 25},	{3616, 30},	{3632, 35},	{3647, 40},	{3660, 45},
 				{3690, 50},	{3721, 55},	{3760, 60},	{3800, 65},	{3838, 70},
 				{3878, 75},	{3935, 80},	{3990, 85},	{4035, 90},	{4100, 95},
-				{4160, 100}};
+				{4160, 100}
+#endif
+
+#ifdef CONFIG_SMARTQ_Q8
+				{3000, 00},	{3542, 05},	{3568, 10},	{3580, 15},	{3593, 20},
+				{3605, 25},	{3617, 30},	{3630, 35},	{3647, 40},	{3677, 45},
+				{3704, 50},	{3732, 55},	{3763, 60},	{3799, 65},	{3839, 70},
+				{3885, 75},	{3931, 80},	{3981, 85},	{4030, 90},	{4110, 95},
+				{4160, 100}
+
+#endif
+};
 /*
 				{3000, 00},	{3400, 05},	{3475, 10},	{3518, 15},	{3557, 20},
 				{3587, 25},	{3608, 30},	{3624, 35},	{3638, 40},	{3655, 45},
@@ -484,7 +502,7 @@ bool OZ8806_PollingLoop(struct pltdata_charger *pd)
 	{
 		int OverCount = 10;
 
-		printk("%s: CAR abnormal overflow = %d",__func__,(int)Value);
+		printk("%s: CAR abnormal overflow = %d\n",__func__,(int)Value);
 		while(OverCount)
 		{
 			OverCount--;
@@ -495,7 +513,8 @@ bool OZ8806_PollingLoop(struct pltdata_charger *pd)
 			if((short)Value > 0)
 			{
 				batt_info.fRC = batt_info.fRCPrev;
-				printk("%s: CAR value of hard to read finally! fRC = %d Count = %d\n",__func__,batt_info.fRC,OverCount);
+				printk("%s: CAR value of hard to read finally! fRC = %d Count = %d\n",__func__,\
+										    batt_info.fRC,(10 - OverCount));
 				break;
 			}
 		}
