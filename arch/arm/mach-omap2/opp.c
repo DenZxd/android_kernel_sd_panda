@@ -22,6 +22,7 @@
 
 #include <plat/omap_device.h>
 #include <plat/clock.h>
+#include <plat/io.h>
 
 #include "omap_opp_data.h"
 #include "dvfs.h"
@@ -91,6 +92,48 @@ int __init omap_init_opp_table(struct omap_opp_def *opp_def,
 				opp_def->clk_name);
 			goto next; /* skip Bad OPP */
 		}
+
+		if (!opp_def->default_available) {
+		    if (omap4_has_iva_430mhz() &&
+			    opp_def->freq ==  430000000 &&
+			    !strcmp(opp_def->hwmod_name, "iva"))
+			opp_def->default_available = true; else
+
+		    if (omap4_has_iva_500mhz() &&
+			    opp_def->freq ==  500000000 &&
+			    !strcmp(opp_def->hwmod_name, "iva"))
+			opp_def->default_available = true; else
+
+		    if (omap4_has_mpu_1_2ghz() &&
+			    opp_def->freq == 1200000000 &&
+			    !strcmp(opp_def->hwmod_name, "mpu"))
+			opp_def->default_available = true; else
+
+		    if (omap4_has_mpu_1_5ghz() &&
+			    opp_def->freq == 1500000000 &&
+			    !strcmp(opp_def->hwmod_name, "mpu")) {
+			int trimmed = 1;
+			if (cpu_is_omap446x())
+			    trimmed = omap_readl(0x4a002268) &
+				    ((1 << 18) | (1 << 19));
+
+			if (!trimmed) {
+			    /* override DPLL TRIM register */
+			    omap_writel(0x29, 0x4a002330);
+
+			    pr_info("This is DPLL un-trimmed SOM. "
+				    "OPP is limited at 1.2 GHz\n");
+			} else
+
+			opp_def->default_available = true;
+		    } else {
+			dev_warn(dev, "skip false OPP for %s@%d\n",
+				opp_def->hwmod_name, opp_def->freq);
+
+			goto next;
+		    }
+		}
+
 		r = opp_add(dev, opp_def->freq, opp_def->u_volt);
 		if (r) {
 			dev_err(dev, "%s: add OPP %ld failed for %s [%d] "
@@ -98,14 +141,6 @@ int __init omap_init_opp_table(struct omap_opp_def *opp_def,
 			       __func__, opp_def->freq,
 			       opp_def->hwmod_name, i, r);
 		} else {
-			if (!opp_def->default_available)
-				r = opp_disable(dev, opp_def->freq);
-			if (r)
-				dev_err(dev, "%s: disable %ld failed for %s "
-					"[%d] result=%d\n",
-					__func__, opp_def->freq,
-					opp_def->hwmod_name, i, r);
-
 			r  = omap_dvfs_register_device(dev,
 				opp_def->voltdm_name, opp_def->clk_name);
 			if (r)
