@@ -311,7 +311,7 @@ static struct omap_opp_def __initdata omap446x_opp_def_list[] = {
 	/* MPU OPP3 - OPP-Turbo */
 	OPP_INITIALIZER("mpu", "virt_dpll_mpu_ck", "mpu", true, 920000000, OMAP4460_VDD_MPU_OPPTURBO_UV),
 	/* MPU OPP4 - OPP-Nitro */
-	OPP_INITIALIZER("mpu", "virt_dpll_mpu_ck", "mpu", false, 1200000000, OMAP4460_VDD_MPU_OPPNITRO_UV),
+	OPP_INITIALIZER("mpu", "virt_dpll_mpu_ck", "mpu", true, 1200000000, OMAP4460_VDD_MPU_OPPNITRO_UV),
 	/* MPU OPP4 - OPP-Nitro SpeedBin */
 	OPP_INITIALIZER("mpu", "virt_dpll_mpu_ck", "mpu", false, 1500000000, OMAP4460_VDD_MPU_OPPNITROSB_UV),
 	/* L3 OPP1 - OPP50 */
@@ -326,7 +326,7 @@ static struct omap_opp_def __initdata omap446x_opp_def_list[] = {
 	/* IVA OPP3 - OPP-Turbo */
 	OPP_INITIALIZER("iva", "virt_iva_ck", "iva", true, 332000000, OMAP4460_VDD_IVA_OPPTURBO_UV),
 	/* IVA OPP4 - OPP-Nitro */
-	OPP_INITIALIZER("iva", "virt_iva_ck", "iva", false, 430000000, OMAP4460_VDD_IVA_OPPNITRO_UV),
+	OPP_INITIALIZER("iva", "virt_iva_ck", "iva", true, 430000000, OMAP4460_VDD_IVA_OPPNITRO_UV),
 	/* IVA OPP5 - OPP-Nitro SpeedBin*/
 	OPP_INITIALIZER("iva", "virt_iva_ck", "iva", false, 500000000, OMAP4460_VDD_IVA_OPPNITROSB_UV),
 
@@ -488,7 +488,7 @@ static struct omap_opp_def __initdata omap447x_opp_low_def_list[] = {
 	/* IVA OPP3 - OPP-Turbo */
 	OPP_INITIALIZER("iva", "virt_iva_ck", "iva", true, 332000000, OMAP4470_VDD_IVA_OPPTURBO_UV),
 	/* IVA OPP4 - OPP-Nitro */
-	OPP_INITIALIZER("iva", "virt_iva_ck", "iva", false, 430000000, OMAP4470_VDD_IVA_OPPNITRO_UV),
+	OPP_INITIALIZER("iva", "virt_iva_ck", "iva", true, 430000000, OMAP4470_VDD_IVA_OPPNITRO_UV),
 	/* IVA OPP5 - OPP-Nitro SpeedBin*/
 	OPP_INITIALIZER("iva", "virt_iva_ck", "iva", false, 500000000, OMAP4470_VDD_IVA_OPPNITROSB_UV),
 
@@ -554,7 +554,7 @@ static struct omap_opp_def __initdata omap447x_opp_high_def_list[] = {
 	/* IVA OPP3 - OPP-Turbo */
 	OPP_INITIALIZER("iva", "virt_iva_ck", "iva", true, 332000000, OMAP4470_VDD_IVA_OPPTURBO_UV),
 	/* IVA OPP4 - OPP-Nitro */
-	OPP_INITIALIZER("iva", "virt_iva_ck", "iva", false, 430000000, OMAP4470_VDD_IVA_OPPNITRO_UV),
+	OPP_INITIALIZER("iva", "virt_iva_ck", "iva", true, 430000000, OMAP4470_VDD_IVA_OPPNITRO_UV),
 	/* IVA OPP5 - OPP-Nitro SpeedBin*/
 	OPP_INITIALIZER("iva", "virt_iva_ck", "iva", false, 500000000, OMAP4470_VDD_IVA_OPPNITROSB_UV),
 
@@ -678,7 +678,6 @@ static void __init omap4_abb_trim_update(
 int __init omap4_opp_init(void)
 {
 	int r = -ENODEV;
-	int trimmed = 1;
 
 	if (!cpu_is_omap44xx())
 		return r;
@@ -690,10 +689,6 @@ int __init omap4_opp_init(void)
 
 		r = omap_init_opp_table(omap446x_opp_def_list,
 			ARRAY_SIZE(omap446x_opp_def_list));
-		trimmed = omap_readl(0x4a002268) & ((1 << 18) | (1 << 19));
-		/* if device is untrimmed override DPLL TRIM register */
-		if (!trimmed)
-			omap_writel(0x29, 0x4a002330);
 	} else if (cpu_is_omap447x()) {
 		struct clk *dpll_core_ck;
 		unsigned long rate = 0;
@@ -714,24 +709,6 @@ int __init omap4_opp_init(void)
 					ARRAY_SIZE(omap447x_opp_low_def_list));
 	}
 
-	if (r)
-		goto out;
-
-	/* Enable Nitro and NitroSB IVA OPPs */
-	if (omap4_has_iva_430mhz())
-		omap4_opp_enable("iva", 430000000);
-	if (omap4_has_iva_500mhz())
-		omap4_opp_enable("iva", 500000000);
-
-	/* Enable Nitro and NitroSB MPU OPPs */
-	if (omap4_has_mpu_1_2ghz())
-		omap4_opp_enable("mpu", 1200000000);
-	if (!trimmed)
-		pr_info("This is DPLL un-trimmed SOM. OPP is limited at 1.2 GHz\n");
-	if (omap4_has_mpu_1_5ghz() && trimmed)
-		omap4_opp_enable("mpu", 1500000000);
-
-out:
 	return r;
 }
 device_initcall(omap4_opp_init);
