@@ -1919,10 +1919,12 @@ static int twl6040_probe(struct snd_soc_codec *codec)
 	/* init vio registers */
 	twl6040_init_vio_regs(codec);
 
+    if (0) {	// XXX:
 	/* power on device */
 	ret = twl6040_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 	if (ret)
 		goto bias_err;
+    }
 
 	snd_soc_add_controls(codec, twl6040_snd_controls,
 				ARRAY_SIZE(twl6040_snd_controls));

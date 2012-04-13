@@ -1741,6 +1741,8 @@ static int musb_gadget_pullup(struct usb_gadget *gadget, int is_on)
 
 	is_on = !!is_on;
 
+	if (0 && is_on == musb->softconnect) return 0;	// XXX:
+
 	pm_runtime_get_sync(musb->controller);
 
 	/* NOTE: this assumes we are sensing vbus; we'd rather
