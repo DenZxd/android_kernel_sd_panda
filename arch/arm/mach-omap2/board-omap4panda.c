@@ -1567,6 +1567,65 @@ static void __init omap4_panda_camera_mux_init(void)
 
 	omap_mux_init_signal("fref_clk2_out.fref_clk2_out", OMAP_MUX_MODE0);
 }
+
+#define GPIO_BOARD_ID0 153
+#define GPIO_BOARD_ID1 154
+#define GPIO_BOARD_ID2 155
+#define GPIO_BOARD_ID3 156
+unsigned char board_revision;
+
+static void __init hhtech_boardrev_init(void)
+{
+	int ret;
+
+	ret = gpio_request(GPIO_BOARD_ID0, "board_id0");
+	if (ret) {
+		pr_err("Cannot request GPIO %d\n", GPIO_BOARD_ID0);
+		goto error1;
+	}
+
+	ret = gpio_request(GPIO_BOARD_ID1, "board_id1");
+	if (ret) {
+		pr_err("Cannot request GPIO %d\n", GPIO_BOARD_ID1);
+		goto error2;
+	}
+
+	ret = gpio_request(GPIO_BOARD_ID2, "board_id2");
+	if (ret) {
+		pr_err("Cannot request GPIO %d\n", GPIO_BOARD_ID2);
+		goto error3;
+	}
+
+	ret = gpio_request(GPIO_BOARD_ID3, "board_id3");
+	if (ret) {
+		pr_err("Cannot request GPIO %d\n", GPIO_BOARD_ID3);
+		goto error4;
+	}
+
+	omap_mux_init_gpio(GPIO_BOARD_ID0, OMAP_PIN_INPUT);
+	omap_mux_init_gpio(GPIO_BOARD_ID1, OMAP_PIN_INPUT);
+	omap_mux_init_gpio(GPIO_BOARD_ID2, OMAP_PIN_INPUT);
+	omap_mux_init_gpio(GPIO_BOARD_ID3, OMAP_PIN_INPUT);
+
+	board_revision  = gpio_get_value(GPIO_BOARD_ID0);
+	board_revision |= gpio_get_value(GPIO_BOARD_ID1) << 1;
+	board_revision |= gpio_get_value(GPIO_BOARD_ID2) << 2;
+	board_revision |= gpio_get_value(GPIO_BOARD_ID3) << 3;
+
+	pr_info("HHTech Board Revision: %x\n", board_revision);
+
+	return;
+
+error4:
+	gpio_free(GPIO_BOARD_ID2);
+error3:
+	gpio_free(GPIO_BOARD_ID1);
+error2:
+	gpio_free(GPIO_BOARD_ID0);
+error1:
+	board_revision = 0xf;
+	pr_err("Unable to detemine Board Revision\n");
+}
 #else
 static void __init omap4_panda_camera_mux_init(void) { }
 #endif
@@ -1585,6 +1644,10 @@ static void __init omap4_panda_init(void)
 	if (omap_rev() == OMAP4430_REV_ES1_0)
 		package = OMAP_PACKAGE_CBL;
 	omap4_mux_init(board_mux, NULL, package);
+
+#ifdef CONFIG_VENDOR_HHTECH
+	hhtech_boardrev_init();
+#endif
 
 	omap_init_board_version(OMAP4_PANDA);
 	omap4_create_board_props();
