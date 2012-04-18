@@ -541,6 +541,13 @@ config INPUT_BMA180
 	  Say Y here if you want to use BMA-180 Tri-axis accelerometer
 	  through I2C interface.
 
+config INPUT_BMA250
+	tristate "BMA-250 Tri-axis accelerometer"
+	depends on I2C && SYSFS
+	help
+	  Say Y here if you want to use BMA-250 Tri-axis accelerometer
+	  through I2C interface.
+
 config INPUT_MMA8452
 	tristate "MMA-8452 Tri-axis accelerometer"
 	depends on I2C && SYSFS
