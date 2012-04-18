@@ -196,6 +196,10 @@ static ssize_t omap4_hwpcb_rev_show(struct kobject *kobj,
 	struct kobj_attribute *attr, char *buf)
 {
     unsigned char rev = 0x0f;
+#ifdef CONFIG_VENDOR_HHTECH
+    extern unsigned char board_revision;
+    rev = board_revision;
+#endif
     return sprintf(buf, "%x\n", rev);
 }
 

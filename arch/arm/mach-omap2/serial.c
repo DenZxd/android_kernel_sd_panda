@@ -159,6 +159,7 @@ static struct omap_device_pad default_omap36xx_uart4_pads[] __initdata = {
 };
 
 static struct omap_device_pad default_omap4_uart4_pads[] __initdata = {
+#ifndef CONFIG_VENDOR_HHTECH
 	{
 		.name	= "uart4_tx.uart4_tx",
 		.enable	= OMAP_PIN_OUTPUT | OMAP_MUX_MODE0,
@@ -169,6 +170,7 @@ static struct omap_device_pad default_omap4_uart4_pads[] __initdata = {
 		.enable	= OMAP_PIN_INPUT | OMAP_MUX_MODE0,
 		.idle	= OMAP_PIN_INPUT | OMAP_MUX_MODE0,
 	},
+#endif	// XXX:
 };
 #else
 static struct omap_device_pad default_uart1_pads[] __initdata = {};
