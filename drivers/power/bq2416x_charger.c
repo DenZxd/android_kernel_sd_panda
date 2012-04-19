@@ -309,11 +309,32 @@ static int bq2416x_set_reg07_ThermalShutdown(struct bq2416x_device_info *di, int
 	return 1;
 }
 
+static int bq2416x_check_reg02(struct bq2416x_device_info *di)
+{
+        u8 Reg1Val = 0;
+        u8 Reg2Val = 0;
+
+        bq2416x_read_byte(di, &Reg1Val, Reg1Add);
+        bq2416x_read_byte(di, &Reg2Val, Reg2Add);
+        if ((Reg1Val >> 1) & 0x3) {
+                if (Reg2Val & 0x4) {
+                        //Reg2Val &= ~((1<<2) | (1<<7));
+                        bq2416x_write_byte(di, 0x08, Reg2Add);
+                }
+        }
+        else {
+                if (!(Reg2Val & 0x4)) {
+                        //Reg2Val &= ~(1<<7);
+                        //Reg2Val |= (1<<2);
+                        bq2416x_write_byte(di, 0x0c, Reg2Add);
+                }
+        }
+}
+
 static int bq2416x_charger_chip_init(struct bq2416x_device_info *di)
 {
 	u8 read_reg[8] = {0};
 
-	bq2416x_set_reg02_control(di,0x8C);
 	bq2416x_set_reg03_safety_reg(di,di->cin_limit,di->max_charger_voltagemV);
 	bq2416x_set_reg05_ChgCur(di,di->charger_current);
 	bq2416x_set_reg05_TermCur(di,di->term_currentmA);
@@ -340,6 +361,8 @@ static void bq2416x_charger_update_status(struct bq2416x_device_info *di)
 	u8 read_reg[8] = {0};
 
 	bq2416x_read_block(di, &read_reg[0], 0, 8);
+
+        bq2416x_check_reg02(di);
 
 	if(((read_reg[0] & 0x07) == 0x03) || ((read_reg[0] & 0x07) == 0x07) || ((read_reg[0] & 0x70) == 0x70))
 	    bq2416x_charger_chip_init(di);
@@ -476,6 +499,7 @@ static int __devinit bq2416x_charger_probe(struct i2c_client *client,
 	di->max_charger_voltagemV = pdata->max_charger_voltagemV;
 	di->cin_limit = pdata->cin_limit;
 
+	bq2416x_check_reg02(di);
 	bq2416x_charger_chip_init(di);
 	bq24161_proc_init();
 
