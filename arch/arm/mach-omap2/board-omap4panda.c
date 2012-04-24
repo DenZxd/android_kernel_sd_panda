@@ -73,6 +73,13 @@
 #define TPS62361_GPIO   7 /* VCORE1 power control */
 #endif
 
+#if defined(CONFIG_PANEL_LG_IPS_7)
+static struct platform_device lg_ips7_panel = {
+   .name = "lg_ips7_panel",
+   .id = -1,
+};
+#endif
+
 #if defined(CONFIG_WL12XX_SDIO) || defined(CONFIG_WL12XX_SDIO_MODULE)
 /* wl127x BT, FM, GPS connectivity chip */
 static int wl1271_gpios[] = {46, -1, -1};
@@ -403,6 +410,9 @@ static void __init bcm43xx_bluetooth_io_init(void) { }
 #endif
 
 static struct platform_device *panda_devices[] __initdata = {
+#ifdef CONFIG_PANEL_LG_IPS_7
+	&lg_ips7_panel,
+#endif
 #if defined(CONFIG_BACKLIGHT_PWM) || defined(CONFIG_BACKLIGHT_PWM_MODULE)
 #ifdef CONFIG_OMAP_PWM
 	&pwm_device,
@@ -1185,6 +1195,20 @@ static void smartq_lcd_disable(struct omap_dss_device *dssdev)
 static int __init smartq_lcd_init(struct omap_dss_device *dssdev)
 {
 	int r, gpio;
+#ifdef CONFIG_PANEL_LG_IPS_7
+#define GPIO_SPI_CSB 134
+#define GPIO_SPI_SCL 135
+#define GPIO_SPI_SDA 136
+
+	// LG 7 inch panel need initialization by spi_gpio
+	omap_mux_init_gpio(GPIO_SPI_SCL, OMAP_PIN_OUTPUT);
+	omap_mux_init_gpio(GPIO_SPI_SDA, OMAP_PIN_OUTPUT);
+	omap_mux_init_gpio(GPIO_SPI_CSB, OMAP_PIN_OUTPUT);
+
+	gpio_direction_output(GPIO_SPI_SDA, 0);
+	gpio_direction_output(GPIO_SPI_SCL, 0);
+	gpio_direction_output(GPIO_SPI_CSB, 0);
+#endif
 
 #ifdef CONFIG_SMARTQ_Q8
 	gpio = GPIO_LCD_PWR_CTRL;
@@ -1228,6 +1252,8 @@ static struct panel_generic_dpi_data smartq_lcd_panel = {
 	.name			= "lg_ips10",
 #elif defined(CONFIG_PANEL_QM_8)
         .name                   = "qm_8",
+#elif defined(CONFIG_PANEL_LG_IPS_7)
+	.name                   = "lg_ips7",
 #elif defined(CONFIG_PANEL_HS_HSD101PWW1)
         .name                   = "hs_ips10.1",
 #endif
@@ -1238,11 +1264,16 @@ static struct panel_generic_dpi_data smartq_lcd_panel = {
 struct omap_dss_device smartq_lcd_device = {
 	.type			= OMAP_DISPLAY_TYPE_DPI,
 	.name			= "SmartQ_LCD",
+// 9Apr2012 ctjing added for ld070ws2(SmartQ_S7)
+#ifdef CONFIG_PANEL_LG_IPS_7
+	.driver_name		= "lg_ld070ws2_panel",
+#else
 	.driver_name		= "generic_dpi_panel",
+#endif
 	.data			= &smartq_lcd_panel,
 #ifdef CONFIG_PANEL_LG_IPS_10
 	.phy.dpi.data_lines	= 18,
-#elif defined(CONFIG_PANEL_QM_8)
+#elif defined(CONFIG_PANEL_QM_8) || defined(CONFIG_PANEL_LG_IPS_7)
 	.phy.dpi.data_lines	= 24,
 #elif defined(CONFIG_PANEL_HS_HSD101PWW1)
         .phy.dpi.data_lines     = 18,
