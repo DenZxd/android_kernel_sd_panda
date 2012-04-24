@@ -734,7 +734,7 @@ static struct i2c_board_info __initdata tps6130x_boardinfo = {
 
 static void touchscreen_rst(void)
 {
-#ifdef CONFIG_SMARTQ_T15
+#if defined(CONFIG_SMARTQ_T15) || defined(CONFIG_SMARTQ_S7)
 	gpio_direction_output(GPIO_TOUCHSCREEN_RST, 1);
 
 	//gpio_set_value(GPIO_TOUCHSCREEN_RST, 1);
@@ -794,6 +794,16 @@ struct goodix_i2c_rmi_platform_data goodix_pdata = {
 	.irq_gpio = GPIO_TOUCHSCREEN_IRQ,
 	.irq_init = touchscreen_irq_init,
 	//.gpio_init = touchscreen_gpio_init,
+};
+#endif
+
+#if defined(CONFIG_TOUCHSCREEN_FT5X0X) || \
+	defined(CONFIG_TOUCHSCREEN_FT5X0X_MODULE)
+#include <linux/ft5x0x_i2c_ts.h>
+
+struct ft5x0x_platform_data ft5x0x_pdata = {
+	.irq = OMAP_GPIO_IRQ(GPIO_TOUCHSCREEN_IRQ),
+	.rst = touchscreen_rst
 };
 #endif
 
@@ -974,6 +984,13 @@ static struct i2c_board_info __initdata panda_i2c_bus4_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("pixcir_ts", 0x5c),
 		.platform_data = &pixcir_pdata,
+	},
+#endif
+#if defined(CONFIG_TOUCHSCREEN_FT5X0X) || \
+	defined(CONFIG_TOUCHSCREEN_FT5X0X_MODULE)
+	{
+		I2C_BOARD_INFO(FT5X0X_NAME, I2C_CTPM_ADDRESS>>1),
+		.platform_data= &ft5x0x_pdata,
 	},
 #endif
 };

@@ -21,6 +21,16 @@ config TOUCHSCREEN_PIXCIR
 	  To compile this driver as a module, choose M here,
 	  the module will be called pixcir_i2c_ts.
 
+config TOUCHSCREEN_FT5X0X
+	tristate "ft5x0x Touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you want to enable goodix
+	  support for the built-in touchscreen
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M
+
 config TOUCHSCREEN_GOODIX
 	tristate "Goodix Touchscreen"
 	depends on I2C
