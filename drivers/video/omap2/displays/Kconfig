@@ -46,6 +46,12 @@ config PANEL_LGPHILIPS_LB035Q02
 	help
 	  LCD Panel used on the Gumstix Overo Palo35
 
+config PANEL_LG_IPS_7
+	tristate "LG.Philips LD070WS2 LCD Panel"
+	depends on OMAP2_DSS_DPI
+	help
+	  LCD Panel used on the SmartQ_S7
+
 config PANEL_SHARP_LS037V7DW01
         tristate "Sharp LS037V7DW01 LCD Panel"
         depends on OMAP2_DSS_DPI
