@@ -1915,6 +1915,12 @@ static void bma250_work_func(struct work_struct *work)
 	unsigned long delay = msecs_to_jiffies(atomic_read(&bma250->delay));
 
 	bma250_read_accel_xyz(bma250->bma250_client, &acc);
+	if((acc.x < 50 && acc.x >0) || (acc.x > -50 && acc.x < 0))
+		acc.x /=2;
+	if((acc.y < 50 && acc.y >0) || (acc.y > -50 && acc.y < 0))
+		acc.y /=2;
+	if((acc.z < 50 && acc.z >0) || (acc.z > -50 && acc.z < 0))
+		acc.z /=2;
 	input_report_abs(bma250->input, ABS_X, acc.x);
 	input_report_abs(bma250->input, ABS_Y, acc.y);
 	input_report_abs(bma250->input, ABS_Z, acc.z);
