@@ -22,6 +22,12 @@
 #include <plat/dmtimer.h>
 #include <plat/pwm.h>
 
+#ifdef CONFIG_VENDOR_HHTECH
+#include "../mach-omap2/mux.h"
+#include <linux/gpio.h>
+#define GPIO_BL_PWM 94
+#endif
+
 /* Preprocessor Definitions */
 
 #undef OMAP_PWM_DEBUG
@@ -69,8 +75,7 @@ struct pwm_device {
 	struct omap_dm_timer			  *dm_timer;
 	struct omap2_pwm_platform_config   config;
 	const char						  *label;
-	unsigned int					   use_count;
-	unsigned int					   pwm_id;
+	unsigned char use_count, pwm_id, active;
 };
 
 /* Function Prototypes */
@@ -136,6 +141,12 @@ struct pwm_device *pwm_request(int pwm_id, const char *label)
 
 	mutex_unlock(&pwm_lock);
 
+#ifdef GPIO_BL_PWM
+	pwm->active = 1;
+	if (!strcmp(pwm->label, "backlight"))
+	    omap_mux_set_gpio(OMAP_MUX_MODE1, GPIO_BL_PWM);
+#endif
+
 	return pwm;
 }
 EXPORT_SYMBOL(pwm_request);
@@ -198,6 +209,13 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 	const int trigger = OMAP_TIMER_TRIGGER_OVERFLOW_AND_COMPARE;
 	int load_value, match_value;
 	unsigned long clk_rate;
+
+#ifdef GPIO_BL_PWM
+	if (!pwm->active && !pwm->config.polarity &&
+		!strcmp(pwm->label, "backlight"))
+	    omap_mux_set_gpio(OMAP_MUX_MODE1, GPIO_BL_PWM);
+	pwm->active = 1;
+#endif
 
 	DEV_DBG(&pwm->pdev->dev,
 			"duty cycle: %d, period %d\n",
@@ -281,6 +299,13 @@ void pwm_disable(struct pwm_device *pwm)
 	omap_dm_timer_enable(pwm->dm_timer);
 	omap_dm_timer_stop(pwm->dm_timer);
 	omap_dm_timer_disable(pwm->dm_timer);
+
+#ifdef GPIO_BL_PWM
+	if (!pwm->config.polarity && !strcmp(pwm->label, "backlight")) {
+	    omap_mux_set_gpio(OMAP_MUX_MODE3, GPIO_BL_PWM);
+	    gpio_direction_output(GPIO_BL_PWM, 1);
+	}   pwm->active = 0;
+#endif
 }
 EXPORT_SYMBOL(pwm_disable);
 
