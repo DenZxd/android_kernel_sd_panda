@@ -21,6 +21,14 @@
 #include <linux/pwm_backlight.h>
 #include <linux/slab.h>
 
+#if 0//defined(CONFIG_SMARTQ_T20)
+#include "../../../arch/arm/mach-omap2/mux.h"
+#include <linux/gpio.h>
+
+#define GPIO_BL_PWM 94
+static unsigned char bl_stop = 0;
+#endif
+
 struct pwm_bl_data {
 	struct pwm_device	*pwm;
 	struct device		*dev;
@@ -49,7 +57,19 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 	if (brightness == 0) {
 		pwm_config(pb->pwm, 0, pb->period);
 		pwm_disable(pb->pwm);
+#if 0//defined(CONFIG_SMARTQ_T20)
+		if (!pwm->config.polarity) {
+			omap_mux_set_gpio(OMAP_MUX_MODE3, GPIO_BL_PWM);
+			gpio_direction_output(GPIO_BL_PWM, 1);
+			bl_stop = 1;
+		}
+#endif
 	} else {
+#if 0//defined(CONFIG_SMARTQ_T20)
+		if (bl_stop) {	bl_stop = 0;
+			omap_mux_set_gpio(OMAP_MUX_MODE1, GPIO_BL_PWM);
+		}
+#endif
 		brightness = pb->lth_brightness +
 			(brightness * (pb->period - pb->lth_brightness) / max);
 		pwm_config(pb->pwm, brightness, pb->period);
