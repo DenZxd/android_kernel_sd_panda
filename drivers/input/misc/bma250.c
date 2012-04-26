@@ -3335,7 +3335,7 @@ static int bma250_probe(struct i2c_client *client,
 
 	data->input = dev;
 
-	err = sysfs_create_group(&data->input->dev.kobj,
+	err = sysfs_create_group(&client->dev.kobj,
 			&bma250_attribute_group);
 	if (err < 0)
 		goto error_sysfs;
