@@ -30,7 +30,8 @@
 #include <linux/i2c.h>
 #include <linux/proc_fs.h>
 #include <linux/skbuff.h>
-
+#include <linux/delay.h>
+#include <linux/time.h>
 #include <asm/unaligned.h>
 
 #include <linux/power/bq27410_battery.h>
@@ -83,6 +84,55 @@ static struct power_supply power_supplies[] =
 };
 
 static struct bq27410_device_info *the_bq27410;
+
+//#define CAPPoints  21
+static struct SOCVPoint    BatTable[] = {
+
+	{3230, 00},	{3300, 05},	{3356, 10},	{3386, 15},	{3420, 20},
+	{3444, 25},	{3460, 30},	{3474, 35},	{3500, 40},	{3520, 45},
+	{3546, 50},	{3576, 55},	{3622, 60},	{3662, 65},	{3708, 70},
+	{3754, 75},	{3800, 80},	{3850, 85},	{3908, 90},	{3964, 95},
+	{3990, 100}
+};
+
+
+static struct SOCVPoint    AcTable[] = {
+
+	{3590, 00},	{3634, 05},	{3650, 10},	{3690, 15},	{3714, 20},
+	{3732, 25},	{3750, 30},	{3770, 35},	{3790, 40},	{3810, 45},
+	{3828, 50},	{3866, 55},	{3900, 60},	{3942, 65},	{3976, 70},
+	{4022, 75},	{4064, 80},	{4114, 85},	{4168, 90},	{4178, 95},
+	{4186, 100}
+};
+
+static int OnVoltToRC(int fVolt, int Points,struct SOCVPoint Table[])
+{
+	int j,res;
+
+	for(j=0; j<Points; j++)
+	{
+		if(Table[j].iVoltage == fVolt)
+		{
+			res = Table[j].iRSOC;
+			return res;
+		}
+		if(Table[j].iVoltage > fVolt)
+			break;
+	}
+	if(j == 0)
+		res = Table[j].iRSOC;
+	else if(j == Points)
+		res = Table[j-1].iRSOC;
+	else
+	{
+		res = ((fVolt-Table[j-1].iVoltage)*
+				(Table[j].iRSOC-Table[j-1].iRSOC));
+		res = res / (Table[j].iVoltage-Table[j-1].iVoltage);
+		res += Table[j-1].iRSOC;
+	}
+
+	return res;
+}
 
 static int bq27410_read_i2c(struct bq27410_device_info *di, u8 reg, bool single)
 {
@@ -281,7 +331,7 @@ static int bq27410_polling(void)
 		return 0;
 
 	mutex_lock(&data->lock);
-
+/*
 	data->control = BQ27410_REG_RSOC;
 	value = bq27410_read_i2c(data,data->control,true);
 	if(value < 0){
@@ -291,6 +341,21 @@ static int bq27410_polling(void)
 	if(value > 100)
 		value = 100;
 	data->capacity = (value - BQ27410_RESE) * 100 / (100 - BQ27410_RESE);
+	if(data->capacity <= 0)
+		data->capacity = 0;
+	if(data->capacity >= 100)
+		data->capacity = 100;
+
+	data->control = BQ27410_REG_AI;
+	value = bq27410_read_i2c(data,data->control,false);
+	if(value < 0)
+		printk("%s: error reading current \n",__func__);
+	value = (int)((s16)value);
+	data->current_now = value;
+*/
+	data->rem_cap_rc = data->rem_cap_hs / (HOUR_SEC * 1000 / INTEGRAL_TIME);
+	data->capacity = (data->rem_cap_rc - BQ27410_RESE) * 100;
+	data->capacity = data->capacity / (FULL_CAP - BQ27410_RESE);
 	if(data->capacity <= 0)
 		data->capacity = 0;
 	if(data->capacity >= 100)
@@ -307,37 +372,12 @@ static int bq27410_polling(void)
 		value = 4200;
 	data->voltage_now = value;
 
-	data->control = BQ27410_REG_AI;
-	value = bq27410_read_i2c(data,data->control,false);
-	if(value < 0)
-		printk("%s: error reading current \n",__func__);
-	value = (int)((s16)value);
-	data->current_now = value;
-
 	data->control = BQ27410_REG_TEMP;
 	value = bq27410_read_i2c(data,data->control,false);
 	if(value < 0)
 		printk("%s: error reading temperature \n",__func__);
 	value /= 10;
 	data->temperature = value - 273;
-
-	data->control = BQ27410_REG_FACAP;
-	value = bq27410_read_i2c(data,data->control,false);
-	if(value < 0)
-		printk("%s: error reading FullAvaCap \n",__func__);
-	data->FullAvaCap = value;
-
-	data->control = BQ27410_REG_FCCAP;
-	value = bq27410_read_i2c(data,data->control,false);
-	if(value < 0)
-		printk("%s: error reading FullChaCap \n",__func__);
-	data->FullChaCap = value;
-
-	data->control =	BQ27410_REG_REMCAP;
-	value = bq27410_read_i2c(data,data->control,false);
-	if(value < 0)
-		printk("%s: error reading RemCap \n",__func__);
-	data->RemCap = value;
 
 	data->control =	BQ27410_REG_FLAGS;
 	value = bq27410_read_i2c(data,data->control,false);
@@ -358,24 +398,31 @@ static int get_battery_info(void)
 	struct battery_info *bi = &(the_bq27410->battery_data);
 
 	if(!bi->PollCount){
-		bi->PollCount = 15;
+		if(the_bq27410->init_count)
+			bi->PollCount = 0;
+		else
+			bi->PollCount = 14;
 		bq27410_polling();
-		//printk("%4x %4x %4d %4d %4d %4d %4d %4d\n",the_bq27410->ControlStatus,the_bq27410->bat_flag,the_bq27410->voltage_now, \
-						the_bq27410->temperature,the_bq27410->current_now,the_bq27410->capacity,the_bq27410->RemCap, \
-						the_bq27410->FullChaCap);
+		/*printk("%4x %4x %4d %4d %4d %4d %4d %4d\n",the_bq27410->ControlStatus,the_bq27410->bat_flag,\
+				    the_bq27410->voltage_now,the_bq27410->temperature,the_bq27410->current_now,\
+				    the_bq27410->capacity,the_bq27410->RemCap,the_bq27410->FullChaCap);*/
+		//printk("%4d %4d %4d %4d %d\n",the_bq27410->capacity,the_bq27410->rem_cap_rc,the_bq27410->rem_cap_hs,\
+					    the_bq27410->voltage_now,the_bq27410->current_now);
 	}
 	else{
 		bi->PollCount--;
 		bi->Power = bq2416x_get_charge_status();
 		if(bi->Power != bi->PrevPower){
-			if((bi->PrevPower = bi->Power) == POWER_SUPPLY_STATUS_FULL){
+			if(((bi->PrevPower = bi->Power) == POWER_SUPPLY_STATUS_FULL) || \
+					((bi->Curr < 200) && (bi->Voltage > 4150) && (bi->Power != POWER_SUPPLY_STATUS_NOT_CHARGING))){
 				the_bq27410->capacity = 100;
+				bi->PrevPower = bi->Power = POWER_SUPPLY_STATUS_FULL;
+			}
+			if((bi->Voltage >= 3405) && (bi->Power == POWER_SUPPLY_STATUS_NOT_CHARGING) && \
+								    (the_bq27410->capacity == 0)){
+				the_bq27410->capacity = 1;
 			}
 			bi->Capacity = the_bq27410->capacity;
-			if((bi->Voltage >= 3405) && (bi->Power == POWER_SUPPLY_STATUS_NOT_CHARGING) && \
-									    (the_bq27410->capacity == 0)){
-				bi->Capacity = the_bq27410->capacity = 1;
-			}
 			return 1;
 		}
 		return 0;
@@ -388,12 +435,14 @@ static int get_battery_info(void)
 	if(!bi->SuspendFlag){
 		bi->SuspendFlag = 1;
 		bi->Capacity = the_bq27410->capacity;
+		if((bi->Curr < 210) && (bi->Voltage > 4150) && (bi->Power != POWER_SUPPLY_STATUS_NOT_CHARGING))
+			bi->Capacity = 100;
 		bi->PrevPower = bi->Power;
 		return 1;
 	}
 
 	if((bi->Voltage <= 3405) && (bi->Power == POWER_SUPPLY_STATUS_NOT_CHARGING)){
-		if(bi->LowCount >= 1){
+		if(bi->LowCount >= 3){
 			bi->Capacity = 0;
 			bi->LowCount = 0;
 			bi->PrevPower = bi->Power;
@@ -403,6 +452,8 @@ static int get_battery_info(void)
 		else
 			++bi->LowCount;
 	}
+	else
+		bi->LowCount = 0;
 
 	if((bi->Voltage >= 3405) && (bi->Power == POWER_SUPPLY_STATUS_NOT_CHARGING) && \
 								(the_bq27410->capacity == 0)){
@@ -412,7 +463,7 @@ static int get_battery_info(void)
 	}
 
 	if((bi->Curr < 200) && (bi->Voltage > 4150) && (bi->Power != POWER_SUPPLY_STATUS_NOT_CHARGING)){
-		if(bi->FullCount >= 1){
+		if(bi->FullCount >= 0){
 			bi->FullCount = 0;
 			bi->Capacity = 100;
 			bi->PrevPower = bi->Power = POWER_SUPPLY_STATUS_FULL;
@@ -435,7 +486,7 @@ static int get_battery_info(void)
 	}
 	else
 	{
-		if(((the_bq27410->capacity - bi->Capacity) > 2) || ((the_bq27410->capacity - bi->Capacity) < -2)){
+/*		if(((the_bq27410->capacity - bi->Capacity) > 2) || ((the_bq27410->capacity - bi->Capacity) < -2)){
 			if(bi->Power != bi->PrevPower){
 				if((bi->PrevPower = bi->Power) == POWER_SUPPLY_STATUS_FULL){
 					the_bq27410->capacity = 100;
@@ -449,7 +500,7 @@ static int get_battery_info(void)
 			}
 		}
 		else
-		{
+*/		{
 			if((bi->PrevPower = bi->Power) == POWER_SUPPLY_STATUS_FULL)
 				the_bq27410->capacity = 100;
 			bi->Capacity = the_bq27410->capacity;
@@ -522,8 +573,16 @@ static int ac_get_property(struct power_supply *psy,
 //--------------------------------
 static int do_battery_timer(void *time_data)
 {
-	mod_timer(&(the_bq27410->battery_timer), jiffies + HZ*2);
-	schedule_work(&(the_bq27410->battery_work));
+	schedule_work(&(the_bq27410->capacity_work));
+
+	if((!the_bq27410->poll_time)){
+		the_bq27410->poll_time = POLL_TIME-1;
+		schedule_work(&(the_bq27410->battery_work));
+	}
+	else{
+		--(the_bq27410->poll_time);
+	}
+	mod_timer(&(the_bq27410->battery_timer), jiffies + HZ/(1000/INTEGRAL_TIME));
 	return 0;
 }
 //---------------------------------
@@ -539,6 +598,114 @@ static void do_work_func(struct work_struct *work)
 	mutex_unlock(&(the_bq27410->lock));
 }
 
+static void do_cap_work(struct work_struct *work)
+{
+	int value,value_pre;
+	struct bq27410_device_info *data = the_bq27410;
+
+	mutex_init(&(the_bq27410->lock));
+
+	if(data->init_count){
+		value = bq27410_read_i2c(data,BQ27410_REG_VOLT,false);
+		if(value > 0){
+			data->current_now = bq27410_read_i2c(data,BQ27410_REG_AI,false);
+			if(data->current_now > 0){
+				data->current_now = (int)((s16)data->current_now);
+				if(!data->get_vol_count){
+					if(data->current_now > data->charger_dir){	// charger
+						data->charger_dir = 1;
+					}
+					else
+						data->charger_dir = 0;
+
+					data->voltage_pre += value;
+					++data->get_vol_count;
+
+					if(data->charger_dir)
+						data->capacity = OnVoltToRC(data->voltage_pre,\
+								sizeof(AcTable)/sizeof(AcTable[0]),AcTable);
+					else
+						data->capacity = OnVoltToRC(data->voltage_pre,\
+								sizeof(BatTable)/sizeof(BatTable[0]),BatTable);
+					if(data->capacity < 0)
+						data->capacity = 1;
+					data->rem_cap_rc = data->capacity * (FULL_CAP / 100);
+					data->rem_cap_hs = data->rem_cap_rc * (HOUR_SEC * 1000/INTEGRAL_TIME);
+				}
+				else{
+					if((data->current_now < 0 ? 0 : 1) == data->charger_dir){
+						data->voltage_pre += value;
+						++data->get_vol_count;
+					}
+					else
+						data->init_count = 1;
+				}
+				//printk("*****************************\n");
+				//printk("%s: chg_dir = %d get_vol_count = %d init_count = %d vol = %d svol = %d\n",__func__,\
+						data->charger_dir,\
+						data->get_vol_count,data->init_count,value,data->voltage_pre);
+				//printk("*****************************\n");
+			}
+		}
+		else
+			printk("%s: error reading voltage \n",__func__);
+
+		--data->init_count;
+		if(!data->init_count){
+			data->voltage_pre /= (data->get_vol_count);
+			//printk("%s: get_vol_count = %d\n",__func__,data->get_vol_count);
+			if(data->charger_dir)
+				data->capacity = OnVoltToRC(data->voltage_pre,\
+						sizeof(AcTable)/sizeof(AcTable[0]),AcTable);
+			else
+				data->capacity = OnVoltToRC(data->voltage_pre,\
+						sizeof(BatTable)/sizeof(BatTable[0]),BatTable);
+
+			if(data->capacity == 100)
+				++data->capacity;
+			data->rem_cap_rc = data->capacity * (FULL_CAP / 100);
+			data->rem_cap_hs = data->rem_cap_rc * (HOUR_SEC * 1000/INTEGRAL_TIME);
+
+		//	printk("------------------------------------------------------\n");
+			printk("%s: %d %d %d %d %d\n",__func__,data->capacity,data->rem_cap_rc,data->rem_cap_hs,\
+					data->voltage_pre,data->current_now);
+		//	printk("------------------------------------------------------\n");
+
+		}
+
+	}
+	else{
+		value = bq27410_read_i2c(data,BQ27410_REG_AI,false);
+		if(value < 0){
+			printk("%s: error reading current \n",__func__);
+			return;
+		}
+		value = value_pre = (int)((s16)value);
+		value += data->current_now;
+		value /= 2;
+		data->current_now = value_pre;
+		data->rem_cap_hs += value;
+		if((value_pre > 0) && (value_pre < 210) && (data->battery_data.Power != POWER_SUPPLY_STATUS_NOT_CHARGING)){
+			if(data->full_count > 9){
+				data->full_count = 0;
+				data->rem_cap_hs = data->rem_cap_init_hs;
+			}
+			else
+				++data->full_count;
+		}
+		else
+			data->full_count = 0;
+		if(data->rem_cap_hs >= data->rem_cap_init_hs)
+			data->rem_cap_hs = data->rem_cap_init_hs;
+		if(data->rem_cap_hs <= 0)
+			data->rem_cap_hs = 0;
+
+	}
+
+	mutex_unlock(&(the_bq27410->lock));
+}
+
+//--------------------------------
 static int bq27410_charger_init(struct bq27410_device_info *di)
 {
 	int err,i;
@@ -564,6 +731,7 @@ static int bq27410_charger_init(struct bq27410_device_info *di)
 
 	add_timer(&(di->battery_timer));
 	INIT_WORK(&(di->battery_work), do_work_func);
+	INIT_WORK(&(di->capacity_work),do_cap_work);
 
 	mutex_unlock(&di->lock);
 
@@ -575,6 +743,9 @@ static int bq27410_chip_init(struct bq27410_device_info *di)
 	int count;
 	u16 flag;
 	u16 status;
+	int value,i;
+	int get_vol_count = 0;
+	struct bq27410_device_info *data = the_bq27410;
 
 	mutex_lock(&di->lock);
 	//OperationConfiguration(di);
@@ -598,6 +769,54 @@ static int bq27410_chip_init(struct bq27410_device_info *di)
 		}
 	}
 
+	/*------------------------------
+	*   Power initialization
+	------------------------------*/
+	data->init_count = 10000/INTEGRAL_TIME;
+	data->get_vol_count = 0;
+	data->charger_dir = 0;
+	data->voltage_pre = 0;
+	data->full_count = 0;
+	data->rem_cap_init_hs =	(FULL_CAP + (FULL_CAP/100)) * (HOUR_SEC * (1000/INTEGRAL_TIME));
+	/*
+	for(i = 1; i <= 4; i++){
+		value = bq27410_read_i2c(data,BQ27410_REG_VOLT,false);
+		while(value < 0){
+			msleep(100);
+			bq27410_read_i2c(data,BQ27410_REG_VOLT,false);
+			if((value < 0) && (get_vol_count >= 5)){
+				printk("%s: error reading voltage \n",__func__);
+				break;
+			}
+			else
+				++get_vol_count;
+		}
+		data->voltage_now += value;
+		msleep(100);
+	}
+	data->voltage_now /= (i-1);
+
+	value = bq27410_read_i2c(data,BQ27410_REG_AI,false);
+	if(value < 0)
+		printk("%s: error reading current \n",__func__);
+	value = (int)((s16)value);
+	data->current_now = value;
+
+	value = data->voltage_now;
+	if(data->current_now >= 0)
+		data->capacity = ACOnVoltToRC(value);
+	else
+		data->capacity = BATOnVoltToRC(value);
+
+	if(data->capacity == 100)
+		++data->capacity;
+	data->rem_cap_rc = data->capacity * (FULL_CAP / 100);
+	data->rem_cap_hs = data->rem_cap_rc * (HOUR_SEC * 1000/INTEGRAL_TIME);
+
+	printk("------------------------------------------------------\n");
+	printk("%s: %d %d %d %d\n",__func__,data->capacity,data->rem_cap_rc,data->voltage_now,data->current_now);
+	printk("------------------------------------------------------\n");
+*/
 	mutex_unlock(&di->lock);
 
 	return 0;
@@ -610,12 +829,21 @@ static int bq27410_suspend(struct device *dev)
 	bi->SuspendFlag = 0;
 	bi->PollCount = 0;
 	del_timer(&the_bq27410->battery_timer);
+	do_gettimeofday(&(the_bq27410->dorm_time));
 
 	return 0;
 }
 
 static int bq27410_resume(struct device *dev)
 {
+	struct timeval tv;
+	long curr_time;
+
+	curr_time = the_bq27410->dorm_time.tv_sec;
+	do_gettimeofday(&(the_bq27410->dorm_time));
+	curr_time = (the_bq27410->dorm_time.tv_sec - curr_time) * DORM_POWER;
+	the_bq27410->rem_cap_hs -= curr_time;
+
 	the_bq27410->battery_timer.expires = jiffies + HZ*0;
 	add_timer(&the_bq27410->battery_timer);
 
@@ -710,8 +938,8 @@ static int deb27410_proc_read(char* page, char** start, off_t off, int count,int
 	struct bq27410_device_info *da = the_bq27410;
 	data = (void *)page;
 
-	bq27410_polling();
-//	printk("cap = %d vol = %d cur = %d temp = %d FullAvaCap = %d FullChaCap = %d\n" \
+	//bq27410_polling();
+	//printk("cap = %d vol = %d cur = %d temp = %d FullAvaCap = %d FullChaCap = %d\n" \
 					,da->capacity,da->voltage_now,da->current_now,da->temperature,da->FullAvaCap,da->FullChaCap);
 #if 1
 	page += sprintf(page,"cap: \t%-4d\t",da->capacity);
@@ -720,7 +948,7 @@ static int deb27410_proc_read(char* page, char** start, off_t off, int count,int
 	page += sprintf(page,"tem: \t%-4d\n",da->temperature);
 	page += sprintf(page,"fac: \t%-4d\t",da->FullAvaCap);
 	page += sprintf(page,"fcc: \t%-4d\t",da->FullChaCap);
-	page += sprintf(page,"rec: \t%-4d\n",da->RemCap);
+	page += sprintf(page,"rec: \t%-4d\n",da->rem_cap_rc);
 	page += sprintf(page,"flg: \t%-4x\t",da->bat_flag);
 	page += sprintf(page,"cts: \t%-4x\n",da->ControlStatus);
 #endif

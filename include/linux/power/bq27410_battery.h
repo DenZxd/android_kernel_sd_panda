@@ -29,9 +29,16 @@
 #define BQ27410_FLAG_CHGS               BIT(7)
 #define BQ27410_FLAG_FC                 BIT(9)
 
-#define BQ27410_RS                      20 /* Resistor sense */
-#define BQ27410_RESE			10
+#define BQ27410_RS                      20  /* Resistor sense */
 
+#define DORM_POWER			50  /* ma Power consumption */
+#define FULL_CAP                        6800
+#define HOUR_SEC			3600
+#define INTEGRAL_TIME                   1000 /* ms Integral Cycle*/
+#define RESE				15
+#define BQ27410_RESE			RESE*FULL_CAP/100
+
+#define POLL_TIME                       (2*1000/INTEGRAL_TIME)
 
 struct bq27410_device_info;
 
@@ -55,10 +62,13 @@ struct bq27410_device_info {
 	struct i2c_client *myclient;
 	struct timer_list battery_timer;
 	struct work_struct battery_work;
+	struct work_struct capacity_work;
 	struct battery_info battery_data;
+	struct timeval dorm_time;
 
 	int temperature;
 	int voltage_now;
+	int voltage_pre;
 	int current_now;
 	int capacity;
 	int power;
@@ -68,9 +78,24 @@ struct bq27410_device_info {
 	int bat_flag;
 	int ControlStatus;
 
+	int init_count;
+	int get_vol_count;
+	int charger_dir;
+	int poll_time;
+	long rem_cap_rc;
+	long rem_cap_hs;
+	long rem_cap_init_hs;
+	int full_count;
+
 	bool mode;
 	u8 control;
 	u8 Adreg;
-	u16	AAddr;
+	u16 AAddr;
 };
+
+struct SOCVPoint {
+	int iVoltage;
+	int iRSOC;
+};
+
 #endif
