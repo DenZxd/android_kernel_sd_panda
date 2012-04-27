@@ -423,8 +423,7 @@ void OZ8806_init_chip(struct i2c_client *client)
 	}
 	else if((bRet == 1) && (batt_info.PowerStatus == 1))			//AC-in and boot up system
 	{
-		if(batt_info.fVolt == 0)
-			batt_info.fVolt = 3900;
+		batt_info.fVolt = 3200;
 		batt_info.fPerFromOCV = OZ8806_PowerOnVoltToRC();					//use PoOCV to initial
 		batt_info.fRSOC = batt_info.fPerFromOCV;					//use fRSOC from OCV table to initialize CAR
 		OZ8806_CAR_Reset(client);
