@@ -1436,8 +1436,15 @@ err0:
 static void ssd2533_ts_early_suspend(struct early_suspend *h)
 {
     struct ssl_ts_priv *ssl_priv = container_of(h, struct ssl_ts_priv, early_suspend);
+    int i = 0;
 	SSL_PRINT("Run into %s.\n",__FUNCTION__);
 	ssd2533_deviceSleep(ssl_priv);
+        for (i=0; i< ssl_priv->finger_count; i++) {
+                if (ssl_priv->fingerbits & (1<<i)) {
+                        input_mt_slot(ssl_priv->input, i);
+                        input_mt_report_slot_state(ssl_priv->input, MT_TOOL_FINGER,false);
+                }
+        }
 }
 
 static void ssd2533_ts_late_resume(struct early_suspend *h)

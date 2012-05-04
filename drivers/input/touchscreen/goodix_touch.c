@@ -1182,7 +1182,7 @@ static int goodix_ts_remove(struct i2c_client *client)
 
 static int goodix_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 {
-	int ret;
+	int ret, i;
 	struct goodix_ts_data *ts = i2c_get_clientdata(client);
 
 	if (ts->use_irq)
@@ -1198,6 +1198,13 @@ static int goodix_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 		if (ret < 0)
 			dev_err(&ts->client->dev, "goodix_ts_resume power off failed\n");
 	}
+
+        for (i=0; i< ts->max_touch_num; i++) {
+                if (ts->fingerbits & (1<<i)) {
+                        input_mt_slot(ts->input_dev, i);
+                        input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER,false);
+                }
+        }
 
 //    cancel_delayed_work_sync(&led_work);
 //    close_key_led();
