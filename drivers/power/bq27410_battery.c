@@ -563,7 +563,7 @@ static int ac_get_property(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
-	    val->intval = (bi->Power == POWER_SUPPLY_STATUS_NOT_CHARGING) ? 0 : 1;
+	    val->intval = ((bi->Power == POWER_SUPPLY_STATUS_CHARGING) || (bi->Power == POWER_SUPPLY_STATUS_FULL)) ? 1 : 0;
 	    break;
 	default:
 	    return -EINVAL;
@@ -716,6 +716,8 @@ static int bq27410_charger_init(struct bq27410_device_info *di)
 	bi->SuspendFlag = 0;
 	bi->PollCount = 0;
 	bi->LowCount = 0;
+	bi->Power = bq2416x_get_charge_status();
+
 	for (i = 0; i < ARRAY_SIZE(power_supplies); i++){
 		err = power_supply_register(di->dev, &power_supplies[i]);
 		if (err){
