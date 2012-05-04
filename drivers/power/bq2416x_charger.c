@@ -479,8 +479,6 @@ static int __devinit bq2416x_charger_probe(struct i2c_client *client,
 {
 	struct bq2416x_device_info *di;
 	struct bq2416x_platform_data *pdata = client->dev.platform_data;
-	int ret;
-
 
 	di = kzalloc(sizeof(*di), GFP_KERNEL);
 	if (!di)
@@ -520,7 +518,7 @@ static int __devinit bq2416x_charger_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK_DEFERRABLE(&di->bq2416x_charger_work,bq2416x_charger_work);
 	schedule_delayed_work(&di->bq2416x_charger_work, 0);
 
-	return ret;
+	return 0;
 }
 
 static int __devexit bq2416x_charger_remove(struct i2c_client *client)
