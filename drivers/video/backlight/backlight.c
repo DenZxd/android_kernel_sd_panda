@@ -175,6 +175,41 @@ static ssize_t backlight_store_brightness(struct device *dev,
 	return rc;
 }
 
+static ssize_t backlight_show_scale(struct device *dev,
+                struct device_attribute *attr, char *buf)
+{
+        struct backlight_device *bd = to_backlight_device(dev);
+
+        return sprintf(buf, "%d\n", bd->props.scale);
+}
+
+static ssize_t backlight_store_scale(struct device *dev,
+                struct device_attribute *attr, const char *buf, size_t count)
+{
+        int rc;
+        struct backlight_device *bd = to_backlight_device(dev);
+        unsigned int scale;
+
+        rc = strict_strtoul(buf, 0, &scale);
+        if (rc)
+                return rc;
+
+        rc = -ENXIO;
+
+        mutex_lock(&bd->ops_lock);
+        if (bd->ops) {
+                pr_debug("backlight: set scale to %d\n", scale);
+                bd->props.scale = scale;
+                backlight_update_status(bd);
+                rc = count;
+        }
+        mutex_unlock(&bd->ops_lock);
+
+        backlight_generate_event(bd, BACKLIGHT_UPDATE_SYSFS);
+
+        return rc;
+}
+
 static ssize_t backlight_show_type(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -245,6 +280,7 @@ static struct device_attribute bl_device_attributes[] = {
 	__ATTR(bl_power, 0644, backlight_show_power, backlight_store_power),
 	__ATTR(brightness, 0644, backlight_show_brightness,
 		     backlight_store_brightness),
+        __ATTR(scale, 0644, backlight_show_scale, backlight_store_scale),
 	__ATTR(actual_brightness, 0444, backlight_show_actual_brightness,
 		     NULL),
 	__ATTR(max_brightness, 0444, backlight_show_max_brightness, NULL),

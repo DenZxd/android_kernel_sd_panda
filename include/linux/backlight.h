@@ -82,6 +82,8 @@ struct backlight_properties {
 #define BL_CORE_DRIVER2		(1 << 30)	/* reserved for driver specific use */
 #define BL_CORE_DRIVER1		(1 << 31)	/* reserved for driver specific use */
 
+        /* Scale for scale brightness */
+        int scale;
 };
 
 struct backlight_device {

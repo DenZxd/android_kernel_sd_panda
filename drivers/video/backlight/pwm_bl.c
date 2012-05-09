@@ -44,6 +44,9 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 	struct pwm_bl_data *pb = dev_get_drvdata(&bl->dev);
 	int brightness = bl->props.brightness;
 	int max = bl->props.max_brightness;
+        int scale = bl->props.scale;
+
+        if (scale > 8) scale = 0;
 
 	if (bl->props.power != FB_BLANK_UNBLANK)
 		brightness = 0;
@@ -53,6 +56,17 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 
 	if (pb->notify)
 		brightness = pb->notify(pb->dev, brightness);
+
+	brightness >>= scale;
+
+#ifdef CONFIG_PANEL_HS_HSD101PWW1
+#define SCREEN_DIM 15
+#else
+#define SCREEN_DIM 5
+#endif
+
+	if (scale && 0 < brightness && brightness < SCREEN_DIM)
+	    brightness = SCREEN_DIM;
 
 	if (brightness == 0) {
 		pwm_config(pb->pwm, 0, pb->period);
@@ -238,4 +252,3 @@ module_exit(pwm_backlight_exit);
 MODULE_DESCRIPTION("PWM based Backlight Driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:pwm-backlight");
-
