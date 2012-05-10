@@ -1000,6 +1000,13 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 	mutex_lock(&dev->mutex);
 
 	sscanf(buff, "%d", &enabled);
+
+	if (!cdev/* && (!enabled != !dev->enabled)*/) {
+	    pr_err("android_usb composite driver isn't ready: %s <- %s\n",
+		    dev->enabled ? "enabled" : "disabled", buff);
+	    goto OUT;
+	}
+
 	if (enabled && !dev->enabled) {
 		/* update values in composite driver's copy of device descriptor */
 		cdev->desc.idVendor = device_desc.idVendor;
@@ -1026,6 +1033,7 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 				dev->enabled ? "enabled" : "disabled");
 	}
 
+OUT:
 	mutex_unlock(&dev->mutex);
 	return size;
 }
