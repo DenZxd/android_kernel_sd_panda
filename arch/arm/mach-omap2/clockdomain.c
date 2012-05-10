@@ -92,6 +92,8 @@ static int _clkdm_register(struct clockdomain *clkdm)
 
 	pwrdm_add_clkdm(pwrdm, clkdm);
 
+	spin_lock_init(&clkdm->lock);
+
 	pr_debug("clockdomain: registered %s\n", clkdm->name);
 
 	return 0;
@@ -690,6 +692,9 @@ int clkdm_clear_all_sleepdeps(struct clockdomain *clkdm)
  */
 int clkdm_sleep(struct clockdomain *clkdm)
 {
+	int ret;
+	unsigned long flags;
+
 	if (!clkdm)
 		return -EINVAL;
 
@@ -704,7 +709,10 @@ int clkdm_sleep(struct clockdomain *clkdm)
 
 	pr_debug("clockdomain: forcing sleep on %s\n", clkdm->name);
 
-	return arch_clkdm->clkdm_sleep(clkdm);
+	spin_lock_irqsave(&clkdm->lock, flags);
+	ret = arch_clkdm->clkdm_sleep(clkdm);
+	spin_unlock_irqrestore(&clkdm->lock, flags);
+	return ret;
 }
 
 /**
@@ -719,6 +727,7 @@ int clkdm_sleep(struct clockdomain *clkdm)
 int clkdm_wakeup(struct clockdomain *clkdm)
 {
 	int ret;
+	unsigned long flags;
 
 	if (!clkdm)
 		return -EINVAL;
@@ -734,9 +743,10 @@ int clkdm_wakeup(struct clockdomain *clkdm)
 
 	pr_debug("clockdomain: forcing wakeup on %s\n", clkdm->name);
 
+	spin_lock_irqsave(&clkdm->lock, flags);
 	ret = arch_clkdm->clkdm_wakeup(clkdm);
 	ret |= pwrdm_wait_transition(clkdm->pwrdm.ptr);
-
+	spin_unlock_irqrestore(&clkdm->lock, flags);
 	return ret;
 }
 
@@ -752,6 +762,8 @@ int clkdm_wakeup(struct clockdomain *clkdm)
  */
 void clkdm_allow_idle(struct clockdomain *clkdm)
 {
+	unsigned long flags;
+
 	if (!clkdm)
 		return;
 
@@ -767,8 +779,10 @@ void clkdm_allow_idle(struct clockdomain *clkdm)
 	pr_debug("clockdomain: enabling automatic idle transitions for %s\n",
 		 clkdm->name);
 
+	spin_lock_irqsave(&clkdm->lock, flags);
 	arch_clkdm->clkdm_allow_idle(clkdm);
 	pwrdm_clkdm_state_switch(clkdm);
+	spin_unlock_irqrestore(&clkdm->lock, flags);
 }
 
 /**
@@ -782,6 +796,8 @@ void clkdm_allow_idle(struct clockdomain *clkdm)
  */
 void clkdm_deny_idle(struct clockdomain *clkdm)
 {
+	unsigned long flags;
+
 	if (!clkdm)
 		return;
 
@@ -797,7 +813,9 @@ void clkdm_deny_idle(struct clockdomain *clkdm)
 	pr_debug("clockdomain: disabling automatic idle transitions for %s\n",
 		 clkdm->name);
 
+	spin_lock_irqsave(&clkdm->lock, flags);
 	arch_clkdm->clkdm_deny_idle(clkdm);
+	spin_unlock_irqrestore(&clkdm->lock, flags);
 }
 
 /**
@@ -810,6 +828,9 @@ void clkdm_deny_idle(struct clockdomain *clkdm)
  */
 int clkdm_is_idle(struct clockdomain *clkdm)
 {
+	bool ret;
+	unsigned long flags;
+
 	if (!clkdm)
 		return -EINVAL;
 
@@ -818,7 +839,11 @@ int clkdm_is_idle(struct clockdomain *clkdm)
 
 	pr_debug("clockdomain: reading idle state for %s\n", clkdm->name);
 
-	return arch_clkdm->clkdm_is_idle(clkdm);
+	spin_lock_irqsave(&clkdm->lock, flags);
+	ret = arch_clkdm->clkdm_is_idle(clkdm);
+	spin_unlock_irqrestore(&clkdm->lock, flags);
+
+	return ret;
 }
 
 
@@ -840,6 +865,7 @@ int clkdm_is_idle(struct clockdomain *clkdm)
  */
 int clkdm_clk_enable(struct clockdomain *clkdm, struct clk *clk)
 {
+	unsigned long flags;
 	/*
 	 * XXX Rewrite this code to maintain a list of enabled
 	 * downstream clocks for debugging purposes?
@@ -864,9 +890,11 @@ int clkdm_clk_enable(struct clockdomain *clkdm, struct clk *clk)
 	pr_debug("clockdomain: clkdm %s: clk %s now enabled\n", clkdm->name,
 		 clk->name);
 
+	spin_lock_irqsave(&clkdm->lock, flags);
 	arch_clkdm->clkdm_clk_enable(clkdm);
 	pwrdm_wait_transition(clkdm->pwrdm.ptr);
 	pwrdm_clkdm_state_switch(clkdm);
+	spin_unlock_irqrestore(&clkdm->lock, flags);
 
 	return 0;
 }
@@ -887,6 +915,7 @@ int clkdm_clk_enable(struct clockdomain *clkdm, struct clk *clk)
  */
 int clkdm_clk_disable(struct clockdomain *clkdm, struct clk *clk)
 {
+	unsigned long flags;
 	/*
 	 * XXX Rewrite this code to maintain a list of enabled
 	 * downstream clocks for debugging purposes?
@@ -913,8 +942,10 @@ int clkdm_clk_disable(struct clockdomain *clkdm, struct clk *clk)
 	pr_debug("clockdomain: clkdm %s: clk %s now disabled\n", clkdm->name,
 		 clk->name);
 
+	spin_lock_irqsave(&clkdm->lock, flags);
 	arch_clkdm->clkdm_clk_disable(clkdm);
 	pwrdm_clkdm_state_switch(clkdm);
+	spin_unlock_irqrestore(&clkdm->lock, flags);
 
 	return 0;
 }
