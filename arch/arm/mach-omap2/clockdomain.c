@@ -745,7 +745,7 @@ int clkdm_wakeup(struct clockdomain *clkdm)
 
 	spin_lock_irqsave(&clkdm->lock, flags);
 	ret = arch_clkdm->clkdm_wakeup(clkdm);
-	ret |= pwrdm_wait_transition(clkdm->pwrdm.ptr);
+	ret |= pwrdm_state_switch(clkdm->pwrdm.ptr);
 	spin_unlock_irqrestore(&clkdm->lock, flags);
 	return ret;
 }
@@ -815,6 +815,7 @@ void clkdm_deny_idle(struct clockdomain *clkdm)
 
 	spin_lock_irqsave(&clkdm->lock, flags);
 	arch_clkdm->clkdm_deny_idle(clkdm);
+	pwrdm_state_switch(clkdm->pwrdm.ptr);
 	spin_unlock_irqrestore(&clkdm->lock, flags);
 }
 
