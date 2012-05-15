@@ -29,8 +29,10 @@
 #include <linux/wakelock.h>
 #include <linux/platform_device.h>
 #include <linux/bcm43xx-bluetooth.h>
+#include <linux/regulator/driver.h>
 
 static struct rfkill *bt_rfkill;
+static struct regulator *clk32kg_reg;
 static struct proc_dir_entry *proc_entry;
 static bool bt_enabled;
 static bool host_wake_uart_enabled;
@@ -57,9 +59,13 @@ static int bcm43xx_bt_rfkill_set_power(void *data, bool blocked)
 
 	// rfkill_ops callback. Turn transmitter on when blocked is false
 	if (!blocked) {
+		if (clk32kg_reg && !bt_enabled)
+			regulator_enable(clk32kg_reg);
 		gpio_set_value(pdata->reset_gpio, 1);
 	} else {
 		gpio_set_value(pdata->reset_gpio, 0);
+		if (clk32kg_reg && bt_enabled)
+			regulator_disable(clk32kg_reg);
 	}
 
 	bt_enabled = !blocked;
@@ -228,6 +234,12 @@ static int bcm43xx_bluetooth_probe(struct platform_device *pdev)
 		"bcm43xx_nreset_gpio");
 	if (unlikely(rc)) return rc;
 
+	clk32kg_reg = regulator_get(0, "clk32kgate");
+	if (IS_ERR(clk32kg_reg)) {
+		pr_err("clk32kg reg not found!\n");
+		clk32kg_reg = NULL;
+	}
+
 	bt_rfkill = rfkill_alloc("bcm43xx Bluetooth", &pdev->dev,
 				RFKILL_TYPE_BLUETOOTH, &bcm43xx_bt_rfkill_ops,
 				pdata);
@@ -284,6 +296,8 @@ static int bcm43xx_bluetooth_remove(struct platform_device *pdev)
 	gpio_free(pdata->host_wake_gpio);
 
 	if (proc_entry) remove_proc_entry("bt_addr", NULL);
+
+	regulator_put(clk32kg_reg);
 
 	wake_lock_destroy(&bt_lpm.wake_lock);
 	return 0;
