@@ -261,11 +261,21 @@ static struct regulator_init_data vaux3 = {
 	.consumer_supplies = cam2_supply,
 };
 
+/* clk32kg is a twl6030 32khz clock modeled as a regulator, used by WLAN on HHTech Board */
+static struct regulator_consumer_supply clk32kg_supply[] = {
+	{
+		.supply = "clk32kgate",
+	},
+};
 static struct regulator_init_data clk32kg = {
 	.constraints = {
 		.valid_ops_mask		= REGULATOR_CHANGE_STATUS,
+#if !(defined(CONFIG_BT_BCM43XX) || defined(CONFIG_BT_BCM43XX_MODULE))
 		.always_on		= true,
+#endif
 	},
+	.num_consumer_supplies  = ARRAY_SIZE(clk32kg_supply),
+	.consumer_supplies      = clk32kg_supply,
 };
 
 static struct regulator_init_data clk32kaudio = {

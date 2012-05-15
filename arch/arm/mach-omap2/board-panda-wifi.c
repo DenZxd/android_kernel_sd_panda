@@ -55,6 +55,7 @@ static struct resource panda_wifi_resources[] = {
 static int panda_wifi_cd = 0; /* WIFI virtual 'card detect' status */
 static void (*wifi_status_cb)(int card_present, void *dev_id);
 static void *wifi_status_cb_devid;
+static struct regulator *clk32kg_reg;
 
 static int panda_wifi_status_register(
 		void (*callback)(int card_present, void *dev_id),
@@ -93,14 +94,32 @@ static int panda_wifi_set_carddetect(int val)
 
 	return 0;
 }
-
+static int tuna_wifi_power_state;
 static int panda_wifi_power(int on)
 {
+	if (!clk32kg_reg) {
+		clk32kg_reg = regulator_get(0, "clk32kgate");
+		if (IS_ERR(clk32kg_reg)) {
+			pr_err("%s: clk32kgate reg not found!\n", __func__);
+			clk32kg_reg = NULL;
+		}
+	}
+
+
+	if (clk32kg_reg && on && !tuna_wifi_power_state)
+		regulator_enable(clk32kg_reg);
+	msleep_interruptible(100);	// XXX:
+
 	pr_debug("%s: %d\n", __func__, on);
 
 	gpio_set_value(WL_RST_N, on);
 
 	msleep_interruptible(100);	// XXX:
+
+	if (clk32kg_reg && !on && tuna_wifi_power_state)
+		regulator_disable(clk32kg_reg);
+
+	tuna_wifi_power_state = on;
 
 	return 0;
 }
