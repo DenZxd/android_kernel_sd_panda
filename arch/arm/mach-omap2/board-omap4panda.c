@@ -46,6 +46,7 @@
 #include <plat/pwm.h>
 #include <plat/omap-pm.h>
 #include <plat/omap_apps_brd_id.h>
+#include <plat/omap-serial.h>
 #include <plat/remoteproc.h>
 #include <plat/vram.h>
 
@@ -343,6 +344,7 @@ static void __init omap_charger_io_init(void) { }
 
 #define BT_RESET_GPIO 42
 #define BT_WAKE_GPIO  49
+#define BT_HOST_WAKE_GPIO 46
 
 /*
  * this uses the unique per-cpu info from the cpu fuses set at factory to
@@ -381,17 +383,26 @@ static int omap4_die_id_to_ethernet_mac(u8 *mac, int subtype)
 	return 0;
 }
 
-static void bcm43xx_bluetooth_set_power(int enable)
+static void bcm43xx_bluetooth_set_uart(int enable)
 {
+	static int bt_uart_enable = 0;
+
+	if (bt_uart_enable == enable)
+		return ;
+
 	if (enable) omap_uart_enable(2); else
 		    omap_uart_disable(2);
+
+	bt_uart_enable = enable;
 }
 
 static struct bcm43xx_bt_platform_data bcm43xx_bluetooth_data = {
 	.reset_gpio = BT_RESET_GPIO,
 	.wake_gpio  = BT_WAKE_GPIO,
-	.set_power  = bcm43xx_bluetooth_set_power,
+	.host_wake_gpio = BT_HOST_WAKE_GPIO,
+	.set_uart  = bcm43xx_bluetooth_set_uart,
 	.get_addr   = omap4_die_id_to_ethernet_mac,
+	.wake_peer = NULL,
 };
 
 static struct platform_device bcm43xx_bluetooth = {
@@ -404,6 +415,13 @@ static void __init bcm43xx_bluetooth_io_init(void)
 {
 	omap_mux_init_gpio(BT_RESET_GPIO, OMAP_PIN_OUTPUT);
 	omap_mux_init_gpio(BT_WAKE_GPIO, OMAP_PIN_OUTPUT);
+	omap_mux_init_gpio(BT_HOST_WAKE_GPIO, OMAP_PIN_INPUT);
+}
+
+static void bcm43xx_wake_peer(struct uart_port *uport)
+{
+	if (bcm43xx_bluetooth_data.wake_peer)
+		bcm43xx_bluetooth_data.wake_peer(uport);
 }
 #else
 static void __init bcm43xx_bluetooth_io_init(void) { }
@@ -1187,9 +1205,29 @@ static struct omap_board_mux board_mux[] __initdata = {
 #define board_mux	NULL
 #endif
 
+static struct omap_uart_port_info omap_serial_uart2_info[] = {
+	{
+		.use_dma    = 0,
+		.dma_rx_buf_size = DEFAULT_RXDMA_BUFSIZE,
+		.dma_rx_poll_rate = DEFAULT_RXDMA_POLLRATE,
+		.dma_rx_timeout = DEFAULT_RXDMA_TIMEOUT,
+		.auto_sus_timeout = DEFAULT_AUTOSUSPEND_DELAY,
+#if defined(CONFIG_BT_BCM43XX) || defined(CONFIG_BT_BCM43XX_MODULE)
+		.wake_peer  = bcm43xx_wake_peer,
+		.rts_mux_driver_control = 1,
+#endif
+	},
+};
+
 static inline void __init board_serial_init(void)
 {
+#ifndef CONFIG_VENDOR_HHTECH
 	omap_serial_init();
+#else
+	omap_serial_init_port_pads(1, NULL, 0, &omap_serial_uart2_info);
+	omap_serial_init_port_pads(2, NULL, 0, NULL);
+#endif
+
 }
 
 #define GPIO_LVDS_POWER 34
