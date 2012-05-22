@@ -414,6 +414,18 @@ static void bq2416x_charger_update_status(struct bq2416x_device_info *di)
 	return;
 }
 
+void bq2416x_set_charger_current(int mode)
+{
+	if (!pdi)
+		return ;
+	int ret = bq2416x_get_charge_status();
+
+	if (mode == SLEEP_MODE)
+		bq2416x_set_reg05_ChgCur(pdi,pdi->standby_current);
+	else
+		bq2416x_set_reg05_ChgCur(pdi,pdi->work_current);
+}
+
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void bq2416x_early_suspend(struct early_suspend *h)
 {
@@ -427,6 +439,7 @@ static void bq2416x_early_suspend(struct early_suspend *h)
 		bq2416x_set_reg05_ChgCur(pdi,pdi->charger_current);
 
 	}
+	bq2416x_set_charger_current(WORK_MODE);
 }
 
 static void bq2416x_late_resume(struct early_suspend *h)

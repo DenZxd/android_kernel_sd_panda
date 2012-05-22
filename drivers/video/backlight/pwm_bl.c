@@ -21,6 +21,8 @@
 #include <linux/pwm_backlight.h>
 #include <linux/slab.h>
 
+#include <linux/i2c/bq2416x.h>
+
 #if 0//defined(CONFIG_SMARTQ_T20)
 #include "../../../arch/arm/mach-omap2/mux.h"
 #include <linux/gpio.h>
@@ -38,6 +40,10 @@ struct pwm_bl_data {
 					  int brightness);
 	int			(*check_fb)(struct device *, struct fb_info *);
 };
+
+#if defined(CONFIG_CHARGER_BQ2416X) //|| defined(CONFIG_CHARGER_BQ2416X_MODULE)
+extern void bq2416x_set_charger_current(int mode);
+#endif
 
 static int pwm_backlight_update_status(struct backlight_device *bl)
 {
@@ -78,6 +84,9 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 			bl_stop = 1;
 		}
 #endif
+#if defined(CONFIG_CHARGER_BQ2416X) //|| defined(CONFIG_CHARGER_BQ2416X_MODULE)
+		bq2416x_set_charger_current(SLEEP_MODE);
+#endif
 	} else {
 #if 0//defined(CONFIG_SMARTQ_T20)
 		if (bl_stop) {	bl_stop = 0;
@@ -91,6 +100,9 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 #if defined(CONFIG_SMARTQ_S7)
 		pwm_config(pb->pwm, brightness, pb->period);
 		pwm_enable(pb->pwm);
+#endif
+#if defined(CONFIG_CHARGER_BQ2416X) //|| defined(CONFIG_CHARGER_BQ2416X_MODULE)
+		bq2416x_set_charger_current(WORK_MODE);
 #endif
 	}
 	return 0;

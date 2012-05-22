@@ -212,6 +212,9 @@
 
 #define BQ2416x_WATCHDOG_TIMEOUT	20000
 
+#define SLEEP_MODE 0
+#define WORK_MODE 1
+
 struct bq2416x_platform_data {
 	int cin_limit;
 	int work_current;
