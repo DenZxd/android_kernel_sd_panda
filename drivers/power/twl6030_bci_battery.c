@@ -1721,7 +1721,7 @@ static int capacity_changed(struct twl6030_bci_device_info *di)
 #ifdef CONFIG_VENDOR_HHTECH
         int i, num, sum, min, max, value;
         int charging = (di->charge_status == POWER_SUPPLY_STATUS_CHARGING) ? 1 : 0;
-        if (di->voltage_mV < 3000 || di->voltage_mV > 4300)
+        if (di->voltage_mV < 2500 || di->voltage_mV > 4300)
                 return 0;
         bat_matrix[bat_count++] = di->voltage_mV;
         if(bat_count > (BATTERY_ARROW_NUM-1))
@@ -1765,9 +1765,8 @@ static int capacity_changed(struct twl6030_bci_device_info *di)
         }
 
         if (is_charger_full()) i = 100;
-        else if (100 == i) i = 99;
 
-        if ((i >= 90) || (i <= 10) || ((ABS(battery_capacity_pos, i) > 10)))
+        if ((i >= 90) || (i <= 30) || ((ABS(battery_capacity_pos, i) > 10)))
                 di->monitoring_interval = 5;
         else
                 di->monitoring_interval = 10;
@@ -1776,6 +1775,10 @@ static int capacity_changed(struct twl6030_bci_device_info *di)
                     battery_capacity_pos, bat_table[i].level, b_from_resume);
 
         //XXX
+        if (i <= 3) {
+                battery_capacity_pos = 0;
+                curr_capacity = 0;
+        } else {
         if (battery_capacity_pos >= 0) {
                 if (!b_from_resume) {
                         if ((battery_capacity_pos - i) > 1)
@@ -1822,6 +1825,9 @@ static int capacity_changed(struct twl6030_bci_device_info *di)
                         battery_capacity_pos = i;
                 }
         }
+        }
+
+        if (i == 100) curr_capacity = 100;
 
         if (b_from_resume) b_from_resume = 0;
         dev_dbg(di->dev, "Now pos=%d, capacity=%d\n", battery_capacity_pos, curr_capacity);
@@ -1857,7 +1863,7 @@ static int capacity_changed(struct twl6030_bci_device_info *di)
 	/* if battery is not present we assume it is on battery simulator and
 	 * current capacity is set to 100%
 	 */
-	if (!is_battery_present(di) || di->voltage_mV < 3000)
+	if (!is_battery_present(di) || di->voltage_mV < 2500)
 		curr_capacity = 100;
 
        /* Debouncing of voltage change. */
@@ -1880,7 +1886,7 @@ static int capacity_changed(struct twl6030_bci_device_info *di)
 	return 0;
 #else
         di->capacity = curr_capacity;
-        if (100 == curr_capacity)
+        if (is_charger_full() && (100 == curr_capacity))
                 di->charge_status = POWER_SUPPLY_STATUS_FULL;
 
         return 1;
@@ -3383,6 +3389,7 @@ static int twl6030_bci_battery_resume(struct device *dev)
 
 #else
         int i = 0;
+#if defined(CONFIG_SMARTQ_S7) || defined(CONFIG_SMARTQ_K7)
 #ifdef CONFIG_TWL6030_BCI_BATTERY
         battery_capacity_pos -= (SUSPEND_POWER * after.tv_sec / (36 * CAP_FULL));
 #else
@@ -3396,6 +3403,7 @@ static int twl6030_bci_battery_resume(struct device *dev)
         pr_info("suspend %dsec, now cap=%d%\n", after.tv_sec, battery_capacity_pos);
 #else
         pr_info("suspend %dsec, now cap=%d%\n", interval_sec, battery_capacity_pos);
+#endif
 #endif
         //b_from_resume = 1;
         bat_count = 0;
