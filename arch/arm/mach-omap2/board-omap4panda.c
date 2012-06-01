@@ -1244,6 +1244,16 @@ static int smartq_lcd_enable(struct omap_dss_device *dssdev)
 	gpio_set_value(dssdev->reset_gpio >> 8, 1);
 	gpio_set_value(dssdev->reset_gpio & 0xFF, 1);
 
+    {	unsigned long long t = cpu_clock(0);
+	do_div(t, 500000000);	// XXX:
+	if (0 < (unsigned)t)
+#ifdef CONFIG_SMARTQ_Q8
+	    msleep_interruptible(200);
+#else
+	    msleep_interruptible(80);
+#endif
+    }
+
 	return 0;
 }
 
