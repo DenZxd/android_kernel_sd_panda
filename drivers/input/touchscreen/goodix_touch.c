@@ -63,7 +63,6 @@ extern  void close_key_led(void);
 static struct delayed_work led_work;
 #endif
 
-int key_locked_stat;
 unsigned int oldcrc32 = 0xFFFFFFFF;
 unsigned int crc32_table[256];
 unsigned int ulPolynomial = 0x04c11db7;
@@ -305,6 +304,7 @@ static void goodix_ts_work_func(struct work_struct *work)
 {
 	int ret = -1;
 	int tmp = 0;
+	int key_locked_stat;
 	uint8_t point_data[(1 - READ_COOR_ADDR) + 1 + 2 + 5 * MAX_FINGER_NUM + 1] = { 0 };	//read address(1byte)+key index(1byte)+point mask(2bytes)+5bytes*MAX_FINGER_NUM+coor checksum(1byte)
 	uint8_t check_sum = 0;
 	uint16_t finger_current = 0;
@@ -324,6 +324,12 @@ static void goodix_ts_work_func(struct work_struct *work)
 		return ;
 
 	pdata = ts->client->dev.platform_data;
+#ifdef CONFIG_SMARTQ_T15
+#if defined(CONFIG_SWITCH_GPIO) || defined(CONFIG_SWITCH_GPIO_MODULE)
+	if(pdata && pdata->get_lock_state)
+	    key_locked_stat = pdata->get_lock_state();
+#endif
+#endif
 
 #if defined(GOODIX_USE_IRQ)
 COORDINATE_POLL:
@@ -860,46 +866,16 @@ static ssize_t goodix_debug_calibration_store(struct device *dev,
 	return count;
 }
 
-static ssize_t goodix_key_locked_show(struct device *dev,
-					struct device_attribute *attr,
-					char *buf)
-{
-	return sprintf(buf, "%d\n", key_locked_stat);
-}
-
-static ssize_t goodix_key_locked_store(struct device *dev,
-					struct device_attribute *attr,
-					const char *buf, size_t count)
-{
-	unsigned long val;
-	int error, enable;
-
-	error = strict_strtoul(buf, 0, &val);
-	if (error)
-		return error;
-
-	enable = !!val;
-
-	if (key_locked_stat == enable)
-		return count;
-
-	key_locked_stat = enable;
-
-	return count;
-}
-
 static DEVICE_ATTR(version, S_IRUGO, goodix_debug_version_show, NULL);
 static DEVICE_ATTR(resolution, S_IRUGO, goodix_debug_resolution_show, NULL);
 static DEVICE_ATTR(diffdata, S_IRUGO, goodix_debug_diffdata_show, NULL);
 static DEVICE_ATTR(calibration, S_IWUSR , NULL, goodix_debug_calibration_store);
-static DEVICE_ATTR(key_locked, 0666, goodix_key_locked_show, goodix_key_locked_store);
 
 static struct attribute *goodix_touch_attrs[] = {
 	&dev_attr_version.attr,
 	&dev_attr_resolution.attr,
 	&dev_attr_diffdata.attr,
 	&dev_attr_calibration.attr,
-	&dev_attr_key_locked.attr,
 	NULL
 };
 

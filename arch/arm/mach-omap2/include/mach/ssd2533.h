@@ -100,6 +100,7 @@ struct ssd2533_platform_data
         void (*irq_init)(void);
         void (*gpio_init)(void);
         void (*gpio_free)(void);
+        int (*get_lock_state)(void);
         unsigned long irq;
         uint32_t flags;
         pReg_Item reg_array;
