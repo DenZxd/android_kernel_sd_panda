@@ -545,6 +545,7 @@ static int IsWrongReport(u32 oldflag,u32 newflag)
 static void ssd2533_ts_work(struct work_struct *work)
 {
 	static int wmode=0;
+	int key_locked_stat = 0;
 	int ret = 0;
 	int i,j,smode;
 	u8 reg_buff[4] = { 0 };
@@ -554,7 +555,14 @@ static void ssd2533_ts_work(struct work_struct *work)
 	u32 bitmask;
 	int px,py;
 	struct ssl_ts_priv *ssl_priv = container_of(work,struct ssl_ts_priv,ssl_work);
+	struct ssd2533_platform_data *pdata = ssl_priv->client->dev.platform_data;
 	SSL_PRINT("Run into %s working_mode=%d.\n",__FUNCTION__,ssl_priv->working_mode);
+#ifdef CONFIG_SMARTQ_T15
+#if defined(CONFIG_SWITCH_GPIO) || defined(CONFIG_SWITCH_GPIO_MODULE)
+	if(pdata && pdata->get_lock_state)
+	    key_locked_stat = pdata->get_lock_state();
+#endif
+#endif
 	if(ssl_priv->bsleep)
 		return;
 #ifdef USE_DYNAMIC_THRESHOLD
@@ -683,7 +691,7 @@ static void ssd2533_ts_work(struct work_struct *work)
 							   ssl_priv->prev_y[i]>(ssd2533_SKeys[j].y-ssd2533_SKeys[j].dy) &&
 							   ssl_priv->prev_y[i]<(ssd2533_SKeys[j].y+ssd2533_SKeys[j].dy)){	//simulated button down
 								SSL_PRINT("Finger%d at:(%d,%d), report as button%d down\n",i,ssl_priv->prev_x[i],ssl_priv->prev_y[i],j);
-								if(i<FINGER_USED)
+								if(i<FINGER_USED && !key_locked_stat)
 									input_report_key(ssl_priv->input,ssl_priv->keys[j],1);
 								ssl_priv->buttons|=(1<<j);
 								ssl_priv->keyindex[j]=i;
@@ -693,7 +701,7 @@ static void ssd2533_ts_work(struct work_struct *work)
 								if((ssl_priv->buttons)&(1<<j)){	//but the button is down previously
 									if(ssl_priv->keyindex[j]==i){	//finger is the one caused button down and now is out of button area, report as button up
 										SSL_PRINT("Finger%d at:(%d,%d), moves out of button area, report as button%d up\n",i,ssl_priv->prev_x[i],ssl_priv->prev_y[i],j);
-										if(i<FINGER_USED)
+										if(i<FINGER_USED && !key_locked_stat)
 											input_report_key(ssl_priv->input,ssl_priv->keys[j],0);
 										ssl_priv->buttons&=~(1<<j);
 									}
@@ -750,7 +758,7 @@ static void ssd2533_ts_work(struct work_struct *work)
 							   ssl_priv->prev_y[i]>(ssd2533_SKeys[j].y-ssd2533_SKeys[j].dy) &&
 							   ssl_priv->prev_y[i]<(ssd2533_SKeys[j].y+ssd2533_SKeys[j].dy)){	//simulated button up
 								SSL_PRINT("Finger%d leave at:(%d,%d), report as button%d up\n",i,ssl_priv->prev_x[i],ssl_priv->prev_y[i],j);
-								if(i<FINGER_USED)
+								if(i<FINGER_USED && !key_locked_stat)
 									input_report_key(ssl_priv->input,ssl_priv->keys[j],0);
 								ssl_priv->buttons&=~(1<<j);
 								break;

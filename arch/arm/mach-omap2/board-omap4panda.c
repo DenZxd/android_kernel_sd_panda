@@ -259,6 +259,11 @@ static void __init omap4_gpio_switch_init(void)
 	omap_mux_init_signal("kpd_col3.gpio_171",
 			OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE3);
 }
+
+static int omap4_gpio_switch_state(void)
+{
+	return gpio_get_value(GPIO_KEY_LOCK);
+}
 #else
 static void __init omap4_gpio_switch_init(void) { }
 #endif
@@ -889,6 +894,11 @@ struct goodix_i2c_rmi_platform_data goodix_pdata = {
 	.irq_gpio = GPIO_TOUCHSCREEN_IRQ,
 	.irq_init = touchscreen_irq_init,
 	//.gpio_init = touchscreen_gpio_init,
+#ifdef CONFIG_SMARTQ_T15
+#if defined(CONFIG_SWITCH_GPIO) || defined(CONFIG_SWITCH_GPIO_MODULE)
+	.get_lock_state = omap4_gpio_switch_state,
+#endif
+#endif
 };
 #endif
 
@@ -1010,6 +1020,11 @@ struct ssd2533_platform_data ssd2533_pdata = {
         .gpio_free = touchscreen_gpio_free,
         .reg_array = ssd2533_Init,
         .reg_size = ARRAY_SIZE(ssd2533_Init),
+#ifdef CONFIG_SMARTQ_T15
+#if defined(CONFIG_SWITCH_GPIO) || defined(CONFIG_SWITCH_GPIO_MODULE)
+	.get_lock_state = omap4_gpio_switch_state,
+#endif
+#endif
 };
 #endif
 

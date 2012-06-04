@@ -153,6 +153,7 @@ struct goodix_i2c_rmi_platform_data
 	void (*rst)(void);
 	void (*irq_init)(void);
 	void (*gpio_init)(void);
+	int (*get_lock_state)(void);
 	unsigned long irq;
 	uint32_t flags;
 	int irq_gpio;
