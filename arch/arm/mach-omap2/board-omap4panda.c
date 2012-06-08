@@ -42,6 +42,7 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 
+#include <plat/android-display.h>
 #include <plat/common.h>
 #include <plat/usb.h>
 #include <plat/mmc.h>
@@ -1841,7 +1842,7 @@ static void __init omap4_panda_init(void)
 	usb_musb_init(&musb_board_data);
 
 	omap_dmm_init();
-	omap_vram_set_sdram_vram(PANDA_FB_RAM_SIZE, 0);
+	//omap_vram_set_sdram_vram(PANDA_FB_RAM_SIZE, 0);
 	omapfb_set_platform_data(&panda_fb_pdata);
 	omap4_panda_display_init();
 
@@ -1886,7 +1887,18 @@ static void __init omap4_panda_reserve(void)
 	omap_init_ram_size();
 
 #ifdef CONFIG_ION_OMAP
+	omap_android_display_setup(&omap4_panda_dss_data,
+				   NULL,
+				   NULL,
+				   &panda_fb_pdata,
+				   get_omap_ion_platform_data());
 	omap_ion_init();
+#else
+	omap_android_display_setup(&omap4_panda_dss_data,
+				   NULL,
+				   NULL,
+				   &panda_fb_pdata,
+				   NULL);
 #endif
 
 	omap_ram_console_init(OMAP_RAM_CONSOLE_START_DEFAULT,
