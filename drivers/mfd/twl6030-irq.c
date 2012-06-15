@@ -209,8 +209,13 @@ static int twl6030_irq_thread(void *data)
 		 * Since VBUS status bit is not reliable for VBUS disconnect
 		 * use CHARGER VBUS detection status bit instead.
 		 */
-		if (sts.bytes[2] & 0x10)
+		if (sts.bytes[2] & 0x10) {
+#ifdef CONFIG_BATTERY_BQ27410
+			extern void bq27410_external_power_changed(void);
+			bq27410_external_power_changed();
+#endif
 			sts.bytes[2] |= 0x08;
+		}
 
 		int_sts = le32_to_cpu(sts.int_sts);
 		for (i = 0; int_sts; int_sts >>= 1, i++) {

@@ -946,10 +946,6 @@ struct ssd2533_platform_data ssd2533_pdata = {
 };
 #endif
 
-#if defined(CONFIG_BATTERY_BQ27410) || defined(CONFIG_BATTERY_BQ27x00_MODULE)
-#include <linux/power/bq27410_battery.h>
-#endif
-
 #if defined(CONFIG_CHARGER_BQ2416X) || defined(CONFIG_CHARGER_BQ2416X_MODULE)
 #include <linux/i2c/bq2416x.h>
 
