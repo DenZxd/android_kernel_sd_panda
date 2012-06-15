@@ -45,13 +45,15 @@
 #include "epautoconf.c"
 #include "composite.c"
 
+#if 0
+#include "f_accessory.c"
 #include "f_audio_source.c"
 #include "f_mass_storage.c"
 #include "u_serial.c"
 #include "f_acm.c"
+#endif
 #include "f_adb.c"
 #include "f_mtp.c"
-#include "f_accessory.c"
 #define USB_ETH_RNDIS y
 #include "f_rndis.c"
 #include "rndis.c"
@@ -309,6 +311,7 @@ static void adb_closed_callback(void)
 }
 
 
+#if 0
 #define MAX_ACM_INSTANCES 4
 struct acm_function_config {
 	int instances;
@@ -379,6 +382,7 @@ static struct android_usb_function acm_function = {
 	.bind_config	= acm_function_bind_config,
 	.attributes	= acm_function_attributes,
 };
+#endif
 
 
 static int mtp_function_init(struct android_usb_function *f, struct usb_composite_dev *cdev)
@@ -619,6 +623,7 @@ static struct android_usb_function rndis_function = {
 };
 
 
+#if 0
 struct mass_storage_function_config {
 	struct fsg_config fsg;
 	struct fsg_common *common;
@@ -802,16 +807,22 @@ static struct android_usb_function audio_source_function = {
 	.unbind_config	= audio_source_function_unbind_config,
 	.attributes	= audio_source_function_attributes,
 };
+#else
+#define acc_ctrlrequest(...) -EOPNOTSUPP
+#define acc_disconnect(...)
+#endif
 
 static struct android_usb_function *supported_functions[] = {
 	&adb_function,
-	&acm_function,
 	&mtp_function,
 	&ptp_function,
 	&rndis_function,
+#if 0
+	&acm_function,
 	&mass_storage_function,
 	&accessory_function,
 	&audio_source_function,
+#endif
 	NULL
 };
 
