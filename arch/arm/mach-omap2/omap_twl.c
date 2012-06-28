@@ -673,6 +673,23 @@ int __init omap_twl_init(void)
 	if (cpu_is_omap44xx())
 		desc = &twl6030_pmic_desc;
 
+#ifdef CONFIG_SMARTQ_T30
+	if (1) {	// XXX:
+	    struct omap_pmic_map* map = omap_twl_map;
+	    for (map = omap_twl_map; map->name; ++map) {
+		if (map->omap_chip.oc  &  CHIP_IS_OMAP447X)
+		    map->omap_chip.oc &= ~CHIP_IS_OMAP447X; else
+		if (map->omap_chip.oc  &  CHIP_IS_OMAP446X)
+		    map->omap_chip.oc |=  CHIP_IS_OMAP447X;
+
+		if (0 && !strcmp(map->name, "mpu")) {
+		    map->omap_chip.oc &= ~CHIP_IS_OMAP447X;
+		    break;
+		}
+	    }
+	}
+#endif
+
 	return omap_pmic_register_data(omap_twl_map, desc);
 }
 

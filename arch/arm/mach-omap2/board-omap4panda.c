@@ -1725,7 +1725,11 @@ static void __init omap4_panda_init(void)
 	omap_mux_init_signal("sys_nirq1",
 		OMAP_PIN_INPUT_PULLUP | OMAP_WAKEUP_EN);
 
-	if (cpu_is_omap446x()) {
+	if (cpu_is_omap446x()
+#ifdef CONFIG_SMARTQ_T30
+		|| (1 && cpu_is_omap447x())	// XXX:
+#endif
+		) {
 		/* Vsel0 = gpio, vsel1 = gnd */
 		status = omap_tps6236x_board_setup(true, TPS62361_GPIO, -1,
 #ifdef CONFIG_VENDOR_HHTECH

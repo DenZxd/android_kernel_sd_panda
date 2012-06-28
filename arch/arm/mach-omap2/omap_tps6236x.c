@@ -345,6 +345,14 @@ int __init omap_tps6236x_init(void)
 	while (map->name) {
 		map->pmic_data->volt_reg_addr = default_reg;
 		map->pmic_data->cmd_reg_addr = default_reg;
+
+#ifdef CONFIG_SMARTQ_T30
+		if (map->omap_chip.oc  &  CHIP_IS_OMAP446X)
+		    map->omap_chip.oc |=  CHIP_IS_OMAP447X;
+		if (0 && !strcmp(map->name, "mpu"))	// XXX:
+		    map->omap_chip.oc |= CHIP_IS_OMAP447X;
+#endif
+
 		map++;
 	}
 
