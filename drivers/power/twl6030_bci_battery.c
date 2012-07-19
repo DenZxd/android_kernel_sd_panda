@@ -921,6 +921,10 @@ static void twl6032_charger_ctrl_interrupt(struct twl6030_bci_device_info *di)
 		dev_dbg(di->dev, "Linear Status: CC STS\n");
 }
 
+#if defined(CONFIG_CHARGER_BQ2416X) || defined(CONFIG_CHARGER_BQ2416X_MODULE)
+extern void bq2416x_control_usb_charger(int charger);
+#endif
+
 /*
  * Interrupt service routine
  *
@@ -1021,6 +1025,9 @@ static irqreturn_t twl6030charger_ctrl_interrupt(int irq, void *_di)
 		 * charging
 		 */
 		if (hw_state & STS_USB_ID) {
+#if defined(CONFIG_CHARGER_BQ2416X) || defined(CONFIG_CHARGER_BQ2416X_MODULE)
+			bq2416x_control_usb_charger(0);
+#endif
 			ret = twl_i2c_read_u8(TWL6030_MODULE_CHARGER,
 					&temp,
 					CHARGERUSB_INT_MASK);
@@ -1036,6 +1043,9 @@ static irqreturn_t twl6030charger_ctrl_interrupt(int irq, void *_di)
 					goto err;
 			}
 		} else {
+#if defined(CONFIG_CHARGER_BQ2416X) || defined(CONFIG_CHARGER_BQ2416X_MODULE)
+			bq2416x_control_usb_charger(1);
+#endif
 			di->usb_online = POWER_SUPPLY_TYPE_USB;
 			if ((present_charge_state & VAC_DET) &&
 					(di->vac_priority == 2))

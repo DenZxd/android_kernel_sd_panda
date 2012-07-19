@@ -321,6 +321,24 @@ static int bq2416x_set_reg07_ThermalShutdown(struct bq2416x_device_info *di, int
 	return 1;
 }
 
+void bq2416x_control_usb_charger(int usb_charger)
+{
+	u8 Reg1Val = 0;
+
+	bq2416x_read_byte(pdi, &Reg1Val, Reg1Add);
+
+	if(usb_charger == 1) {
+		// No OTG supply present. Use USB input as normal.
+		Reg1Val &= 0xf7;
+		bq2416x_write_byte(pdi, Reg1Val, Reg1Add);
+	} else if (usb_charger == 0) {
+		// OTG supply present. Lockout USB input for charging
+		Reg1Val |= 0x08;
+		bq2416x_write_byte(pdi, Reg1Val, Reg1Add);
+	}
+}
+EXPORT_SYMBOL(bq2416x_control_usb_charger);
+
 static int bq2416x_check_reg02(struct bq2416x_device_info *di, int force)
 {
         u8 Reg1Val = 0;
@@ -339,15 +357,17 @@ static int bq2416x_check_reg02(struct bq2416x_device_info *di, int force)
                 }
         }
         else {
+#ifdef USE_USB_CHARGER
                 if ((Reg2Val != (USB_CHARGER_CURRENT | 0x80)) || force) {
                         //Reg2Val &= ~(1<<7);
                         //Reg2Val |= (1<<2);
-#ifdef USE_USB_CHARGER
                         bq2416x_write_byte(di, USB_CHARGER_CURRENT, Reg2Add);
-#else
-                        bq2416x_write_byte(di, 0x0c, Reg2Add);
-#endif
                 }
+#else
+                if (!(Reg2Val & 0x4)) {
+                        bq2416x_write_byte(di, 0x0c, Reg2Add);
+                }
+#endif
         }
 }
 
