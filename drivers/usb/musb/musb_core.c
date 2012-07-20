@@ -127,6 +127,7 @@ MODULE_ALIAS("platform:" MUSB_DRIVER_NAME);
 
 /*-------------------------------------------------------------------------*/
 
+static USB_3G = 0;
 static inline struct musb *dev_to_musb(struct device *dev)
 {
 	return dev_get_drvdata(dev);
@@ -746,13 +747,14 @@ b_host:
 		case OTG_STATE_A_SUSPEND:
 			usb_hcd_resume_root_hub(musb_to_hcd(musb));
 			musb_root_disconnect(musb);
-			musb_platform_disable(musb);
 			/* FIX: Multiple times hotplug with removal and connect
 			 * time-gap less than a second. "0" delay gives 7ms time
 			 * to call musb_do_idle
 			 */
-			if (musb->a_wait_bcon != 0 && is_otg_enabled(musb))
+			if (musb->a_wait_bcon != 0 && is_otg_enabled(musb)) {
 				musb_platform_try_idle(musb, 0);
+				USB_3G = 1;
+			}
 			break;
 #endif	/* HOST */
 #ifdef CONFIG_USB_MUSB_OTG
@@ -1563,6 +1565,7 @@ irqreturn_t musb_interrupt(struct musb *musb)
 	devctl = musb_readb(musb->mregs, MUSB_DEVCTL);
 	power = musb_readb(musb->mregs, MUSB_POWER);
 
+	USB_3G = 0;
 	dev_dbg(musb->controller, "** IRQ %s usb%04x tx%04x rx%04x\n",
 		(devctl & MUSB_DEVCTL_HM) ? "host" : "peripheral",
 		musb->int_usb, musb->int_tx, musb->int_rx);
@@ -1833,6 +1836,17 @@ static void musb_irq_work(struct work_struct *data)
 	else if (USB_EVENT_NONE == musb->event)
 		omap4_dpll_cascading_blocker_release(musb->controller);
 #endif
+
+	if (USB_3G != 0) {
+		if (10 < USB_3G){
+			USB_3G = 0;
+			musb_platform_disable(musb);
+		} else {
+			USB_3G++;
+			msleep_interruptible(1000);
+			schedule_work(&musb->irq_work);
+		}
+	}
 }
 
 /* --------------------------------------------------------------------------
