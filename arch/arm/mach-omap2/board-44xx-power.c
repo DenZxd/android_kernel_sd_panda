@@ -21,6 +21,7 @@
 #include "mux.h"
 #include <linux/i2c/twl.h>
 #include <linux/gpio.h>
+#include <linux/cpufreq.h>
 #include <plat/common.h>
 #include <plat/usb.h>
 #include <plat/omap-serial.h>
@@ -421,6 +422,44 @@ static int hhtech_phy_exit(struct device *dev)
 static int hhtech_phy_power(struct device *dev, int ID, int on)
 {
 	int value = on && ID;
+
+#ifdef CONFIG_CPU_FREQ
+	if (cpu_is_omap443x()) {	// XXX:
+	    int cpu = smp_processor_id();
+	    struct cpufreq_policy new_policy;
+	    struct cpufreq_policy* policy = cpufreq_cpu_get(cpu);
+	    extern int __cpufreq_set_policy(struct cpufreq_policy *data,
+		    struct cpufreq_policy *policy);
+
+	    if (!policy) goto OUT;
+	    if (cpufreq_get_policy(&new_policy, policy->cpu)) {
+		cpufreq_cpu_put(policy);
+		goto OUT;
+	    }
+
+	    if ((ID + on) < 1)
+		new_policy.min = policy->user_policy.min; else {
+#if 0
+		cpufreq_frequency_table* freq_table =
+			cpufreq_frequency_get_table(policy->cpu);
+		int idx = 1, cur_freq = new_policy.cur;
+
+		new_policy.cur = new_policy.min;
+		if (cpufreq_frequency_table_next_highest(new_policy,
+			freq_table, &idx)) ;
+		new_policy.min = freq_table[idx];
+		new_policy.cur = cur_freq;
+#else//	XXX:
+		//new_policy.min = 600 * 1000;
+		new_policy.min <<= 1;
+#endif
+	    }
+
+	    __cpufreq_set_policy(policy, &new_policy);
+	    cpufreq_cpu_put(policy);
+OUT:	    ;
+	}
+#endif
 
 	gpio_set_value(GPIO_USB_VBUS, value);
 	gpio_set_value(GPIO_USB_POWER, !value);
