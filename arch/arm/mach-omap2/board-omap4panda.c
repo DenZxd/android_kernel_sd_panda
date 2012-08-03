@@ -28,6 +28,8 @@
 #include <linux/regulator/fixed.h>
 #include <linux/pwm_backlight.h>
 #include <linux/wl12xx.h>
+#include <linux/skbuff.h>
+#include <linux/ti_wilink_st.h>
 #include <linux/memblock.h>
 #include <linux/gpio_keys.h>
 
@@ -63,14 +65,15 @@
 
 #define GPIO_HUB_POWER		1
 #define GPIO_HUB_NRESET		62
-#define GPIO_WIFI_PMENA		43
 #define GPIO_WIFI_IRQ		53
 #define HDMI_GPIO_CT_CP_HPD 60 /* HPD mode enable/disable */
 #define HDMI_GPIO_LS_OE 41 /* Level shifter for HDMI */
 #define HDMI_GPIO_HPD  63 /* Hotplug detect */
 #ifdef CONFIG_VENDOR_HHTECH
 #define TPS62361_GPIO   8
+#define GPIO_WIFI_PMENA		40
 #else
+#define GPIO_WIFI_PMENA		43
 #define TPS62361_GPIO   7 /* VCORE1 power control */
 #endif
 
@@ -81,15 +84,79 @@ static struct platform_device lg_ips7_panel = {
 };
 #endif
 
-#if defined(CONFIG_WL12XX_SDIO) || defined(CONFIG_WL12XX_SDIO_MODULE)
-/* wl127x BT, FM, GPS connectivity chip */
-static int wl1271_gpios[] = {46, -1, -1};
-static struct platform_device wl1271_device = {
-	.name	= "kim",
-	.id	= -1,
-	.dev	= {
-		.platform_data	= &wl1271_gpios,
-	},
+#if defined(CONFIG_WL12XX) || defined(CONFIG_WL12XX_MODULE)
+#define WILINK_BT_RESET     42
+#define WILINK_UART_DEV_NAME    "/dev/ttyO1"
+/* TODO: handle suspend/resume here.
+ * Upon every suspend, make sure the wilink chip is
+ * capable enough to wake-up the OMAP host.
+ */
+static int plat_wlink_kim_suspend(struct platform_device *pdev, pm_message_t
+		state)
+{
+	return 0;
+}
+
+static int plat_wlink_kim_resume(struct platform_device *pdev)
+{
+	return 0;
+}
+
+static bool uart_req;
+static struct wake_lock st_wk_lock;
+/* Call the uart disable of serial driver */
+static int plat_uart_disable(void)
+{
+	int port_id = 0;
+	int err = 0;
+	if (uart_req) {
+		sscanf(WILINK_UART_DEV_NAME, "/dev/ttyO%d", &port_id);
+		err = omap_serial_ext_uart_disable(port_id);
+		if (!err)
+			uart_req = false;
+	}
+	wake_unlock(&st_wk_lock);
+	return err;
+}
+
+/* Call the uart enable of serial driver */
+static int plat_uart_enable(void)
+{
+	int port_id = 0;
+	int err = 0;
+	if (!uart_req) {
+		sscanf(WILINK_UART_DEV_NAME, "/dev/ttyO%d", &port_id);
+		err = omap_serial_ext_uart_enable(port_id);
+		if (!err)
+			uart_req = true;
+	}
+	wake_lock(&st_wk_lock);
+	return err;
+}
+
+/* wl128x BT, FM, GPS connectivity chip */
+static struct ti_st_plat_data wilink_pdata = {
+	.nshutdown_gpio = WILINK_BT_RESET,
+	.dev_name = WILINK_UART_DEV_NAME,
+	.flow_cntrl = 1,
+	.baud_rate = 3686400,
+	.suspend = plat_wlink_kim_suspend,
+	.resume = plat_wlink_kim_resume,
+	.chip_asleep = plat_uart_disable,
+	.chip_awake  = plat_uart_enable,
+	.chip_enable = plat_uart_enable,
+	.chip_disable = plat_uart_disable,
+};
+
+static struct platform_device wl128x_device = {
+	.name		= "kim",
+	.id		= -1,
+	.dev.platform_data = &wilink_pdata,
+};
+
+static struct platform_device btwilink_device = {
+	.name = "btwilink",
+	.id = -1,
 };
 #endif
 
@@ -424,7 +491,12 @@ static void bcm43xx_wake_peer(struct uart_port *uport)
 		bcm43xx_bluetooth_data.wake_peer(uport);
 }
 #else
-static void __init bcm43xx_bluetooth_io_init(void) { }
+static void __init bcm43xx_bluetooth_io_init(void)
+{
+#if defined(CONFIG_WL12XX) || defined(CONFIG_WL12XX_MODULE)
+        omap_mux_init_gpio(WILINK_BT_RESET, OMAP_PIN_OUTPUT);
+#endif
+}
 #endif
 
 static struct platform_device *panda_devices[] __initdata = {
@@ -446,8 +518,9 @@ static struct platform_device *panda_devices[] __initdata = {
 #ifndef CONFIG_VENDOR_HHTECH
 	&leds_gpio,
 #endif
-#if defined(CONFIG_WL12XX_SDIO) || defined(CONFIG_WL12XX_SDIO_MODULE)
-	&wl1271_device,
+#if defined(CONFIG_WL12XX) || defined(CONFIG_WL12XX_MODULE)
+	&wl128x_device,
+	&btwilink_device,
 #endif
 #if defined(CONFIG_SWITCH_GPIO) || defined(CONFIG_SWITCH_GPIO_MODULE)
 	&ts_key_switch_device,
@@ -587,7 +660,7 @@ static struct omap2_hsmmc_info mmc[] = {
 	{}	/* Terminator */
 };
 
-#if defined(CONFIG_WL12XX_SDIO) || defined(CONFIG_WL12XX_SDIO_MODULE)
+#if defined(CONFIG_WL12XX) || defined(CONFIG_WL12XX_MODULE)
 static struct regulator_consumer_supply omap4_panda_vmmc5_supply = {
 	.supply = "vmmc",
 	.dev_name = "omap_hsmmc.4",
@@ -617,12 +690,6 @@ static struct platform_device omap_vwlan_device = {
 	.dev = {
 		.platform_data = &panda_vwlan,
 	},
-};
-
-struct wl12xx_platform_data omap_panda_wlan_data  __initdata = {
-	.irq = OMAP_GPIO_IRQ(GPIO_WIFI_IRQ),
-	/* PANDA ref clock is 38.4 MHz */
-	.board_ref_clock = 2,
 };
 #endif
 
@@ -1518,6 +1585,43 @@ static __initdata struct emif_device_details emif_devices_4470 = {
 	.cs0_device = &lpddr2_elpida_4G_S4_dev,
 };
 
+#if defined(CONFIG_WL12XX) || defined(CONFIG_WL12XX_MODULE)
+static void __init omap4_panda_wifi_mux_init(void)
+{
+	omap_mux_init_gpio(GPIO_WIFI_IRQ, OMAP_PIN_INPUT |
+				OMAP_PIN_OFF_WAKEUPENABLE);
+	omap_mux_init_gpio(GPIO_WIFI_PMENA, OMAP_PIN_OUTPUT);
+
+return;
+	omap_mux_init_signal("sdmmc5_cmd.sdmmc5_cmd",
+				OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP);
+	omap_mux_init_signal("sdmmc5_clk.sdmmc5_clk",
+				OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP);
+	omap_mux_init_signal("sdmmc5_dat0.sdmmc5_dat0",
+				OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP);
+	omap_mux_init_signal("sdmmc5_dat1.sdmmc5_dat1",
+				OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP);
+	omap_mux_init_signal("sdmmc5_dat2.sdmmc5_dat2",
+				OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP);
+	omap_mux_init_signal("sdmmc5_dat3.sdmmc5_dat3",
+				OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP);
+}
+
+static struct wl12xx_platform_data omap4_panda_wlan_data __initdata = {
+	.irq = OMAP_GPIO_IRQ(GPIO_WIFI_IRQ),
+	.board_ref_clock = WL12XX_REFCLOCK_26,
+	.board_tcxo_clock = WL12XX_TCXOCLOCK_26,
+};
+
+static void __init omap4_panda_wifi_init(void)
+{
+	omap4_panda_wifi_mux_init();
+	if (wl12xx_set_platform_data(&omap4_panda_wlan_data))
+		pr_err("Error setting wl12xx data\n");
+	platform_device_register(&omap_vwlan_device);
+}
+#endif
+
 static void __init omap4_panda_display_init(void)
 {
 	int r;
@@ -1706,11 +1810,10 @@ static void __init omap4_panda_init(void)
 
 #ifdef CONFIG_VENDOR_HHTECH
 	panda_wlan_init();
-#elif defined(CONFIG_WL12XX_SDIO) || defined(CONFIG_WL12XX_SDIO_MODULE)
-	if (wl12xx_set_platform_data(&omap_panda_wlan_data))
-		pr_err("error setting wl12xx data\n");
-
-	platform_device_register(&omap_vwlan_device);
+#endif
+#if defined(CONFIG_WL12XX) || defined(CONFIG_WL12XX_MODULE)
+        wake_lock_init(&st_wk_lock, WAKE_LOCK_SUSPEND, "st_wake_lock");
+        omap4_panda_wifi_init();
 #endif
 
 	omap4_panda_i2c_init();
