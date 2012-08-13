@@ -598,6 +598,7 @@ void hdmi_get_monspecs(struct fb_monspecs *specs);
 void hdmi_inform_hpd_to_cec(int status);
 void hdmi_inform_power_on_to_cec(int status);
 u8 *hdmi_read_edid(struct omap_video_timings *);
+u8 *hdmi_read_edid_default(struct omap_video_timings *);
 
 int hdmi_panel_init(void);
 void hdmi_panel_exit(void);
