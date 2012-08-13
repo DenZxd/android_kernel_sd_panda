@@ -327,6 +327,7 @@ static void hdmi_hotplug_detect_worker(struct work_struct *work)
 			/* powered down after enable - skip EDID read */
 			goto done;
 		} else if (hdmi_read_edid(&dssdev->panel.timings)) {
+EDID:
 			/* get monspecs from edid */
 			hdmi_get_monspecs(&dssdev->panel.monspecs);
 			pr_info("HDMI panel size %dx%d (cm)\n",
@@ -341,7 +342,8 @@ static void hdmi_hotplug_detect_worker(struct work_struct *work)
 			goto done;
 		} else if (state == HPD_STATE_EDID_TRYLAST){
 			pr_info("Failed to read EDID after %d times. Giving up.", state - HPD_STATE_START);
-			goto done;
+			hdmi_read_edid_default(&dssdev->panel.timings);
+			goto EDID;
 		}
 		if (atomic_add_unless(&d->state, 1, HPD_STATE_OFF))
 			queue_delayed_work(my_workq, &d->dwork, msecs_to_jiffies(60));
