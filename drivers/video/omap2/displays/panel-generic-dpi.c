@@ -117,7 +117,7 @@ static struct panel_config generic_dpi_panels[] = {
                         .x_res          = 1280,
                         .y_res          = 800,
 
-                        .pixel_clock    = 75506,    // XXX: 75518
+                        .pixel_clock    = 75506,	// XXX: 75518
 
                         .hfp            = 60,
                         .hsw            = 48,
@@ -336,6 +336,32 @@ static struct panel_config generic_dpi_panels[] = {
 		.power_on_delay		= 0,
 		.power_off_delay	= 0,
 		.name			= "powertip_ph480272t",
+	},
+#endif
+
+#ifdef CONFIG_PANEL_CLAA070WP03
+	/* claa070wp03 7" 1280*800 */
+	{
+		{
+			.x_res		= 800,
+			.y_res		= 1280,
+
+			.pixel_clock	= 75506,    // XXX: 75518
+
+			.hfp		= 4,
+			.hsw		= 9,
+			.hbp		= 35,
+
+			.vfp		= 60,
+			.vsw		= 48,
+			.vbp		= 96,
+		},
+		.acbi			= 0x0,
+		.acb			= 0x0,
+		.config			= OMAP_DSS_LCD_TFT,
+		.power_on_delay		= 0,
+		.power_off_delay	= 0,
+		.name			= "claa070wp03_panel",
 	},
 #endif
 };

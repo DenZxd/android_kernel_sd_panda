@@ -15,6 +15,11 @@ config PANEL_LG_IPS_10
 	depends on PANEL_GENERIC_DPI
 	help
 	  LCD Panel used on SmartQ devices
+config PANEL_CLAA070WP03
+	tristate "PANEL_CLAA070WP03 LCD Panel"
+	depends on OMAP2_DSS_DPI
+	help
+	  LCD Panel used on SmartQ X7
 
 config PANEL_QM_8
 	bool "QM 8 LCD Panel"

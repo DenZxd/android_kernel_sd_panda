@@ -835,7 +835,8 @@ static struct i2c_board_info __initdata tps6130x_boardinfo = {
 
 static void touchscreen_rst(void)
 {
-#if defined(CONFIG_SMARTQ_T15) || defined(CONFIG_SMARTQ_S7)
+#if defined(CONFIG_SMARTQ_T15) || defined(CONFIG_SMARTQ_S7) || \
+    defined(CONFIG_SMARTQ_X7)
 	gpio_direction_output(GPIO_TOUCHSCREEN_RST, 1);
 
 	//gpio_set_value(GPIO_TOUCHSCREEN_RST, 1);
@@ -1320,6 +1321,10 @@ static int smartq_lcd_enable(struct omap_dss_device *dssdev)
 	gpio_set_value(GPIO_LCD_PWR_CTRL, 0);
 #endif
 
+#ifdef CONFIG_SMARTQ_X7
+#define GPIO_LCD_PWR_CTRL 134
+#endif
+
 	gpio_set_value(dssdev->reset_gpio >> 8, 1);
 	gpio_set_value(dssdev->reset_gpio & 0xFF, 1);
 
@@ -1371,6 +1376,12 @@ static int __init smartq_lcd_init(struct omap_dss_device *dssdev)
 	gpio_request_one(gpio, GPIOF_OUT_INIT_LOW, "LCD_a PD");
 #endif
 
+#ifdef CONFIG_SMARTQ_X7
+	gpio =  GPIO_LCD_PWR_CTRL;
+	omap_mux_init_gpio(gpio, OMAP_PIN_OUTPUT);
+	gpio_direction_output(gpio, 1);
+#endif
+
 	gpio = dssdev->reset_gpio & 0xFF;
 	omap_mux_init_gpio(gpio, OMAP_PIN_OUTPUT);
 
@@ -1405,6 +1416,8 @@ err:	pr_err("Cannot request GPIO %d\n", gpio);
 static struct panel_generic_dpi_data smartq_lcd_panel = {
 #ifdef CONFIG_PANEL_LG_IPS_10
 	.name			= "lg_ips10",
+#elif defined(CONFIG_PANEL_CLAA070WP03)
+	.name			= "claa070wp03_panel",
 #elif defined(CONFIG_PANEL_QM_8)
         .name                   = "qm_8",
 #elif defined(CONFIG_PANEL_LG_IPS_7)
@@ -1426,7 +1439,7 @@ struct omap_dss_device smartq_lcd_device = {
 	.driver_name		= "generic_dpi_panel",
 #endif
 	.data			= &smartq_lcd_panel,
-#ifdef CONFIG_PANEL_LG_IPS_10
+#if defined(CONFIG_PANEL_LG_IPS_10) || defined(CONFIG_PANEL_CLAA070WP03)
 	.phy.dpi.data_lines	= 18,
 #elif defined(CONFIG_PANEL_QM_8) || defined(CONFIG_PANEL_LG_IPS_7)
 	.phy.dpi.data_lines	= 24,
