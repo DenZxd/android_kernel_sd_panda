@@ -196,14 +196,14 @@ static struct regulator_init_data vaux1 = {
 
 static struct regulator_consumer_supply vaux2_supply[] = {
 	REGULATOR_SUPPLY("av-switch", "soc-audio"),
-#ifdef CONFIG_SMARTQ_S7
+#if defined(CONFIG_SMARTQ_S7) || defined(CONFIG_SMARTQ_X7)
 	{ .supply = "s7-tp-power", },
 #endif
 };
 
 static struct regulator_init_data vaux2 = {
 	.constraints = {
-#ifdef CONFIG_SMARTQ_S7
+#if defined(CONFIG_SMARTQ_S7) || defined(CONFIG_SMARTQ_X7)
 		.always_on		= true,
 		.min_uV			= 3000000,
 		.max_uV			= 3000000,

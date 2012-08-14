@@ -191,8 +191,13 @@ static void fts_ts_release(void)
 
         _st_finger_infos[i].u2_pressure = 0;
 
+#if defined(CONFIG_SMARTQ_X7)
+        input_report_abs(data->input_dev, ABS_MT_POSITION_X, _st_finger_infos[i].i2_y);
+        input_report_abs(data->input_dev, ABS_MT_POSITION_Y, 1280 - _st_finger_infos[i].i2_x);
+#else
         input_report_abs(data->input_dev, ABS_MT_POSITION_X, _st_finger_infos[i].i2_x);
         input_report_abs(data->input_dev, ABS_MT_POSITION_Y, _st_finger_infos[i].i2_y);
+#endif
 //        input_report_abs(data->input_dev, ABS_MT_TOUCH_MAJOR, _st_finger_infos[i].u2_pressure);
 //        input_report_abs(data->input_dev, ABS_MT_WIDTH_MAJOR, _st_finger_infos[i].ui2_id);
 //		input_report_key(data->input_dev, BTN_TOUCH, 0);
@@ -577,11 +582,13 @@ int fts_read_data(void)
 					temp = temp<<8;
 					temp = temp | buf[j*6+1];
 					x = temp;
+#if !defined(CONFIG_SMARTQ_X7)
 					if(x >= 300 && x < 800) {
 						x -= 10;
 					} else if(x >= 800 && x <= 1045) {
 						x -= 20;
 					}
+#endif
 
 					temp = (buf[j*6+2])& 0x0f;
 					temp = temp<<8;
@@ -607,8 +614,13 @@ int fts_read_data(void)
 							global_i |= (1<<i);
 							input_mt_slot(data->input_dev, i);
 							input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER,true);
+#if defined(CONFIG_SMARTQ_X7)
+							input_report_abs(data->input_dev, ABS_MT_POSITION_X, _st_finger_infos[i].i2_y);
+							input_report_abs(data->input_dev, ABS_MT_POSITION_Y, 1280 -_st_finger_infos[i].i2_x);
+#else
 							input_report_abs(data->input_dev, ABS_MT_POSITION_X, _st_finger_infos[i].i2_x);
 							input_report_abs(data->input_dev, ABS_MT_POSITION_Y, _st_finger_infos[i].i2_y);
+#endif
 
 							if(_st_finger_infos[i].u2_pressure == 0 )
 							{

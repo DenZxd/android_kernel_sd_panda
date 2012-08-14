@@ -12,12 +12,12 @@
 #define CFG_NUMOFKEYS                    0x4    //number of touch keys
 
 #define CONFIG_FTS_CUSTOME_ENV
-#ifdef CONFIG_FTS_CUSTOME_ENV  
+#if defined(CONFIG_FTS_CUSTOME_ENV)  && !defined(CONFIG_PANEL_CLAA070WP03)
 #define SCREEN_MAX_X           1024
 #define SCREEN_MAX_Y           600
 #else
 #define SCREEN_MAX_X           800
-#define SCREEN_MAX_Y           480
+#define SCREEN_MAX_Y           1280
 #endif
 #define PRESS_MAX                 255
 
