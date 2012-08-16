@@ -120,5 +120,6 @@ struct struct_batt_data {
 // Out:		void
 //--------------------------------------------------------------------------
 
-extern bool OZ8806_PollingLoop(struct pltdata_charger *pd);
+extern bool OZ8806_PollingLoop(int);
 extern bool OZ8806_GaugeAdjustion(void);
+extern bool OZ8806_PowerLoop(void);

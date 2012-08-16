@@ -21,15 +21,34 @@
 #include <linux/power/hhcn_charger.h>
 #include "oz8806.h"
 
+#ifdef CONFIG_SMARTQ_T40
+#define UCAP	68
+#define RETE	0
+#endif
+
+#ifdef CONFIG_SMARTQ_T16
+#define UCAP	64
+#define RETE    0
+#endif
+
+#ifdef CONFIG_SMARTQ_T15
+#define UCAP    68
+#define RETE	9
+#endif
+
 #ifdef CONFIG_SMARTQ_Q8
 #define UCAP	48
-#else
-#define UCAP	68
+#define RETE    9
+#endif
+
+#ifndef UCAP
+#define UCAP    68
+#define RETE   9
 #endif
 
 /*-------------------------------------------------------------------------*/
 struct struct_batt_data batt_info = {
-	0, ((20*107)/100), 5, 391, 250, 40, (100*UCAP), 345, 0, 0, 0, 0, 0, 0, 0, (UCAP*9), 4140, 0, 5, 0, 100, 100, 1400, 0, 0, 3775, 100
+	0, ((20*105)/100), 5, 391, 250, 40, (100*UCAP), 345, 0, 0, 0, 0, 0, 0, 0, (UCAP*RETE), 4140, 0, 5, 0, 100, 100, 1400, 0, 0, 3775, 100
 };
 EXPORT_SYMBOL(batt_info);
 
@@ -109,6 +128,22 @@ struct SOCVPoint	OCVtable[OCVNPoints] = {
 				{3885, 75},	{3931, 80},	{3981, 85},	{4030, 90},	{4110, 95},
 				{4160, 100}
 
+#endif
+
+#ifdef CONFIG_SMARTQ_T40
+				{3340, 00},	{3672, 05},	{3684, 10},	{3713, 15},	{3740, 20},
+				{3755, 25},	{3765, 30},	{3772, 35},	{3781, 40},	{3793, 45},
+				{3807, 50},	{3826, 55},	{3852, 60},	{3889, 65},	{3923, 70},
+				{3952, 75},	{3980, 80},	{4012, 85},	{4063, 90},	{4096, 95},
+				{4150, 100}
+#endif
+
+#ifdef CONFIG_SMARTQ_T16
+				{3340, 00},	{3675, 05},	{3688, 10},	{3711, 15},	{3745, 20},
+				{3763, 25},	{3770, 30},	{3775, 35},	{3783, 40},	{3794, 45},
+				{3808, 50},	{3829, 55},	{3857, 60},	{3898, 65},	{3925, 70},
+				{3955, 75},	{3980, 80},	{4015, 85},	{4073, 90},	{4100, 95},
+				{4150, 100}
 #endif
 };
 /*
@@ -360,15 +395,20 @@ static void OZ8806_CAR_Reset(struct i2c_client *client)
 void OZ8806_init_chip(struct i2c_client *client)
 {
 	struct OZ8806_data *data = i2c_get_clientdata(client);
+	int Val_s32;
 	u16 ADCValue;
 	u8  bRet = 0, tmpADC;
 
 	// Initialize OZ8806 chip
 	// Called when we have found OZ8806.
 	data->control = CellOCVLow;
-	ADCValue = i2c_smbus_read_word_data(client, data->control);
-	if((ADCValue > 0))				//Power On OCV detect
-	{
+	Val_s32 = i2c_smbus_read_word_data(client, data->control);
+	if(Val_s32 < 0){
+		printk("%s: read CellOCVLow i2c err\n", __func__);
+		return;
+	}
+	else{				//Power On OCV detect
+		ADCValue = (u16)Val_s32;
 		if(ADCValue & CellOCVSleepMask)
 		{
 			bRet = 2;
@@ -398,15 +438,18 @@ void OZ8806_init_chip(struct i2c_client *client)
 	else
 		batt_info.PowerStatus = 0;
 	data->control = CellVoltLow;
-	ADCValue = i2c_smbus_read_word_data(client, data->control);
-	if(ADCValue > 0)
-	{
+	Val_s32 = i2c_smbus_read_word_data(client, data->control);
+	if(Val_s32 < 0){
+		printk("%s: read CellVoltLow i2c err\n", __func__);
+		batt_info.fVolt = 3900;
+	}
+	else{
+		ADCValue = (u16)Val_s32;
 		ADCValue=ADCValue >> 4;
 		ADCValue=ADCValue & CellVoltMASK;
 		batt_info.fVolt = ((int)ADCValue * batt_info.fVoltLSB) / 100;
 	}
-	else
-		batt_info.fVolt = 3900;										//just for case
+
 	if(bRet == 2)
 	{
 		if(batt_info.fOCVVolt == 0)
@@ -425,15 +468,17 @@ void OZ8806_init_chip(struct i2c_client *client)
 	{
 		msleep(2500);
 		data->control = CellVoltLow;
-		ADCValue = i2c_smbus_read_word_data(client, data->control);
-		if(ADCValue > 0)
-		{
+		Val_s32 = i2c_smbus_read_word_data(client, data->control);
+		if(Val_s32 < 0){
+			printk("%s: read CellVoltLow i2c err\n", __func__);
+			batt_info.fVolt = 3900;
+		}
+		else{
+			ADCValue = (u16)Val_s32;
 			ADCValue=ADCValue >> 4;
 			ADCValue=ADCValue & CellVoltMASK;
 			batt_info.fVolt = ((int)ADCValue * batt_info.fVoltLSB) / 100;
 		}
-		else
-			batt_info.fVolt = 3900;
 		batt_info.fVolt += 20;
 		batt_info.fPerFromOCV = OZ8806_PowerOnVoltToRC();					//use PoOCV to initial
 		batt_info.fRSOC = batt_info.fPerFromOCV;					//use fRSOC from OCV table to initialize CAR
@@ -457,45 +502,79 @@ void OZ8806_init_chip(struct i2c_client *client)
 	data->aout16	= 20;
 	bRet =i2c_smbus_write_word_data(client, data->control, data->aout16);
 	//initial sCaMAH equals to fRC
-	printk("%s: fVolt = %d  fOCVVolt = %d fRSOC = %d\n",__func__,batt_info.fVolt,batt_info.fOCVVolt,OZ8806_PowerOnVoltToRC());
+	printk("%s: fVolt = %d  fOCVVolt = %d fRSOC = %d\n",__func__,\
+			batt_info.fVolt,batt_info.fOCVVolt,OZ8806_PowerOnVoltToRC());
 	batt_info.sCaMAH = batt_info.fRC;
 
 }
 EXPORT_SYMBOL(OZ8806_init_chip);
 
-bool OZ8806_PollingLoop(struct pltdata_charger *pd)
+bool OZ8806_PowerLoop()
 {
 	struct OZ8806_data *data = i2c_get_clientdata(the_OZ8806->myclient);
+	u16 ADCValue;
+	u16 Value;
+	int ret;
+
+	data->control = CellCurrLow;
+	ADCValue = i2c_smbus_read_word_data(the_OZ8806->myclient, data->control);
+	ADCValue=ADCValue & CellCurrMASK;
+	ret = (short)ADCValue * batt_info.dbCurrLSB;    //dbCurrLSB = 391 (3.90625 mA)
+	ret = (ret / batt_info.fRsense) / 100;
+	ret /= 2;
+	if(ret < -20)
+		return 0;
+	else
+		return 1;
+
+}
+EXPORT_SYMBOL(OZ8806_PowerLoop);
+
+bool OZ8806_PollingLoop(int power)
+{
+	struct OZ8806_data *data = i2c_get_clientdata(the_OZ8806->myclient);
+	int Val_s32;
+	int val;
 	u16	ADCValue;
 	u16 Value;
-	//int	val;
 
 	batt_info.fPrevCurr = batt_info.fCurr;							//saved previous current
 	batt_info.fRCPrev = batt_info.fRC;
 
 	mutex_lock(&data->update_lock);
 	data->control = CellTempLow;
-	ADCValue = i2c_smbus_read_word_data(the_OZ8806->myclient, data->control);
+	Val_s32 = i2c_smbus_read_word_data(the_OZ8806->myclient, data->control);
+	if(Val_s32 < 0) printk("%s: read CellTempLow i2c err\n", __func__);
+
+	ADCValue = (u16)Val_s32;
 	ADCValue=ADCValue >> 4;
 	ADCValue=ADCValue & CellTempMASK;
 	batt_info.fCellTemp = ADCValue * batt_info.fVoltLSB;		//fVoltLSB = 250 (2.5 mV)
 	batt_info.fCellTemp = OZ8806_TemperaturemV2oC(batt_info.fCellTemp/100);
 
 	data->control = CellVoltLow;
-	ADCValue = i2c_smbus_read_word_data(the_OZ8806->myclient, data->control);
+	Val_s32 = i2c_smbus_read_word_data(the_OZ8806->myclient, data->control);
+	if(Val_s32 < 0) printk("%s: read CellVoltLow i2c err\n", __func__);
+
+	ADCValue = (u16)Val_s32;
 	ADCValue=ADCValue >> 4;
 	ADCValue=ADCValue & CellTempMASK;
 	batt_info.fVolt = (ADCValue * batt_info.fVoltLSB) / 100;	//fVoltLSB = 250 (2.5 mV)
 
 	data->control = CellCurrLow;
-	ADCValue = i2c_smbus_read_word_data(the_OZ8806->myclient, data->control);
+	Val_s32 = i2c_smbus_read_word_data(the_OZ8806->myclient, data->control);
+	if(Val_s32 < 0) printk("%s: read CellCurrLow i2c err\n", __func__);
+
+	ADCValue = (u16)Val_s32;
 	ADCValue=ADCValue & CellCurrMASK;
 	batt_info.fCurr = (short)ADCValue * batt_info.dbCurrLSB;	//dbCurrLSB = 391 (3.90625 mA)
 	batt_info.fCurr = (batt_info.fCurr / batt_info.fRsense) / 100;
 	batt_info.fCurr /= 2;
 
 	data->control = CellCARLow;
-	ADCValue = i2c_smbus_read_word_data(the_OZ8806->myclient, data->control);
+	Val_s32 = i2c_smbus_read_word_data(the_OZ8806->myclient, data->control);
+	if(Val_s32 < 0) printk("%s: read CellCARLow i2c err\n", __func__);
+	ADCValue = (u16)Val_s32;
 	ADCValue=ADCValue & CellCARMASK;
 	Value = ADCValue;
 	if((short)Value < 0)
@@ -507,7 +586,10 @@ bool OZ8806_PollingLoop(struct pltdata_charger *pd)
 		{
 			OverCount--;
 			msleep(200);
-			ADCValue = i2c_smbus_read_word_data(the_OZ8806->myclient, data->control);
+			Val_s32 = i2c_smbus_read_word_data(the_OZ8806->myclient, data->control);
+			if(Val_s32 < 0) printk("%s: read CellCARLow i2c err\n", __func__);
+
+			ADCValue = (u16)Val_s32;
 			ADCValue=ADCValue & CellCARMASK;
 			Value = ADCValue;
 			if((short)Value > 0)
@@ -524,8 +606,8 @@ bool OZ8806_PollingLoop(struct pltdata_charger *pd)
 		batt_info.fRC = (short)(ADCValue) * batt_info.dbCARLSB;
 		batt_info.fRC = batt_info.fRC / batt_info.fRsense;
 	}
-	//val = (batt_info.fRC - 0) * 100;
-	//val = val / (batt_info.fFCC - 0);
+	val = (batt_info.fRC - 0) * 100;
+	val = val / (batt_info.fFCC - 0);
 	batt_info.fRSOC = (batt_info.fRC - batt_info.fReserved) * 100;
 	batt_info.fRSOC = batt_info.fRSOC / (batt_info.fFCC - batt_info.fReserved);
 	if(batt_info.fRSOC >= 100)
@@ -537,19 +619,20 @@ bool OZ8806_PollingLoop(struct pltdata_charger *pd)
 	{
         //EOC condition, this may be different during each project
 		if(((batt_info.fPrevCurr < batt_info.fCurr+2) && (batt_info.fCurr >= 0)) || \
-		   ((pd->charger_sts()) && (batt_info.fRSOC >= 99) && (batt_info.fCurr <= 0)))
+				(power && (batt_info.fRSOC >= 99) && (batt_info.fCurr <= 0)))
 		{
 			if(FullCount >= 5)
 			{
 				batt_info.fRSOC = 101;
 				OZ8806_CAR_Reset(the_OZ8806->myclient);
+				printk("%s: Conduct a full charge correction\n", __func__);
 				FullCount = 0;
 			}
 			else
 				++FullCount;
 		}
 	}
-//printk("--->> nr = %d ns = %d nc = %d nu = %d nv = %d\n",val,batt_info.fRSOC,batt_info.fRC,batt_info.fCurr,batt_info.fVolt);
+	//printk("--->> nr = %d ns = %d nc = %d nu = %d nv = %d\n",val,batt_info.fRSOC,batt_info.fRC,batt_info.fCurr,batt_info.fVolt);
 	mutex_unlock(&data->update_lock);
 
 	return true;
@@ -1085,20 +1168,22 @@ static void OZ8806_shutdown(struct i2c_client *client)
 
 static int oz8806_proc_read(char* page, char** start, off_t off, int count,int* eof, void* data)
 {
-    struct i2c_client *client = the_OZ8806->myclient;
+	struct i2c_client *client = the_OZ8806->myclient;
 
-    if (!client)
-        return count;
-    data = (void *)page;
-    //OZ8806_PollingLoop();
+	if (!client)
+		return count;
+	data = (void *)page;
+	//OZ8806_PollingLoop();
 
 	page += sprintf(page,"\t%-4d\n",batt_info.fCurr);
 	page += sprintf(page,"\t%-4d\n",batt_info.fVolt);
 	page += sprintf(page,"\t%-4d\n",batt_info.fOCVVolt);
-    page += sprintf(page,"\t%-4d\n",batt_info.fRSOC);
-    count = 64;
+	page += sprintf(page,"\t%-4d\n",batt_info.fRSOC);
+	page += sprintf(page,"\t%-6d\n",batt_info.fRC);
 
-    return ((page += sprintf(page, "\n")) - (char*)data);
+	count = 64;
+
+	return ((page += sprintf(page, "\n")) - (char*)data);
 }
 
 static int oz8806_proc_write(struct file* file, const char* buffer,unsigned long count, void* data) {
