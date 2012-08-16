@@ -62,15 +62,43 @@ static struct power_supply hhtech_power_supplies[] = {
 
 static struct struct_battery_data *hhcn_battery_data;
 
+#if defined(CONFIG_CHARGER_BQ2416X)
+extern int bq2416x_get_charge_status(void);
+static int battery_ac_status()
+{
+	int status;
+	int i;
+
+	for(i=0; i < 4; i++)
+	{
+		status = bq2416x_get_charge_status();
+		if ((status == POWER_SUPPLY_STATUS_CHARGING) || (status == POWER_SUPPLY_STATUS_FULL) )
+			return 1;
+		else if (status == POWER_SUPPLY_STATUS_NOT_CHARGING)
+			return 0;
+		else{
+			printk("%s: Read bq24161 battery ac status err\n",__func__);
+			msleep(100);
+		}
+	}
+	return OZ8806_PowerLoop();
+}
+#endif
+
 static int hhcn_get_battery_info(void)
 {
 	struct hhcn_battery_info *bi = &(hhcn_battery_data->battery_data);
+#if defined(CONFIG_CHARGER_BQ2416X)
+	bi->Power = battery_ac_status();
+#else
 	struct pltdata_charger *pd = hhcn_battery_data->pdata_chg;
+	bi->Power = pd->charger_sts();
 
+#endif
 	if(!bi->PollCount)
 	{
 		bi->PollCount = TIME_POLL;
-		OZ8806_PollingLoop(pd);
+		OZ8806_PollingLoop(bi->Power);
 	}
 	else
 	{
@@ -78,13 +106,12 @@ static int hhcn_get_battery_info(void)
 	}
 	bi->Voltage = batt_info.fVolt;
 	bi->Curr = batt_info.fCurr;
-	bi->Power = pd->charger_sts();
 	if(!bi->SuspendFlag)
 	{
 		int count;
 		if(batt_info.fRSOC <= 0){
 			for(count = 0; count < 5; count++){
-				OZ8806_PollingLoop(pd);
+				OZ8806_PollingLoop(bi->Power);
 				if(batt_info.fRSOC > 0)
 					break;
 				msleep(800);
@@ -239,7 +266,12 @@ static int __devinit hhcn_battery_probe(struct platform_device *pdev)
 	    return -1;
 	}
 	bi = &(hhcn_battery_data->battery_data);
+#if defined(CONFIG_CHARGER_BQ2416X)
+	bi->Power = battery_ac_status();
+#else
 	hhcn_battery_data->pdata_chg = pdev->dev.platform_data;
+	bi->Power = hhcn_battery_data->pdata_chg->charger_sts();
+#endif
 	bi->SuspendFlag = 0;
 	bi->PollCount = 0;
 	bi->LowCount = 0;
@@ -256,7 +288,6 @@ static int __devinit hhcn_battery_probe(struct platform_device *pdev)
 	hhcn_battery_data->battery_timer.expires = jiffies + HZ*1;
 	add_timer(&(hhcn_battery_data->battery_timer));
 	INIT_WORK(&(hhcn_battery_data->battery_work), hhcn_work_func);
-	bi->Power = hhcn_battery_data->pdata_chg->charger_sts();
 	power_supply_changed(&hhtech_power_supplies[CHARGER_BATTERY]);
 
 	return 0;
@@ -272,22 +303,27 @@ static int hhcn_battery_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int hhcn_bat_suspend(struct device *dev)
 {
+
 	struct hhcn_battery_info *bi = &(hhcn_battery_data->battery_data);
+#if !defined(CONFIG_CHARGER_BQ2416X)
 	struct pltdata_charger *pd = hhcn_battery_data->pdata_chg;
+	if(!pd->charger_sts())
+		pd->charger_crt(0);
+#endif
 
 	bi->SuspendFlag = 0;
 	bi->PollCount = 0;
-	if(!pd->charger_sts())
-		pd->charger_crt(0);
-    del_timer(&(hhcn_battery_data->battery_timer));
-    return 0;
+	del_timer(&(hhcn_battery_data->battery_timer));
+	return 0;
 }
 
 static int hhcn_bat_resume(struct device *dev)
 {
-	struct pltdata_charger *pd = hhcn_battery_data->pdata_chg;
 
+#if !defined(CONFIG_CHARGER_BQ2416X)
+	struct pltdata_charger *pd = hhcn_battery_data->pdata_chg;
 	pd->charger_crt(1);
+#endif
     hhcn_battery_data->battery_timer.function = &hhcn_battery_timer;
     hhcn_battery_data->battery_timer.expires = jiffies;
     add_timer(&(hhcn_battery_data->battery_timer));

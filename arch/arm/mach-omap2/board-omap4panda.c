@@ -359,6 +359,9 @@ static void __init omap_encrypt_io_init(void) { }
 #if defined(CONFIG_CHARGER_HHCN) || defined(CONFIG_CHARGER_HHCN_MODULE)
 #include <linux/power/hhcn_charger.h>
 
+#ifdef CONFIG_CHARGER_BQ2416X
+static void __init omap_charger_io_init(void) { }
+#else
 #define GPIO_CHARGER 137
 #define GPIO_CHARGER_DETECT 95
 
@@ -399,13 +402,16 @@ static struct pltdata_charger pdata_charger = {
 	.charger_crt = omap_charger_control,
 	.charger_sts = omap_charger_get_status,
 };
+#endif
 
 static struct platform_device hhcn_charger = {
 	.name	= "hhcn-charger",
 	.id	= -1,
+#ifndef CONFIG_CHARGER_BQ2416X
 	.dev  = {
 		.platform_data = &pdata_charger,
 	},
+#endif
 };
 #else
 static void __init omap_charger_io_init(void) { }
