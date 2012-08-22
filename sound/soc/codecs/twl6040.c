@@ -1572,6 +1572,11 @@ static int twl6040_set_bias_level(struct snd_soc_codec *codec,
 		if (!priv->codec_powered)
 			break;
 
+#ifdef CONFIG_VENDOR_HHTECH	// XXX:
+		twl6040_write(codec, TWL6040_REG_HFLCTL, 0);
+		twl6040_write(codec, TWL6040_REG_HFRCTL, 0);
+#endif
+
 		twl6040_disable(twl6040);
 		priv->codec_powered = 0;
 		break;
