@@ -931,6 +931,20 @@ struct pixcir_platform_data pixcir_pdata = {
 };
 #endif
 
+#if defined(CONFIG_NOVATEK_TOUCH) || \
+    defined(CONFIG_NOVATEK_TOUCH_MODULE)
+#include <linux/novatek_ts.h>
+
+struct novatek_platform_data novatek_pdata = {
+	.rst = touchscreen_rst,
+	.irq = OMAP_GPIO_IRQ(GPIO_TOUCHSCREEN_IRQ),
+	.irq_gpio = GPIO_TOUCHSCREEN_IRQ,
+	.irq_init = touchscreen_irq_init,
+	//.gpio_init = touchscreen_gpio_init,
+};
+
+#endif
+
 #if defined(CONFIG_TOUCHSCREEN_SSD2533) || \
     defined(CONFIG_TOUCHSCREEN_SSD2533_MODULE)
 #include <mach/ssd2533.h>
@@ -1128,6 +1142,16 @@ static struct i2c_board_info __initdata panda_i2c_bus4_boardinfo[] = {
 		.platform_data = &pixcir_pdata,
 	},
 #endif
+#if defined(CONFIG_NOVATEK_TOUCH) || \
+	defined(CONFIG_NOVATEK_TOUCH_MODULE)
+	{
+		I2C_BOARD_INFO("novatek-ts", 0x01),
+		//     I2C_BOARD_INFO("novatek-ts", 0x5c),
+		//     I2C_BOARD_INFO("novatek-ts", 0x09),
+		.platform_data = &novatek_pdata,
+	},
+#endif
+
 #if defined(CONFIG_TOUCHSCREEN_FT5X0X) || \
 	defined(CONFIG_TOUCHSCREEN_FT5X0X_MODULE)
 	{
