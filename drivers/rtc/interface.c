@@ -762,7 +762,7 @@ static int rtc_timer_enqueue(struct rtc_device *rtc, struct rtc_timer *timer)
 	return 0;
 }
 
-static void rtc_alarm_disable(struct rtc_device *rtc)
+void rtc_alarm_disable(struct rtc_device *rtc)
 {
 	if (!rtc->ops || !rtc->ops->alarm_irq_enable)
 		return;

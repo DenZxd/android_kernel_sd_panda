@@ -25,6 +25,30 @@
 static struct device fake_reset_dev;
 #endif
 
+#include <linux/i2c/twl.h>
+
+#define START_ON_RTC (1 << 4)
+#define PHOENIX_START_CONDITION 0x1F
+
+static int twl_rtc_reboot(void)
+{
+    int ret;
+    u8 start_state = 0;
+    ret = twl_i2c_read_u8(TWL6030_MODULE_ID0, &start_state,
+	    PHOENIX_START_CONDITION);
+    if (ret)
+	start_state = 0;
+
+    if (start_state & START_ON_RTC) {
+	start_state = 1;
+	twl_i2c_write_u8(TWL6030_MODULE_ID0, start_state & ~START_ON_RTC,
+		PHOENIX_START_CONDITION);
+    } else
+	start_state = 0;
+
+    return start_state;
+}
+
 static int omap_reboot_notifier_call(struct notifier_block *this,
 					unsigned long code, void *cmd)
 {
@@ -68,6 +92,9 @@ static int __init omap_reboot_reason_init(void)
 		strncpy(omap4_reboot_reason, ptr, OMAP_REBOOT_REASON_SIZE);
 		ptr[0] = '\0';
 	}
+
+	if (twl_rtc_reboot())
+	    strncpy(omap4_reboot_reason, "rtc_reboot", OMAP_REBOOT_REASON_SIZE);
 
 	return register_reboot_notifier(&omap_reboot_notifier);
 }
