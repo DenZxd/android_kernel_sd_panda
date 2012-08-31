@@ -25,6 +25,7 @@ enum android_alarm_type {
 	ANDROID_ALARM_RTC,
 	ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP,
 	ANDROID_ALARM_ELAPSED_REALTIME,
+	ANDROID_ALARM_RTC_OPEN,
 	ANDROID_ALARM_SYSTEMTIME,
 
 	ANDROID_ALARM_TYPE_COUNT,
@@ -75,6 +76,9 @@ ktime_t alarm_get_elapsed_realtime(void);
 /* set rtc while preserving elapsed realtime */
 int alarm_set_rtc(const struct timespec ts);
 
+void alarm_set_alarm(void);
+void alarm_disable_irq(void);
+void rtc_alarm_disable(struct rtc_device *rtc);
 #endif
 
 enum android_alarm_return_flags {
@@ -84,6 +88,7 @@ enum android_alarm_return_flags {
 				1U << ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP,
 	ANDROID_ALARM_ELAPSED_REALTIME_MASK =
 				1U << ANDROID_ALARM_ELAPSED_REALTIME,
+	ANDROID_ALARM_RTC_OPEN_MASK = 1U << ANDROID_ALARM_RTC_OPEN,
 	ANDROID_ALARM_SYSTEMTIME_MASK = 1U << ANDROID_ALARM_SYSTEMTIME,
 	ANDROID_ALARM_TIME_CHANGE_MASK = 1U << 16
 };
@@ -93,6 +98,7 @@ enum android_alarm_return_flags {
 
 /* Ack last alarm and wait for next */
 #define ANDROID_ALARM_WAIT                  _IO('a', 1)
+#define CUSTOM_ALARM_WAIT		    _IO('a', 7)
 
 #define ALARM_IOW(c, type, size)            _IOW('a', (c) | ((type) << 4), size)
 #define ALARM_IOR(c, type, size)            _IOR('a', (c) | ((type) << 4), size)

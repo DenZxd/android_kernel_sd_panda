@@ -40,6 +40,7 @@ module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 	} while (0)
 
 #define ANDROID_ALARM_WAKEUP_MASK ( \
+	ANDROID_ALARM_RTC_OPEN_MASK | \
 	ANDROID_ALARM_RTC_WAKEUP_MASK | \
 	ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP_MASK)
 
@@ -51,6 +52,7 @@ static int alarm_opened;
 static DEFINE_SPINLOCK(alarm_slock);
 static struct wake_lock alarm_wake_lock;
 static DECLARE_WAIT_QUEUE_HEAD(alarm_wait_queue);
+static uint32_t custom_alarm_pending;
 static uint32_t alarm_pending;
 static uint32_t alarm_enabled;
 static uint32_t wait_pending;
@@ -125,6 +127,14 @@ from_old_alarm_set:
 			timespec_to_ktime(new_alarm_time),
 			timespec_to_ktime(new_alarm_time));
 		spin_unlock_irqrestore(&alarm_slock, flags);
+
+		if (alarm_type == ANDROID_ALARM_RTC_OPEN) {
+			alarm_set_alarm();
+			if ((long)new_alarm_time.tv_sec  < 0 &&
+				  new_alarm_time.tv_nsec < 0)
+				alarm_disable_irq();
+		}
+
 		if (ANDROID_ALARM_BASE_CMD(cmd) != ANDROID_ALARM_SET_AND_WAIT(0)
 		    && cmd != ANDROID_ALARM_SET_AND_WAIT_OLD)
 			break;
@@ -146,6 +156,26 @@ from_old_alarm_set:
 		alarm_pending = 0;
 		spin_unlock_irqrestore(&alarm_slock, flags);
 		break;
+
+	case CUSTOM_ALARM_WAIT:
+		spin_lock_irqsave(&alarm_slock, flags);
+		pr_alarm(IO, "custom alarm wait\n");
+		if (!custom_alarm_pending && wait_pending) {
+			wake_unlock(&alarm_wake_lock);
+			wait_pending = 0;
+		}
+		spin_unlock_irqrestore(&alarm_slock, flags);
+		rv = wait_event_interruptible(alarm_wait_queue,
+			custom_alarm_pending);
+		if (rv)
+			goto err1;
+		spin_lock_irqsave(&alarm_slock, flags);
+		rv = custom_alarm_pending;
+		wait_pending = 1;
+		custom_alarm_pending = 0;
+		spin_unlock_irqrestore(&alarm_slock, flags);
+		break;
+
 	case ANDROID_ALARM_SET_RTC:
 		if (copy_from_user(&new_rtc_time, (void __user *)arg,
 		    sizeof(new_rtc_time))) {
@@ -164,6 +194,7 @@ from_old_alarm_set:
 		switch (alarm_type) {
 		case ANDROID_ALARM_RTC_WAKEUP:
 		case ANDROID_ALARM_RTC:
+		case ANDROID_ALARM_RTC_OPEN:
 			getnstimeofday(&tmp_time);
 			break;
 		case ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP:
@@ -244,6 +275,16 @@ static void alarm_triggered(struct alarm *alarm)
 		wake_up(&alarm_wait_queue);
 	}
 	spin_unlock_irqrestore(&alarm_slock, flags);
+}
+
+void custom_alarm_triggered(void)
+{
+    unsigned long flags;
+
+    spin_lock_irqsave(&alarm_slock, flags);
+    custom_alarm_pending |= ANDROID_ALARM_RTC_OPEN_MASK;
+    wake_up(&alarm_wait_queue);
+    spin_unlock_irqrestore(&alarm_slock, flags);
 }
 
 static const struct file_operations alarm_fops = {
