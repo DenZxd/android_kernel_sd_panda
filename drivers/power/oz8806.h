@@ -87,6 +87,8 @@ struct struct_batt_data {
 	int		fRCPrev;		//= 0;						//previous CAR value
 	int		fVoltAdjLow;	//= 3775;					//mV
 	int		fDisCOCV;		//= 100;					//OCV table is made by discharging current = 100C
+	int		bOCV;
+	int		nRC;
 };
 
 

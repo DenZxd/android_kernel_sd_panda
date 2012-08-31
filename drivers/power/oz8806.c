@@ -48,8 +48,9 @@
 
 /*-------------------------------------------------------------------------*/
 struct struct_batt_data batt_info = {
-	0, ((20*105)/100), 5, 391, 250, 40, (100*UCAP), 345, 0, 0, 0, 0, 0, 0, 0, (UCAP*RETE), 4140, 0, 5, 0, 100, 100, 1400, 0, 0, 3775, 100
-};
+	0, ((20*105)/100), 5, 391, 250, 40, (100*UCAP), 345, 0, 0, 0, 0, 0, 0, \
+		0, (UCAP*RETE), 4140, 0, 5, 0, 100, 100, 1400, 0, 0, 3775, 100, 0, 0 };
+
 EXPORT_SYMBOL(batt_info);
 
 // Addresses to scan, in 7-bit presentation
@@ -131,7 +132,7 @@ struct SOCVPoint	OCVtable[OCVNPoints] = {
 #endif
 
 #ifdef CONFIG_SMARTQ_T40
-				{3340, 00},	{3672, 05},	{3684, 10},	{3713, 15},	{3740, 20},
+				{3400, 00},	{3672, 05},	{3684, 10},	{3713, 15},	{3740, 20},
 				{3755, 25},	{3765, 30},	{3772, 35},	{3781, 40},	{3793, 45},
 				{3807, 50},	{3826, 55},	{3852, 60},	{3889, 65},	{3923, 70},
 				{3952, 75},	{3980, 80},	{4012, 85},	{4063, 90},	{4096, 95},
@@ -139,11 +140,11 @@ struct SOCVPoint	OCVtable[OCVNPoints] = {
 #endif
 
 #ifdef CONFIG_SMARTQ_T16
-				{3340, 00},	{3675, 05},	{3688, 10},	{3711, 15},	{3745, 20},
-				{3763, 25},	{3770, 30},	{3775, 35},	{3783, 40},	{3794, 45},
-				{3808, 50},	{3829, 55},	{3857, 60},	{3898, 65},	{3925, 70},
-				{3955, 75},	{3980, 80},	{4015, 85},	{4073, 90},	{4100, 95},
-				{4150, 100}
+				{3400, 00},	{3677, 05},	{3682, 10},	{3725, 15},	{3745, 20},
+				{3757, 25},	{3762, 30},	{3767, 35},	{3777, 40},	{3787, 45},
+				{3802, 50},	{3832, 55},	{3870, 60},	{3895, 65},	{3922, 70},
+				{3950, 75},	{3975, 80},	{4017, 85},	{4067, 90},	{4102, 95},
+				{4152, 100}
 #endif
 };
 /*
@@ -412,16 +413,19 @@ void OZ8806_init_chip(struct i2c_client *client)
 		if(ADCValue & CellOCVSleepMask)
 		{
 			bRet = 2;
+			batt_info.bOCV = 1;
 			printk("%s: OVC sleep mode is activated ",__func__);
 		}
 		else if(ADCValue & CellOCVPoOnMask)
 		{
 			bRet = 1;
+			batt_info.bOCV = 0;
 			printk("%s: Power on mode is activated ",__func__);
 		}
 		else
 		{
 			bRet = 0;
+			batt_info.bOCV = 0;
 			printk("%s: In electrical mode is activated ",__func__);
 		}
 		ADCValue=ADCValue >> 4;									//if no OCV flag, use old value for pretended initialization
@@ -534,7 +538,6 @@ bool OZ8806_PollingLoop(int power)
 {
 	struct OZ8806_data *data = i2c_get_clientdata(the_OZ8806->myclient);
 	int Val_s32;
-	int val;
 	u16	ADCValue;
 	u16 Value;
 
@@ -606,8 +609,8 @@ bool OZ8806_PollingLoop(int power)
 		batt_info.fRC = (short)(ADCValue) * batt_info.dbCARLSB;
 		batt_info.fRC = batt_info.fRC / batt_info.fRsense;
 	}
-	val = (batt_info.fRC - 0) * 100;
-	val = val / (batt_info.fFCC - 0);
+	batt_info.nRC = (batt_info.fRC - 0) * 100;
+	batt_info.nRC = batt_info.nRC / (batt_info.fFCC - 0);
 	batt_info.fRSOC = (batt_info.fRC - batt_info.fReserved) * 100;
 	batt_info.fRSOC = batt_info.fRSOC / (batt_info.fFCC - batt_info.fReserved);
 	if(batt_info.fRSOC >= 100)
@@ -632,7 +635,8 @@ bool OZ8806_PollingLoop(int power)
 				++FullCount;
 		}
 	}
-	//printk("--->> nr = %d ns = %d nc = %d nu = %d nv = %d\n",val,batt_info.fRSOC,batt_info.fRC,batt_info.fCurr,batt_info.fVolt);
+	//printk("--->> nr = %d ns = %d nc = %d nu = %d nv = %d\n",batt_info.nRC,\
+			batt_info.fRSOC,batt_info.fRC,batt_info.fCurr,batt_info.fVolt);
 	mutex_unlock(&data->update_lock);
 
 	return true;
@@ -1101,6 +1105,7 @@ static int OZ8806_suspend(struct device *dev)
 
 	mutex_lock(&data->update_lock);
 	FullCount = 5;
+	batt_info.bOCV = 0;
 	OZ8806_sleep_control(data->myclient, 1, 1);
 	mutex_unlock(&data->update_lock);
 
@@ -1129,6 +1134,7 @@ static int OZ8806_resume(struct device *dev)
 			OZ8806_CAR_Reset(data->myclient);
 			//sCaMAH = fRCPrev = fRC;
 		}
+		batt_info.bOCV = 1;
 		printk("%s: Suspend wake-up from the OCV mode OCV = %d\n",__func__,batt_info.fOCVVolt);
 	}
 	else													//no Sleep OCV detection, use current CAR
@@ -1142,6 +1148,7 @@ static int OZ8806_resume(struct device *dev)
 		batt_info.fRSOC = batt_info.fRSOC / (batt_info.fFCC - batt_info.fReserved);
 		if(batt_info.fRSOC >= 100)		batt_info.fRSOC = 100;
 		if(batt_info.fRSOC <= 0)		batt_info.fRSOC = 0;
+		batt_info.bOCV = 0;
 		printk("%s: Suspend wake-up from the CAR mode RSOC = %d\n",__func__,batt_info.fRSOC);
 	}
 	OZ8806_sleep_control(data->myclient, 0, 0);
@@ -1173,15 +1180,17 @@ static int oz8806_proc_read(char* page, char** start, off_t off, int count,int* 
 	if (!client)
 		return count;
 	data = (void *)page;
-	//OZ8806_PollingLoop();
+	OZ8806_PollingLoop(OZ8806_PowerLoop());
 
-	page += sprintf(page,"\t%-4d\n",batt_info.fCurr);
-	page += sprintf(page,"\t%-4d\n",batt_info.fVolt);
-	page += sprintf(page,"\t%-4d\n",batt_info.fOCVVolt);
-	page += sprintf(page,"\t%-4d\n",batt_info.fRSOC);
-	page += sprintf(page,"\t%-6d\n",batt_info.fRC);
+	page += sprintf(page,"%-4d",batt_info.fCurr);
+	page += sprintf(page,"\t%-4d",batt_info.fVolt);
+	page += sprintf(page,"\t%-6d",batt_info.nRC);
 
-	count = 64;
+	page += sprintf(page,"\t%-4d",batt_info.bOCV);
+	page += sprintf(page,"\t%-4d",batt_info.fRSOC);
+	page += sprintf(page,"\t%-4d",batt_info.fRC);
+	page += sprintf(page,"\t%-4d",batt_info.fFCC);
+	page += sprintf(page,"\t%-4d",batt_info.fOCVVolt);
 
 	return ((page += sprintf(page, "\n")) - (char*)data);
 }
