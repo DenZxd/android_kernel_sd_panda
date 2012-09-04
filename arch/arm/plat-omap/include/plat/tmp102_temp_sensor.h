@@ -25,5 +25,6 @@
 #define __ARCH_ARM_PLAT_OMAP_INCLUDE_PLAT_TMP102_TEMPERATURE_SENSOR_H
 
 #define TMP102_SENSOR_NAME "tmp102_sensor"
+#define TMP103_SENSOR_NAME "tmp103_sensor"
 
 #endif
