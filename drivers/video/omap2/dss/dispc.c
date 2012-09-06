@@ -3750,7 +3750,7 @@ void dispc_set_pol_freq(enum omap_channel channel,
 void dispc_find_clk_divs(bool is_tft, unsigned long req_pck, unsigned long fck,
 		struct dispc_clock_info *cinfo)
 {
-	u16 pcd_min = is_tft ? 2 : 3;
+	u16 pcd_min = is_tft && ((148500000 >> 1) < req_pck) ? 2 : 3;
 	unsigned long best_pck;
 	u16 best_ld, cur_ld;
 	u16 best_pd, cur_pd;
