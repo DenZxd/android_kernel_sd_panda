@@ -41,6 +41,16 @@ static struct timespec suspend_time;
 #else
 static struct timeval suspend_time;
 #endif
+
+#ifdef CONFIG_SMARTQ_S7
+#include <linux/notifier.h>
+static int flag_battery_low = 0;
+static BLOCKING_NOTIFIER_HEAD(battery_low_noti_chain);
+extern int battery_low_handler(struct notifier_block *self, unsigned long val, void *data);
+static struct notifier_block battery_low_notifier = {
+	.notifier_call = battery_low_handler,
+};
+#endif
 #endif
 
 #define CONTROLLER_INT_MASK	0x00
@@ -1790,6 +1800,13 @@ static int capacity_changed(struct twl6030_bci_device_info *di)
                 curr_capacity = 0;
         } else {
         if (battery_capacity_pos >= 0) {
+#ifdef CONFIG_SMARTQ_S7
+                if (i < 50 && (di->charge_status != POWER_SUPPLY_STATUS_CHARGING
+                        || (di->charge_status == POWER_SUPPLY_STATUS_CHARGING && charger_source == POWER_SUPPLY_TYPE_USB))) {
+                        flag_battery_low = (100 - i);
+                        blocking_notifier_call_chain(&battery_low_noti_chain, 0, &flag_battery_low);
+                }
+#endif
                 if (!b_from_resume) {
                         if ((battery_capacity_pos - i) > 1)
                                 i = battery_capacity_pos - 1;
@@ -1803,6 +1820,12 @@ static int capacity_changed(struct twl6030_bci_device_info *di)
                                 curr_capacity = bat_table[i].level;
                                 battery_capacity_pos = i;
                         }
+#ifdef CONFIG_SMARTQ_S7
+                        if (flag_battery_low && charger_source != POWER_SUPPLY_TYPE_USB) {
+                                flag_battery_low = 0;
+                                blocking_notifier_call_chain(&battery_low_noti_chain, 0, &flag_battery_low);
+                        }
+#endif
                 }
                 else {
                         if (bat_table[i].level <= di->capacity) {
@@ -1833,6 +1856,12 @@ static int capacity_changed(struct twl6030_bci_device_info *di)
                 else {
                         curr_capacity = bat_table[i].level;
                         battery_capacity_pos = i;
+#ifdef CONFIG_SMARTQ_S7
+                        if (i < 50) {
+                                flag_battery_low = (100 - i);
+                                blocking_notifier_call_chain(&battery_low_noti_chain, 0, &flag_battery_low);
+                        }
+#endif
                 }
         }
         }
@@ -3224,6 +3253,10 @@ temp_setup_fail:
 	platform_set_drvdata(pdev, NULL);
 	kfree(di);
 
+#ifdef CONFIG_SMARTQ_S7
+	blocking_notifier_chain_register(&battery_low_noti_chain, &battery_low_notifier);
+#endif
+
 	return ret;
 }
 
@@ -3268,6 +3301,10 @@ static int __devexit twl6030_bci_battery_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 	kfree(di->platform_data);
 	kfree(di);
+
+#ifdef CONFIG_SMARTQ_S7
+	blocking_notifier_chain_unregister(&battery_low_noti_chain, &battery_low_notifier);
+#endif
 
 	return 0;
 }
