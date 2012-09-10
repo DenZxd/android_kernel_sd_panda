@@ -108,7 +108,7 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 			(brightness * (pb->period - pb->lth_brightness) / max);
 		pwm_config(pb->pwm, brightness, pb->period);
 		pwm_enable(pb->pwm);
-#if defined(CONFIG_SMARTQ_S7)
+#if defined(CONFIG_SMARTQ_S7) || defined(CONFIG_SMARTQ_K7)
 		pwm_config(pb->pwm, brightness, pb->period);
 		pwm_enable(pb->pwm);
 #endif

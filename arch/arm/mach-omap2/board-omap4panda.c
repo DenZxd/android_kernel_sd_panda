@@ -842,7 +842,7 @@ static struct i2c_board_info __initdata tps6130x_boardinfo = {
 static void touchscreen_rst(void)
 {
 #if defined(CONFIG_SMARTQ_T15) || defined(CONFIG_SMARTQ_S7) || \
-    defined(CONFIG_SMARTQ_X7)
+    defined(CONFIG_SMARTQ_K7) || defined(CONFIG_SMARTQ_X7)
 	gpio_direction_output(GPIO_TOUCHSCREEN_RST, 1);
 
 	//gpio_set_value(GPIO_TOUCHSCREEN_RST, 1);
