@@ -23,6 +23,14 @@
 
 #include <linux/i2c/bq2416x.h>
 
+#ifdef CONFIG_SMARTQ_S7
+#include <linux/notifier.h>
+#include <linux/delay.h>
+
+static int flag_battery_low = 0;
+static struct backlight_device *global_bl;
+#endif
+
 #if 0//defined(CONFIG_SMARTQ_T20)
 #include "../../../arch/arm/mach-omap2/mux.h"
 #include <linux/gpio.h>
@@ -93,6 +101,9 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 			omap_mux_set_gpio(OMAP_MUX_MODE1, GPIO_BL_PWM);
 		}
 #endif
+#ifdef CONFIG_SMARTQ_S7
+		brightness -= (((flag_battery_low * 3) * brightness)/ (max * 2) );
+#endif
 		brightness = pb->lth_brightness +
 			(brightness * (pb->period - pb->lth_brightness) / max);
 		pwm_config(pb->pwm, brightness, pb->period);
@@ -107,6 +118,41 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 	}
 	return 0;
 }
+
+#ifdef CONFIG_SMARTQ_S7
+int battery_low_handler(struct notifier_block *self, unsigned long val, void *data)
+{
+	unsigned int *pData = (unsigned int *)data;
+	unsigned int i = 0;
+	unsigned int last_battery_low = 0;
+	if (*pData)
+	{
+		i = (*pData % 100);
+		last_battery_low = flag_battery_low;
+		for (flag_battery_low = last_battery_low; flag_battery_low <= i; flag_battery_low += ((abs(i - last_battery_low) / 20) + 1))
+		{
+			backlight_update_status(global_bl);
+			msleep_interruptible(200);
+		}
+		flag_battery_low = i;
+		backlight_update_status(global_bl);
+	}
+	else
+	{
+		i = flag_battery_low;
+		for (; flag_battery_low >= 0; flag_battery_low -= ((i / 20) + 1))
+		{
+			backlight_update_status(global_bl);
+			msleep_interruptible(200);
+		}
+		flag_battery_low = 0;
+		backlight_update_status(global_bl);
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(battery_low_handler);
+#endif
 
 static int pwm_backlight_get_brightness(struct backlight_device *bl)
 {
@@ -184,6 +230,11 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	backlight_update_status(bl);
 
 	platform_set_drvdata(pdev, bl);
+
+#ifdef CONFIG_SMARTQ_S7
+	global_bl = bl;
+#endif
+
 	return 0;
 
 err_bl:
