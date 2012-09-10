@@ -132,7 +132,11 @@ static const u16 twl6030_gain[TWL6030_GPADC_MAX_CHANNELS] = {
 	15,	/* CHANNEL 2 */
 
 	10,	/* CHANNEL 3 */
+#ifdef CONFIG_VENDOR_HHTECH
+	8,	/* CHANNEL 4 */
+#else
 	10,	/* CHANNEL 4 */
+#endif
 	10,	/* CHANNEL 5 */
 	10,	/* CHANNEL 6 */
 
@@ -520,8 +524,12 @@ static int twl6030_gpadc_read_channels(struct twl6030_gpadc_data *gpadc,
 				req->buf[i].code = corrected_code =
 					(raw_code * SCALE - offset_error) /
 						gain_error;
+#ifdef CONFIG_VENDOR_HHTECH
+				req->rbuf[i] = (corrected_code * 1101647) >> 18;
+#else
 				req->rbuf[i] = (corrected_code * twl6030_gain[i]
 								* 1000) >> 13;
+#endif
 			}
 			dev_dbg(gpadc->dev, "GPADC val: %d", req->rbuf[i]);
 		}
