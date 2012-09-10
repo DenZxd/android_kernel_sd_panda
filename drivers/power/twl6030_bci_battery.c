@@ -31,6 +31,9 @@
 
 #ifdef CONFIG_VENDOR_HHTECH
 #include "bat_table.h"
+#if defined(CONFIG_SMARTQ_S7) || defined(CONFIG_SMARTQ_K7)
+#define USE_USB_CHARGER
+#endif
 #endif
 
 #define CONTROLLER_INT_MASK	0x00
@@ -652,7 +655,9 @@ static void twl6030_stop_usb_charger(struct twl6030_bci_device_info *di)
 	di->charger_source = 0;
 	di->charge_status = POWER_SUPPLY_STATUS_DISCHARGING;
 
+#ifndef CONFIG_VENDOR_HHTECH
 	ret = twl_i2c_write_u8(TWL6030_MODULE_CHARGER, 0, CONTROLLER_CTRL1);
+#endif
 
 err:
 	if (ret)
@@ -664,6 +669,10 @@ static void twl6030_start_usb_charger_sw(struct twl6030_bci_device_info *di)
 	int ret;
 	u8 reg = 0;
 	u8 reg_int_mask = 0;
+
+#ifdef CONFIG_VENDOR_HHTECH
+	return; // XXX : fix usb charger
+#endif
 
 	if (!is_battery_present(di)) {
 		dev_dbg(di->dev, "BATTERY NOT DETECTED!\n");
@@ -942,7 +951,7 @@ static irqreturn_t twl6030charger_ctrl_interrupt(int irq, void *_di)
 
 	charge_state = di->stat1;
 
-#ifdef CONFIG_VENDOR_HHTECH
+#ifndef USE_USB_CHARGER
 	present_charge_state &= ~VBUS_DET;
 #endif
 
@@ -1760,7 +1769,8 @@ static int capacity_changed(struct twl6030_bci_device_info *di)
                 }
 
                 if (di->charge_status == POWER_SUPPLY_STATUS_CHARGING) {
-                        if (bat_table[i].level >= di->capacity) {
+                        if ((bat_table[i].level >= di->capacity) ||
+                                    (charger_source == POWER_SUPPLY_TYPE_USB)) {
                                 curr_capacity = bat_table[i].level;
                                 battery_capacity_pos = i;
                         }
@@ -2808,11 +2818,13 @@ static int __devinit twl6030_bci_battery_probe(struct platform_device *pdev)
 	di->bat.properties = twl6030_bci_battery_props;
 	di->bat.num_properties = ARRAY_SIZE(twl6030_bci_battery_props);
 	di->bat.get_property = twl6030_bci_battery_get_property;
+#ifndef CONFIG_VENDOR_HHTECH
 	di->bat.external_power_changed =
 			twl6030_bci_battery_external_power_changed;
+#endif
 	di->bat_health = POWER_SUPPLY_HEALTH_GOOD;
 
-#ifndef CONFIG_VENDOR_HHTECH
+#ifdef USE_USB_CHARGER
 	di->usb.name = "twl6030_usb";
 	di->usb.type = POWER_SUPPLY_TYPE_USB;
 	di->usb.properties = twl6030_usb_props;
@@ -2930,7 +2942,7 @@ static int __devinit twl6030_bci_battery_probe(struct platform_device *pdev)
 		goto batt_failed;
 	}
 
-#ifndef CONFIG_VENDOR_HHTECH
+#ifdef USE_USB_CHARGER
 	ret = power_supply_register(&pdev->dev, &di->usb);
 	if (ret) {
 		dev_dbg(&pdev->dev, "failed to register usb power supply\n");
@@ -2979,7 +2991,9 @@ static int __devinit twl6030_bci_battery_probe(struct platform_device *pdev)
 						CONTROLLER_INT_MASK);
 	if (ret)
 		goto bk_batt_failed;
+#endif
 
+#ifndef CONFIG_VENDOR_HHTECH
 	ret = twl_i2c_write_u8(TWL6030_MODULE_CHARGER, MASK_MCHARGERUSB_THMREG,
 						CHARGERUSB_INT_MASK);
 	if (ret)
@@ -2992,14 +3006,14 @@ static int __devinit twl6030_bci_battery_probe(struct platform_device *pdev)
 		goto bk_batt_failed;
 
 	di->stat1 = controller_stat;
-#ifdef CONFIG_VENDOR_HHTECH
+#ifndef USE_USB_CHARGER
 	di->stat1 &= ~VBUS_DET;
 #endif
 	di->charger_outcurrentmA = di->platform_data->max_charger_currentmA;
 
 	twl6030_set_watchdog(di, 32);
 
-#ifndef CONFIG_VENDOR_HHTECH
+#ifdef USE_USB_CHARGER
 	INIT_WORK(&di->usb_work, twl6030_usb_charger_work);
 	di->nb.notifier_call = twl6030_usb_notifier_call;
 	di->otg = otg_get_transceiver();
@@ -3049,7 +3063,7 @@ static int __devinit twl6030_bci_battery_probe(struct platform_device *pdev)
 		if (controller_stat & VAC_DET) {
 			di->ac_online = POWER_SUPPLY_TYPE_MAINS;
 			twl6030_start_ac_charger(di);
-#ifndef CONFIG_VENDOR_HHTECH
+#ifdef USE_USB_CHARGER
 		} else if (controller_stat & VBUS_DET) {
 			/*
 			 * In HOST mode (ID GROUND) with a device connected,
@@ -3122,7 +3136,7 @@ bk_batt_failed:
 	cancel_delayed_work(&di->twl6030_bci_monitor_work);
 	power_supply_unregister(&di->ac);
 ac_failed:
-#ifndef CONFIG_VENDOR_HHTECH
+#ifdef USE_USB_CHARGER
 	power_supply_unregister(&di->usb);
 #endif
 usb_failed:
@@ -3172,7 +3186,7 @@ static int __devexit twl6030_bci_battery_remove(struct platform_device *pdev)
 #endif
 	flush_scheduled_work();
 	power_supply_unregister(&di->bat);
-#ifndef CONFIG_VENDOR_HHTECH
+#ifdef USE_USB_CHARGER
 	power_supply_unregister(&di->usb);
 #endif
 	power_supply_unregister(&di->ac);
@@ -3209,7 +3223,9 @@ static int twl6030_bci_battery_suspend(struct device *dev)
 		goto err;
 
 	cancel_delayed_work_sync(&di->twl6030_bci_monitor_work);
+#ifndef CONFIG_VENDOR_HHTECH
 	cancel_delayed_work_sync(&di->twl6030_current_avg_work);
+#endif
 
 	/* We cannot tolarate a sleep longer than 30 seconds
 	 * while on ac charging we have to reset the BQ watchdog timer.
