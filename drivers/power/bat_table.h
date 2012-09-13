@@ -6,7 +6,7 @@
 #ifndef _BAT_TABLE_
 #define _BAT_TABLE_
 
-#define BATTERY_ARROW_NUM  10
+#define BATTERY_ARROW_NUM  6
 
 static unsigned bat_matrix[BATTERY_ARROW_NUM] = {0};
 static int bat_count = 0;

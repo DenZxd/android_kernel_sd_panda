@@ -33,6 +33,13 @@
 #include "bat_table.h"
 #if defined(CONFIG_SMARTQ_S7) || defined(CONFIG_SMARTQ_K7)
 #define USE_USB_CHARGER
+#define SUSPEND_POWER 10    //mA
+#define CAP_FULL      3600  //mAH
+#endif
+#ifdef CONFIG_TWL6030_BCI_BATTERY
+static struct timespec suspend_time;
+#else
+static struct timeval suspend_time;
 #endif
 #endif
 
@@ -1660,6 +1667,7 @@ static int twl6030_usb_autogate_charger(struct twl6030_bci_device_info *di)
 }
 
 #ifdef CONFIG_VENDOR_HHTECH
+#define ABS(x,y)    (x) > (y) ? ((x)-(y)) : ((y)-(x))
 static int is_charger_full()
 {
 #if defined(CONFIG_SMARTQ_S7) || defined(CONFIG_SMARTQ_K7)
@@ -1755,6 +1763,14 @@ static int capacity_changed(struct twl6030_bci_device_info *di)
                         (bat_table[i+1].bat > value))
                 break;
         }
+
+        if (is_charger_full()) i = 100;
+        else if (100 == i) i = 99;
+
+        if ((i >= 90) || (i <= 10) || ((ABS(battery_capacity_pos, i) > 10)))
+                di->monitoring_interval = 5;
+        else
+                di->monitoring_interval = 10;
 
         dev_dbg(di->dev, "voltage=%dmV, i=%d, pos=%d, level=%d, resume=%d\n", value, i,
                     battery_capacity_pos, bat_table[i].level, b_from_resume);
@@ -1864,10 +1880,8 @@ static int capacity_changed(struct twl6030_bci_device_info *di)
 	return 0;
 #else
         di->capacity = curr_capacity;
-        if (is_charger_full()) {
+        if (100 == curr_capacity)
                 di->charge_status = POWER_SUPPLY_STATUS_FULL;
-                di->capacity = 100;
-        }
 
         return 1;
 #endif
@@ -2667,6 +2681,45 @@ static ssize_t set_vbus_charge_thres(struct device *dev,
 	return status;
 }
 
+static ssize_t set_last_capacity(struct device *dev,
+          struct device_attribute *attr, const char *buf, size_t count)
+{
+        long val;
+        int status = count;
+        int i = 0;
+        struct twl6030_bci_device_info *di = dev_get_drvdata(dev);
+
+        if ((strict_strtol(buf, 10, &val) < 0) || (val < 0) || (val > 100))
+                return -EINVAL;
+
+        if (0 == val) {
+            battery_capacity_pos = 1;
+            di->capacity = 1;
+        } else {
+            battery_capacity_pos = val;
+            di->capacity = val;
+        }
+
+        bat_count = 0;
+        for (i=0; i<=(BATTERY_ARROW_NUM-1); i++)
+                bat_matrix[i] = 0;
+
+        power_supply_changed(&di->bat);
+        power_supply_changed(&di->ac);
+
+        return status;
+}
+
+static ssize_t show_last_capacity(struct device *dev,
+                                  struct device_attribute *attr, char *buf)
+{
+        unsigned int val;
+        struct twl6030_bci_device_info *di = dev_get_drvdata(dev);
+
+        val = battery_capacity_pos;
+        return sprintf(buf, "%u\n", val);
+}
+
 static DEVICE_ATTR(fg_mode, S_IWUSR | S_IRUGO, show_fg_mode, set_fg_mode);
 static DEVICE_ATTR(charge_src, S_IWUSR | S_IRUGO, show_charge_src,
 		set_charge_src);
@@ -2700,6 +2753,7 @@ static DEVICE_ATTR(status_int1, S_IRUGO, show_status_int1, NULL);
 static DEVICE_ATTR(status_int2, S_IRUGO, show_status_int2, NULL);
 static DEVICE_ATTR(vbus_charge_thres, S_IWUSR | S_IRUGO,
 		show_vbus_charge_thres, set_vbus_charge_thres);
+static DEVICE_ATTR(last_capacity, S_IWUSR | S_IRUGO, show_last_capacity, set_last_capacity);
 
 static struct attribute *twl6030_bci_attributes[] = {
 	&dev_attr_fg_mode.attr,
@@ -2726,6 +2780,7 @@ static struct attribute *twl6030_bci_attributes[] = {
 	&dev_attr_status_int2.attr,
 	&dev_attr_wakelock_enable.attr,
 	&dev_attr_vbus_charge_thres.attr,
+        &dev_attr_last_capacity.attr,
 	NULL,
 };
 
@@ -3257,6 +3312,13 @@ static int twl6030_bci_battery_suspend(struct device *dev)
 	}
 #endif
 
+#ifdef CONFIG_VENDOR_HHTECH
+#ifdef CONFIG_TWL6030_BCI_BATTERY
+        read_persistent_clock(&suspend_time);
+#else
+        do_gettimeofday(&suspend_time);
+#endif
+#endif
 	return 0;
 err:
 	pr_err("%s: Error access to TWL6030 (%d)\n", __func__, ret);
@@ -3270,6 +3332,21 @@ static int twl6030_bci_battery_resume(struct device *dev)
 	long int events;
 	u8 rd_reg = 0;
 	int ret;
+
+#ifdef CONFIG_VENDOR_HHTECH
+#ifdef CONFIG_TWL6030_BCI_BATTERY
+        struct timespec after;
+
+        read_persistent_clock(&after);
+        after = timespec_sub(after, suspend_time);
+#else
+        struct timeval after;
+        __kernel_time_t interval_sec;
+
+        do_gettimeofday(&after);
+        interval_sec = after.tv_sec - suspend_time.tv_sec;
+#endif
+#endif
 
 #ifndef CONFIG_VENDOR_HHTECH
 	ret = twl6030battery_temp_setup(true);
@@ -3306,8 +3383,21 @@ static int twl6030_bci_battery_resume(struct device *dev)
 
 #else
         int i = 0;
-        battery_capacity_pos = -1;
-        b_from_resume = 1;
+#ifdef CONFIG_TWL6030_BCI_BATTERY
+        battery_capacity_pos -= (SUSPEND_POWER * after.tv_sec / (36 * CAP_FULL));
+#else
+        battery_capacity_pos -= (SUSPEND_POWER * interval_sec / (36 * CAP_FULL));
+#endif
+        if (battery_capacity_pos < 0) battery_capacity_pos = 0;
+		di->capacity = battery_capacity_pos;
+		power_supply_changed(&di->bat);
+		power_supply_changed(&di->ac);
+#ifdef CONFIG_TWL6030_BCI_BATTERY
+        pr_info("suspend %dsec, now cap=%d%\n", after.tv_sec, battery_capacity_pos);
+#else
+        pr_info("suspend %dsec, now cap=%d%\n", interval_sec, battery_capacity_pos);
+#endif
+        //b_from_resume = 1;
         bat_count = 0;
         for(i=0; i<=(BATTERY_ARROW_NUM-1); i++) bat_matrix[i] = 0;
 #endif
