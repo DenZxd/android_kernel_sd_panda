@@ -38,12 +38,17 @@
 
 #ifdef CONFIG_SMARTQ_Q8
 #define UCAP	48
-#define RETE    9
+#define RETE    0
+#endif
+
+#ifdef CONFIG_SMARTQ_U7
+#define UCAP	48
+#define RETE    18
 #endif
 
 #ifndef UCAP
 #define UCAP    68
-#define RETE   9
+#define RETE	9
 #endif
 
 /*-------------------------------------------------------------------------*/
@@ -59,23 +64,23 @@ EXPORT_SYMBOL(batt_info);
 static int FullCount = 0;
 
 struct OZ8806_data {
-	struct i2c_client	*myclient;
-	struct mutex		update_lock;
+	struct i2c_client *myclient;
+	struct mutex update_lock;
+	unsigned long last_updated;
 
-	u32					valid;
-	unsigned long		last_updated;
-	u8					control;
-	u16					aout16;
+	u32 valid;
+	u8 control;
+	u16 aout16;
 };
 
 static struct OZ8806_data *the_OZ8806;
 
-int		sECxMAH[4]		= {0,0,0,0};		//tables of EOC adjustment point
-int		fStateDtm		= 10;				//current below this value, state => idle
-u8		yOZState, yPrevOZState;
-int		iVoltAdjHigh	= 3800;				//mV
-int		iEODLowVolt		= 3500;				//mV, low voltage of battery, base on battery spec
-bool	bHadFullEOD		= false;			//Record EOD process
+int sECxMAH[4]		= {0,0,0,0};		//tables of EOC adjustment point
+int fStateDtm		= 10;				//current below this value, state => idle
+int iVoltAdjHigh	= 3800;				//mV
+int iEODLowVolt		= 3500;				//mV, low voltage of battery, base on battery spec
+bool bHadFullEOD	= false;			//Record EOD process
+u8  yOZState, yPrevOZState;
 
 /*-------------------------------------------------------------------------*/
 
@@ -85,9 +90,9 @@ bool	bHadFullEOD		= false;			//Record EOD process
 #define NPoints		31
 struct RTPoint
 {
-	int			oC;
-	int			Ohm;
-	int			mV;
+	int oC;
+	int Ohm;
+	int mV;
 };
 //value of 1st point depends on HW connection, demo board using 120Kohm+1.8V, oC can be any value
 struct RTPoint			RTtable[NPoints] = {
@@ -107,8 +112,8 @@ struct RTPoint			RTtable[NPoints] = {
 #define	OCVNPoints	21
 struct SOCVPoint
 {
-	int			iVoltage;
-	int			iRSOC;				//this value save in xx%, really value * 100
+	int iVoltage;
+	int iRSOC;				//this value save in xx%, really value * 100
 };
 
 //To Customer: OCVtable[] is used when OS goes into Suspend and OZ8806 ever did SleepOCV detection
@@ -122,12 +127,21 @@ struct SOCVPoint	OCVtable[OCVNPoints] = {
 				{4160, 100}
 #endif
 
-#ifdef CONFIG_SMARTQ_Q8
+#ifdef	CONFIG_SMARTQ_Q8
 				{3000, 00},	{3542, 05},	{3568, 10},	{3580, 15},	{3593, 20},
 				{3605, 25},	{3617, 30},	{3630, 35},	{3647, 40},	{3677, 45},
 				{3704, 50},	{3732, 55},	{3763, 60},	{3799, 65},	{3839, 70},
 				{3885, 75},	{3931, 80},	{3981, 85},	{4030, 90},	{4110, 95},
 				{4160, 100}
+
+#endif
+
+#ifdef CONFIG_SMARTQ_U7
+				{3000, 00},	{3200, 05},	{3300, 10},	{3378, 15},	{3438, 20},
+				{3496, 25},	{3546, 30},	{3571, 35},	{3588, 40},	{3603, 45},
+				{3618, 50},	{3638, 55},	{3669, 60},	{3707, 65},	{3748, 70},
+				{3794, 75},	{3846, 80},	{3904, 85},	{3967, 90},	{4033, 95},
+				{4112, 100}
 
 #endif
 
@@ -169,17 +183,17 @@ struct SOCVPoint	PoOntable[OCVNPoints] = {
 #define XAxis		25
 
 // RC table X Axis value
-int				XAxisElement[XAxis] = { 3000, 3070, 3145, 3205, 3240, 3275, 3305, 3335,
-										3360, 3385, 3410, 3435, 3460, 3485, 3510, 3530,
-										3555, 3580, 3605, 3625, 3645, 3670, 3700, 3735,
-										3775};	//mV
+int XAxisElement[XAxis] = { 3000, 3070, 3145, 3205, 3240, 3275, 3305, 3335,
+			    3360, 3385, 3410, 3435, 3460, 3485, 3510, 3530,
+			    3555, 3580, 3605, 3625, 3645, 3670, 3700, 3735,
+			    3775};	//mV
 // RC table Y Axis value
-int				YAxisElement[YAxis] = {  1000, 2000, 3000};	//10000C (1C=DesignCapacity)
+int YAxisElement[YAxis] = {  1000, 2000, 3000};	//10000C (1C=DesignCapacity)
 // RC table Z Axis value, in 10*'C format
-int			ZAxisElement[ZAxis] = { -75, -25,  50, 150, 250, 350, 450, 550};
+int ZAxisElement[ZAxis] = { -75, -25,  50, 150, 250, 350, 450, 550};
 
 // contents of RC table, its unit is 10000C, 1C = DesignCapacity
-int				RCtable[YAxis*ZAxis][XAxis]={
+int RCtable[YAxis*ZAxis][XAxis]={
 {3696,3804,3976,4154,4281,4433,4593,4801,5005,5235,5511,5827,6177,6565,6948,7208,7454,7623,7724,7791,7873,7992,8143,8293,8415},		//-7.5'C
 {4230,4423,4728,4979,5166,5411,5660,5937,6203,6495,6813,7145,7441,7663,7813,7893,7970,8066,8199,8322,8453,8620,8816,9024,9211},
 {4198,4368,4729,5217,5600,6037,6456,6899,7274,7611,7871,8051,8161,8241,8331,8427,8579,8754,8941,9094,9292,9542,9784,9983,10000},
@@ -208,8 +222,8 @@ int				RCtable[YAxis*ZAxis][XAxis]={
 
 static void OZ8806_TemperatureInit(void)
 {
-	int				i;
-	struct RTPoint			*pRTPoint;
+	int i;
+	struct RTPoint *pRTPoint;
 
 	for (i=1;i<NPoints;i++)
 	{
@@ -221,8 +235,8 @@ static void OZ8806_TemperatureInit(void)
 
 int OZ8806_TemperaturemV2oC(int mVvalue)
 {
-	int		i,j;
-	int	res;
+	int i,j;
+	int res;
 
 	for (j=0;j<NPoints;j++)
 	{
@@ -325,8 +339,8 @@ static int OZ8806_PowerOnVoltToRC(void)
 
 static u8 OZ8806_control_register(struct i2c_client *client, int op, u8 indata)
 {
-	struct		OZ8806_data *data = i2c_get_clientdata(client);
-	u8			bRet = 0;
+	struct OZ8806_data *data = i2c_get_clientdata(client);
+	u8 bRet = 0;
 
 	data->control	= ControlStatus;
 	data->aout16	= indata;
@@ -346,7 +360,7 @@ static u8 OZ8806_control_register(struct i2c_client *client, int op, u8 indata)
 
 static void OZ8806_sleep_control(struct i2c_client *client, int sleepEn, int sleepOCV)
 {
-	u8			data8;
+	u8 data8;
 	data8= 0x05;
 	if(sleepEn != 0)
 	{
@@ -366,8 +380,8 @@ static void OZ8806_sleep_control(struct i2c_client *client, int sleepEn, int sle
 
 static void OZ8806_CAR_Write(struct i2c_client *client)
 {
-	int			tmpVl;
-	struct		OZ8806_data *data = i2c_get_clientdata(client);
+	int tmpVl;
+	struct OZ8806_data *data = i2c_get_clientdata(client);
 
 	tmpVl = (((batt_info.fRC)*batt_info.fRsense)/batt_info.dbCARLSB);		//transfer to CAR
 
@@ -667,8 +681,8 @@ void OZ8806_EOCXSet(void)
 
 void OZ8806_EOCBlend(void)
 {
-	int		l=0,h=3;
-	int		fTemp;
+	int l=0,h=3;
+	int fTemp;
 
 	while(l<=3)
 	{
@@ -768,9 +782,9 @@ int OZ8806_c10k2mah(int capIn10kC)
 
 bool OZ8806_LookUpRCTable(int infTemp, int infCurr, int infVolt, int *infCal)
 {
-	bool	bRet = true;
-	int		indexX, indexY, indexZ;
-	long	fRCtemp1, fRCtemp2, fRCInter1, fRCInter2, flongCal;
+	bool bRet = true;
+	int indexX, indexY, indexZ;
+	long fRCtemp1, fRCtemp2, fRCInter1, fRCInter2, flongCal;
 
 	for(indexX=1;indexX<XAxis;indexX++)
 	{
@@ -1115,8 +1129,8 @@ static int OZ8806_suspend(struct device *dev)
 static int OZ8806_resume(struct device *dev)
 {
 	struct OZ8806_data *data = the_OZ8806;
-	u16			ADCValue;
-	int				tmpfRSOC;
+	u16 ADCValue;
+	int tmpfRSOC;
 
 	mutex_lock(&data->update_lock);
 	data->control = CellOCVLow;
@@ -1254,18 +1268,18 @@ static struct i2c_driver OZ8806_driver = {
 	.driver = {
 		.name	= MYDRIVER,
 #ifdef CONFIG_PM
-		.pm		= &oz8806_pm_ops,
+		.pm	= &oz8806_pm_ops,
 #endif
 		.owner  = THIS_MODULE,
 	},
-	.probe			= OZ8806_probe,
-	.remove			= OZ8806_remove,
-	.id_table		= OZ8806_id,
-	.shutdown		= OZ8806_shutdown,
+	.probe		= OZ8806_probe,
+	.remove		= OZ8806_remove,
+	.id_table	= OZ8806_id,
+	.shutdown	= OZ8806_shutdown,
 
 	//auto-detection function
-	.class			= I2C_CLASS_HWMON,			// Nearest choice
-	.detect			= OZ8806_detect,
+	.class		= I2C_CLASS_HWMON,			// Nearest choice
+	.detect		= OZ8806_detect,
 };
 
 /*-------------------------------------------------------------------------*/
