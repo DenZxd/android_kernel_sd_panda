@@ -182,11 +182,6 @@ void alarm_start_range(struct alarm *alarm, ktime_t start, ktime_t end)
 	spin_unlock_irqrestore(&alarm_slock, flags);
 }
 
-void alarm_disable_irq(void)
-{
-	rtc_alarm_disable(alarm_rtc_dev);
-}
-
 /**
  * alarm_try_to_cancel - try to deactivate an alarm
  * @alarm:	alarm to stop
@@ -245,7 +240,7 @@ int alarm_cancel(struct alarm *alarm)
 	}
 }
 
-void alarm_set_alarm(void)
+void alarm_set_alarm(struct timespec new_alarm_time)
 {
 	struct rtc_wkalrm   rtc_alarm;
 	struct rtc_time     rtc_current_rtc_time;
@@ -281,6 +276,15 @@ void alarm_set_alarm(void)
 
 		rtc_set_alarm(alarm_rtc_dev, &rtc_alarm);
 	}
+
+	if (new_alarm_time.tv_sec ==  0 &&
+		new_alarm_time.tv_nsec ==  0) {
+	    memset(&rtc_alarm, 0, sizeof(rtc_alarm));
+	    rtc_alarm.enabled = 0;
+	    rtc_set_alarm(alarm_rtc_dev, &rtc_alarm);
+	    rtc_alarm_disable(alarm_rtc_dev);
+	}
+
 }
 
 /**
@@ -427,6 +431,9 @@ static int alarm_suspend(struct platform_device *pdev, pm_message_t state)
 	struct timespec     wall_time;
 	struct alarm_queue *wakeup_queue = NULL;
 	struct alarm_queue *tmp_queue = NULL;
+	unsigned long       custom_rtc_alarm_time;
+	struct alarm_queue *custom_wakeup_queue = NULL;
+	struct alarm_queue *custom_tmp_queue = NULL;
 
 	pr_alarm(SUSPEND, "alarm_suspend(%p, %d)\n", pdev, state.event);
 
@@ -443,6 +450,16 @@ static int alarm_suspend(struct platform_device *pdev, pm_message_t state)
 	tmp_queue = &alarms[ANDROID_ALARM_RTC_OPEN];
 	if (tmp_queue->first)
 		wakeup_queue = tmp_queue;
+
+	custom_tmp_queue = &alarms[ANDROID_ALARM_RTC_WAKEUP];
+	if (custom_tmp_queue->first)
+		custom_wakeup_queue = custom_tmp_queue;
+	custom_tmp_queue = &alarms[ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP];
+	if (custom_tmp_queue->first && (!custom_wakeup_queue ||
+				hrtimer_get_expires(&custom_tmp_queue->timer).tv64 <
+				hrtimer_get_expires(&custom_wakeup_queue->timer).tv64))
+		custom_wakeup_queue = custom_tmp_queue;
+
 #else
 	tmp_queue = &alarms[ANDROID_ALARM_RTC_WAKEUP];
 	if (tmp_queue->first)
@@ -453,7 +470,7 @@ static int alarm_suspend(struct platform_device *pdev, pm_message_t state)
 				hrtimer_get_expires(&wakeup_queue->timer).tv64))
 		wakeup_queue = tmp_queue;
 #endif
-	if (wakeup_queue) {
+	if (wakeup_queue || custom_wakeup_queue) {
 		rtc_read_time(alarm_rtc_dev, &rtc_current_rtc_time);
 		getnstimeofday(&wall_time);
 		rtc_tm_to_time(&rtc_current_rtc_time, &rtc_current_time);
@@ -461,23 +478,32 @@ static int alarm_suspend(struct platform_device *pdev, pm_message_t state)
 					wall_time.tv_sec - rtc_current_time,
 					wall_time.tv_nsec);
 
-		rtc_alarm_time = timespec_sub(ktime_to_timespec(
-			hrtimer_get_expires(&wakeup_queue->timer)),
-			rtc_delta).tv_sec;
 
-		rtc_time_to_tm(rtc_alarm_time, &rtc_alarm.time);
+		if (custom_wakeup_queue)
+		    custom_rtc_alarm_time = timespec_sub(ktime_to_timespec(
+			    hrtimer_get_expires(&custom_wakeup_queue->timer)),
+			    rtc_delta).tv_sec;
 
-		rtc_alarm_time -= 60;
+		if (wakeup_queue) {
+		    rtc_alarm_time = timespec_sub(ktime_to_timespec(
+			    hrtimer_get_expires(&wakeup_queue->timer)),
+			    rtc_delta).tv_sec;
+		    rtc_time_to_tm(rtc_alarm_time, &rtc_alarm.time);
 
-		rtc_alarm.enabled = 1;
-		rtc_set_alarm(alarm_rtc_dev, &rtc_alarm);
+		    rtc_alarm_time -= 60;
+
+		    rtc_alarm.enabled = 1;
+		    rtc_set_alarm(alarm_rtc_dev, &rtc_alarm);
+		}
 		rtc_read_time(alarm_rtc_dev, &rtc_current_rtc_time);
 		rtc_tm_to_time(&rtc_current_rtc_time, &rtc_current_time);
-		pr_alarm(SUSPEND,
-			"rtc alarm set at %ld, now %ld, rtc delta %ld.%09ld\n",
-			rtc_alarm_time, rtc_current_time,
-			rtc_delta.tv_sec, rtc_delta.tv_nsec);
-		if (rtc_current_time + 1 >= rtc_alarm_time) {
+		if (wakeup_queue)
+		    pr_alarm(SUSPEND,
+			    "rtc alarm set at %ld, now %ld, rtc delta %ld.%09ld\n",
+			    rtc_alarm_time, rtc_current_time,
+			    rtc_delta.tv_sec, rtc_delta.tv_nsec);
+		if ((wakeup_queue && rtc_current_time + 1 >= rtc_alarm_time) ||
+		    (custom_wakeup_queue && rtc_current_time + 1 >= custom_rtc_alarm_time)) {
 			pr_alarm(SUSPEND, "alarm about to go off\n");
 			memset(&rtc_alarm, 0, sizeof(rtc_alarm));
 			rtc_alarm.enabled = 0;

@@ -129,10 +129,7 @@ from_old_alarm_set:
 		spin_unlock_irqrestore(&alarm_slock, flags);
 
 		if (alarm_type == ANDROID_ALARM_RTC_OPEN) {
-			alarm_set_alarm();
-			if ((long)new_alarm_time.tv_sec  < 0 &&
-				  new_alarm_time.tv_nsec < 0)
-				alarm_disable_irq();
+		    alarm_set_alarm(new_alarm_time);
 		}
 
 		if (ANDROID_ALARM_BASE_CMD(cmd) != ANDROID_ALARM_SET_AND_WAIT(0)
