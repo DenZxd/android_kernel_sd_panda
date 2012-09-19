@@ -76,8 +76,7 @@ ktime_t alarm_get_elapsed_realtime(void);
 /* set rtc while preserving elapsed realtime */
 int alarm_set_rtc(const struct timespec ts);
 
-void alarm_set_alarm(void);
-void alarm_disable_irq(void);
+void alarm_set_alarm(struct timespec new_alarm_time);
 void rtc_alarm_disable(struct rtc_device *rtc);
 #endif
 
