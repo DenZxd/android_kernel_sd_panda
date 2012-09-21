@@ -16,6 +16,7 @@
 #include "oz8806.h"
 
 #define TIME_POLL 14
+#define MIN_VOLT 3400
 //----------------------------------------------------------
 
 typedef enum {
@@ -122,7 +123,7 @@ static int hhcn_get_battery_info(void)
 		bi->SuspendFlag = 1;
 		return 1;
 	}
-	if((bi->Voltage <= 3400) && (!bi->Power) && (bi->PollCount == TIME_POLL))
+	if((bi->Voltage <= MIN_VOLT) && (!bi->Power) && (bi->PollCount == TIME_POLL))
 	{
 		if(bi->LowCount >= 3)
 		{
@@ -135,7 +136,7 @@ static int hhcn_get_battery_info(void)
 		else
 			++bi->LowCount;
 	}
-	if((bi->Voltage >= 3400) && (!bi->Power) && (batt_info.fRSOC == 0))
+	if((bi->Voltage >= MIN_VOLT) && (!bi->Power) && (batt_info.fRSOC == 0))
 	{
 		bi->Capacity = 1;
 		bi->PrevPower = bi->Power;
