@@ -136,6 +136,8 @@ static void mma8452_accel_device_sleep(struct mma8452_accel_data *data)
 {
 	char reg_val;
 
+	cancel_delayed_work_sync(&data->wq);
+
 	mma8452_read(data,MMA8452_REG_CTRL,&reg_val,1);
 	reg_val &= ~MMA8452_CTRL_ACTIVE;
 	mma8452_write(data,MMA8452_REG_CTRL,reg_val);
@@ -148,6 +150,8 @@ static void mma8452_accel_device_wakeup(struct mma8452_accel_data *data)
 	mma8452_read(data,MMA8452_REG_CTRL,&reg_val,1);
 	reg_val |= MMA8452_CTRL_ACTIVE;
 	mma8452_write(data,MMA8452_REG_CTRL,reg_val);
+
+	schedule_delayed_work(&data->wq, 0);
 }
 static short mma8452_accel_read_data(struct mma8452_accel_data *data,
 									 short *x, short *y, short *z)
@@ -242,10 +246,8 @@ static ssize_t mma8452_store_attr_enable(struct device *dev,
 
 	if (enable) {
 		mma8452_accel_device_wakeup(data);
-		schedule_delayed_work(&data->wq, 0);
 	} else {
 		mma8452_accel_device_sleep(data);
-		cancel_delayed_work_sync(&data->wq);
 	}
 
 	data->mode = enable;
