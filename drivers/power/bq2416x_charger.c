@@ -79,6 +79,7 @@ struct bq2416x_device_info {
 	bool			enable_iterm;
 	bool			active;
 	bool			lock_flag;
+	bool			suspend_flag;
 };
 
 static struct bq2416x_device_info *pdi;
@@ -436,40 +437,39 @@ static void bq2416x_charger_update_status(struct bq2416x_device_info *di)
 
 void bq2416x_set_charger_current(int mode)
 {
-	if (!pdi)
-		return ;
-	int ret = bq2416x_get_charge_status();
+    if (!pdi || pdi->suspend_flag) {
+	return ;
+    }
 
-	if (mode == SLEEP_MODE)
-		bq2416x_set_reg05_ChgCur(pdi,pdi->standby_current);
-	else
-		bq2416x_set_reg05_ChgCur(pdi,pdi->work_current);
+    if (mode == WORK_MODE && pdi->charger_current != pdi->work_current) {
+	bq2416x_set_reg05_ChgCur(pdi,pdi->work_current);
+	pdi->charger_current = pdi->work_current;
+    } else if (mode == SLEEP_MODE && pdi->charger_current != pdi->standby_current) {
+	bq2416x_set_reg05_ChgCur(pdi, pdi->standby_current);
+	pdi->charger_current = pdi->standby_current;
+    }
 }
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void bq2416x_early_suspend(struct early_suspend *h)
 {
-	int ret;
+    int ret;
 
-	ret = bq2416x_get_charge_status();
-	if(ret != POWER_SUPPLY_STATUS_NOT_CHARGING){
-		pdi->lock_flag = true;
-		wake_lock(&pdi->chrg_lock);
-		pdi->charger_current = pdi->standby_current;
-		bq2416x_set_reg05_ChgCur(pdi,pdi->charger_current);
-
-	}
-	bq2416x_set_charger_current(WORK_MODE);
+    ret = bq2416x_get_charge_status();
+    if (ret != POWER_SUPPLY_STATUS_NOT_CHARGING) {
+	pdi->lock_flag = true;
+	wake_lock(&pdi->chrg_lock);
+	bq2416x_set_charger_current(SLEEP_MODE);
+    }
 }
 
 static void bq2416x_late_resume(struct early_suspend *h)
 {
-	if(pdi->lock_flag){
-		pdi->lock_flag = false;
-		wake_unlock(&pdi->chrg_lock);
-		pdi->charger_current = pdi->work_current;
-		bq2416x_set_reg05_ChgCur(pdi,pdi->charger_current);
-	}
+    if (pdi->lock_flag) {
+	pdi->lock_flag = false;
+	wake_unlock(&pdi->chrg_lock);
+	bq2416x_set_charger_current(WORK_MODE);
+    }
 }
 #endif
 
@@ -559,6 +559,7 @@ static int __devinit bq2416x_charger_probe(struct i2c_client *client,
 	di->cfg_params = 1;
 	di->enable_iterm = 1;
 	di->lock_flag = false;
+	di->suspend_flag = false;
 	di->active = 1;
 
 	di->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
@@ -570,6 +571,8 @@ static int __devinit bq2416x_charger_probe(struct i2c_client *client,
 
 	INIT_DELAYED_WORK_DEFERRABLE(&di->bq2416x_charger_work,bq2416x_charger_work);
 	schedule_delayed_work(&di->bq2416x_charger_work, 0);
+
+	bq2416x_set_charger_current(WORK_MODE);
 
 	return 0;
 }
@@ -591,13 +594,24 @@ static int __devexit bq2416x_charger_remove(struct i2c_client *client)
 static int bq2416x_suspend(struct device *dev)
 {
 
-	return 0;
+    pdi->suspend_flag = true;
+    cancel_delayed_work_sync(&pdi->bq2416x_charger_work);
+
+    return 0;
 }
 
 static int bq2416x_resume(struct device *dev)
 {
+    int ret = bq2416x_get_charge_status();
+    if (ret != POWER_SUPPLY_STATUS_NOT_CHARGING && !pdi->lock_flag) {
+	pdi->lock_flag = true;
+	wake_lock(&pdi->chrg_lock);
+    }
 
-	return 0;
+    pdi->suspend_flag = false;
+    schedule_delayed_work(&pdi->bq2416x_charger_work, 0);
+
+    return 0;
 }
 
 static const struct dev_pm_ops bq2416x_pm_ops = {

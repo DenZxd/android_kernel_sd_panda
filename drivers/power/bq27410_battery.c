@@ -654,6 +654,7 @@ static void bq27410_powersupply_unregister(struct bq27410_device_info *di)
 
 static int bq27410_suspend(struct device *dev)
 {
+	cancel_delayed_work_sync(&di->work);
 	return 0;
 }
 
