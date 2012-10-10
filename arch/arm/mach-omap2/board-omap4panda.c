@@ -1469,12 +1469,46 @@ struct omap_dss_device smartq_lcd_device = {
 	.driver_name		= "generic_dpi_panel",
 #endif
 	.data			= &smartq_lcd_panel,
-#if defined(CONFIG_PANEL_LG_IPS_10) || defined(CONFIG_PANEL_CLAA070WP03)
+#if   defined(CONFIG_PANEL_LG_IPS_10)
 	.phy.dpi.data_lines	= 18,
-#elif defined(CONFIG_PANEL_QM_8) || defined(CONFIG_PANEL_LG_IPS_7)
+	.panel = {
+		.timings = {
+			.x_res = 1024,
+			.y_res =  768,
+		},
+	},
+#elif defined(CONFIG_PANEL_CLAA070WP03)
+	.phy.dpi.data_lines	= 18,
+	.panel = {
+		.timings = {
+			.x_res =  800,
+			.y_res = 1280,
+		},
+	},
+#elif defined(CONFIG_PANEL_QM_8)
 	.phy.dpi.data_lines	= 24,
+	.panel = {
+		.timings = {
+			.x_res = 1024,
+			.y_res =  768,
+		},
+	},
+#elif defined(CONFIG_PANEL_LG_IPS_7)
+	.phy.dpi.data_lines	= 24,
+	.panel = {
+		.timings = {
+			.x_res = 1024,
+			.y_res =  600,
+		},
+	},
 #elif defined(CONFIG_PANEL_HS_HSD101PWW1)
-        .phy.dpi.data_lines     = 18,
+	.phy.dpi.data_lines     = 18,
+	.panel = {
+		.timings = {
+			.x_res = 1280,
+			.y_res =  800,
+		},
+	},
 #endif
 	.reset_gpio		= GPIO_LCD_POWER | (GPIO_LVDS_POWER << 8),
 	.channel		= OMAP_DSS_CHANNEL_LCD2,
@@ -1711,6 +1745,10 @@ static struct omapfb_platform_data panda_fb_pdata = {
 			},
 		},
 	},
+};
+
+static struct dsscomp_platform_data dsscomp_config_hdmi_display = {
+	.tiler1d_slotsz = (SZ_16M + SZ_2M + SZ_8M + SZ_1M),
 };
 
 extern void __init omap4_panda_android_init(void);
