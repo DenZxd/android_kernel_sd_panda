@@ -735,7 +735,11 @@ void __init iotable_init(struct map_desc *io_desc, int nr)
 		create_mapping(io_desc + i);
 }
 
+#ifdef CONFIG_VMSPLIT_2G
+static void * __initdata vmalloc_min = (void *)(VMALLOC_END - SZ_128M - SZ_64M);
+#else
 static void * __initdata vmalloc_min = (void *)(VMALLOC_END - SZ_128M);
+#endif
 
 /*
  * vmalloc=size forces the vmalloc area to be exactly 'size'
