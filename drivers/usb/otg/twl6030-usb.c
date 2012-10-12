@@ -391,6 +391,14 @@ static irqreturn_t twl6030_usbotg_irq(int irq, void *_twl)
 			}
 		}
 	} else  {
+
+		struct device *dev;
+		struct twl4030_usb_data *pdata;
+
+		dev  = twl->dev;
+		pdata = dev->platform_data;
+		pdata->phy_power(twl->dev, 0, 0);
+
 		/*
 		 * NOTE:
 		 * This is workaround for the TWL6032 thats missed VBUS
