@@ -646,8 +646,6 @@ struct twl4030_bci_platform_data {
 	unsigned long features;
 
 	unsigned long errata;
-
-	struct cell_config *cell_cfg;
 };
 
 /* TWL4030_GPIO_MAX (18) GPIOs, with interrupts */
