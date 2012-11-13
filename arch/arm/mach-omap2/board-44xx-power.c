@@ -488,8 +488,8 @@ static struct twl4030_codec_audio_data twl6040_audio = {
 	/* single-step ramp for headset and handsfree */
 	.hs_left_step   = 0x0f,
 	.hs_right_step  = 0x0f,
-	.hf_left_step   = 0x1d,
-	.hf_right_step  = 0x1d,
+	.hf_left_step   = 0x1,
+	.hf_right_step  = 0x1,
 	.vddhf_uV	= 4075000,
 };
 
