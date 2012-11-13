@@ -622,6 +622,7 @@ static int twl6040_power(struct twl6040 *twl6040, int enable)
 	int audpwron = twl6040->audpwron;
 	int naudint = twl6040->irq;
 	int ret = 0;
+	u8 ncpctl;
 
 	if (enable) {
 		/* enable 32kHz external clock */
@@ -646,6 +647,16 @@ static int twl6040_power(struct twl6040 *twl6040, int enable)
 					"automatic power-up failed\n");
 				return ret;
 			}
+			ncpctl = twl6040_reg_read(twl6040, TWL6040_REG_NCPCTL);
+			/* enable negative charge pump */
+			ncpctl |= TWL6040_NCPENA | TWL6040_NCPOPEN;
+			/*
+			ncpctl |= TWL6040_NCPMODE;
+			ncpctl |= TWL6040_NCPFETCTL;
+			ncpctl |= 7 << TWL6040_NCPFETSIZE_MASK;
+			*/
+			twl6040_reg_write(twl6040, TWL6040_REG_NCPCTL, ncpctl);
+			udelay(488);
 		} else {
 			/* use manual power-up sequence */
 			ret = twl6040_power_up(twl6040);
@@ -673,6 +684,16 @@ static int twl6040_power(struct twl6040 *twl6040, int enable)
 		twl6040->sysclk = 19200000;
 	} else {
 		if (gpio_is_valid(audpwron)) {
+			/* disable negative charge pump */
+			ncpctl = twl6040_reg_read(twl6040, TWL6040_REG_NCPCTL);
+			ncpctl &= ~(TWL6040_NCPENA | TWL6040_NCPOPEN);
+			/*
+			ncpctl &= ~TWL6040_NCPMODE;
+			ncpctl &= ~TWL6040_NCPFETCTL;
+			ncpctl &= ~TWL6040_NCPFETSIZE_MASK;
+			*/
+			twl6040_reg_write(twl6040, TWL6040_REG_NCPCTL, ncpctl);
+			udelay(488);
 			/* use AUDPWRON line */
 			gpio_set_value(audpwron, 0);
 

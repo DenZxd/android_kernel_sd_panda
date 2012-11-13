@@ -736,13 +736,14 @@ static int pga_event(struct snd_soc_dapm_widget *w,
 		out->right_step = priv->hs_right_step;
 		out->step_delay = 5;	/* 5 ms between volume ramp steps */
 		break;
+	case 1:
 	case 4:
 		out = &priv->handsfree;
 		work = &priv->hf_delayed_work;
 		queue = priv->hf_workqueue;
 		out->left_step = priv->hf_left_step;
 		out->right_step = priv->hf_right_step;
-		out->step_delay = 5;	/* 5 ms between volume ramp steps */
+		out->step_delay = 20;	/* 5 ms between volume ramp steps */
 		break;
 	default:
 		return -1;
@@ -880,6 +881,17 @@ static int twl6040_hs_dac_right_event(struct snd_soc_dapm_widget *w,
 static int twl6040_hf_dac_event(struct snd_soc_dapm_widget *w,
 			struct snd_kcontrol *kcontrol, int event)
 {
+	struct snd_soc_codec *codec = w->codec;
+	int hfctl;
+
+	hfctl = twl6040_read_reg_cache(codec, TWL6040_REG_HFLCTL);
+	if (!likely((hfctl & TWL6040_HFDRVENAL)) && (hfctl & TWL6040_HFLPGA_PATH_MASK ))
+	    twl6040_write(codec, TWL6040_REG_HFLCTL, hfctl | TWL6040_HFDRVENAL);
+
+	hfctl = twl6040_read_reg_cache(codec, TWL6040_REG_HFRCTL);
+	if (!likely((hfctl & TWL6040_HFDRVENAR)) && (hfctl & TWL6040_HFRPGA_PATH_MASK ))
+	    twl6040_write(codec, TWL6040_REG_HFRCTL, hfctl | TWL6040_HFDRVENAR);
+
 	/* HFDAC settling time */
 	usleep_range(80, 200);
 
@@ -1397,14 +1409,10 @@ static const struct snd_soc_dapm_widget twl6040_dapm_widgets[] = {
 			SND_SOC_NOPM, 0, 0, &auxl_switch_controls),
 	SND_SOC_DAPM_SWITCH("Aux Right Playback",
 			SND_SOC_NOPM, 0, 0, &auxr_switch_controls),
-	SND_SOC_DAPM_OUT_DRV_E("Handsfree Left Driver",
-			TWL6040_REG_HFLCTL, 4, 0, NULL, 0,
-			pga_event,
-			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
-	SND_SOC_DAPM_OUT_DRV_E("Handsfree Right Driver",
-			TWL6040_REG_HFRCTL, 4, 0, NULL, 0,
-			pga_event,
-			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+	SND_SOC_DAPM_OUT_DRV("Handsfree Left Driver",
+			TWL6040_REG_HFLCTL, 4, 0, NULL, 0),
+	SND_SOC_DAPM_OUT_DRV("Handsfree Right Driver",
+			TWL6040_REG_HFRCTL, 4, 0, NULL, 0),
 	SND_SOC_DAPM_OUT_DRV_E("Headset Left Driver",
 			TWL6040_REG_HSLCTL, 2, 0, NULL, 0,
 			pga_event,
@@ -1430,10 +1438,14 @@ static const struct snd_soc_dapm_widget twl6040_dapm_widgets[] = {
 			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
 
 	/* Analog playback PGAs */
-	SND_SOC_DAPM_PGA("HFDAC Left PGA",
-			TWL6040_REG_HFLCTL, 1, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("HFDAC Right PGA",
-			TWL6040_REG_HFRCTL, 1, 0, NULL, 0),
+	SND_SOC_DAPM_PGA_E("HFDAC Left PGA",
+			TWL6040_REG_HFLCTL, 1, 0, NULL, 0,
+			pga_event,
+			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+	SND_SOC_DAPM_PGA_E("HFDAC Right PGA",
+			TWL6040_REG_HFRCTL, 1, 0, NULL, 0,
+			pga_event,
+			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
 
 };
 
@@ -1486,14 +1498,9 @@ static const struct snd_soc_dapm_route intercon[] = {
 
 	{"Aux Left Playback", "Switch", "HFDAC Left PGA"},
 	{"Aux Right Playback", "Switch", "HFDAC Right PGA"},
-	{"Handsfree Left Driver", "Switch", "HFDAC Left PGA"},
-	{"Handsfree Right Driver", "Switch", "HFDAC Right PGA"},
 
-	{"Handsfree Left Driver", NULL, "Handsfree Left Boost Supply"},
-	{"Handsfree Right Driver", NULL, "Handsfree Right Boost Supply"},
-
-	{"HFL", NULL, "Handsfree Left Driver"},
-	{"HFR", NULL, "Handsfree Right Driver"},
+	{"HFL", "Switch", "HFDAC Left PGA"},
+	{"HFR", "Switch", "HFDAC Right PGA"},
 
 	{"AUXL", NULL, "Aux Left Playback"},
 	{"AUXR", NULL, "Aux Right Playback"},
@@ -1571,11 +1578,6 @@ static int twl6040_set_bias_level(struct snd_soc_codec *codec,
 	case SND_SOC_BIAS_OFF:
 		if (!priv->codec_powered)
 			break;
-
-#ifdef CONFIG_VENDOR_HHTECH	// XXX:
-		twl6040_write(codec, TWL6040_REG_HFLCTL, 0);
-		twl6040_write(codec, TWL6040_REG_HFRCTL, 0);
-#endif
 
 		twl6040_disable(twl6040);
 		priv->codec_powered = 0;
