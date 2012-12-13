@@ -43,6 +43,7 @@ SKey_Info ssd2533_SKeys[]={
 //#define USE_DYNAMIC_THRESHOLD
 
 static int threshold_flag = 0;
+struct i2c_client * i2c_connect_client = NULL;
 
 static int ssd2533_ts_open(struct input_dev *dev);
 static void ssd2533_ts_close(struct input_dev *dev);
@@ -1290,6 +1291,52 @@ static void ssd2533_ts_work(struct work_struct *work)
 }
 #endif
 
+static ssize_t ssd_debug_version_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return 0;
+}
+
+static DEVICE_ATTR(version, S_IRUGO, ssd_debug_version_show, NULL);
+
+static struct attribute *ssd_touch_attrs[] = {
+	&dev_attr_version.attr,
+	NULL
+};
+
+static const struct attribute_group ssd_touch_attr_group = {
+	.attrs = ssd_touch_attrs,
+};
+
+/********************************************************
+Description:
+	ssd debug sysfs init function.
+
+Parameter:
+	none.
+
+return:
+	Executive outcomes. 0---succeed.
+*******************************************************/
+static int ssd_debug_sysfs_init(void)
+{
+	int ret ;
+
+	ret = sysfs_create_group(&i2c_connect_client->dev.kobj, &ssd_touch_attr_group);
+	if (ret)
+	{
+		dev_err(&i2c_connect_client->dev, "%s: sysfs_create_group failed\n", __func__);
+		return ret;
+	}
+
+	return 0 ;
+}
+
+static void ssd_debug_sysfs_deinit(void)
+{
+	sysfs_remove_group(&i2c_connect_client->dev.kobj, &ssd_touch_attr_group);
+}
+
 static int ssd2533_ts_probe(struct i2c_client *client,const struct i2c_device_id *idp)
 {
 	struct ssl_ts_priv *ssl_priv;
@@ -1311,7 +1358,7 @@ static int ssd2533_ts_probe(struct i2c_client *client,const struct i2c_device_id
 	if (pdata->gpio_init) pdata->gpio_init();
 
 
-    ssl_priv->client = client;
+	ssl_priv->client = client;
 	if(ssd2533_deviceInit(ssl_priv)){
 		error=-ENODEV;
 		goto	err1;
@@ -1427,6 +1474,8 @@ static int ssd2533_ts_probe(struct i2c_client *client,const struct i2c_device_id
 	    TP_PROC_FILE->size=37;
     }
 
+	i2c_connect_client = client;
+	ssd_debug_sysfs_init();
 	return 0;
 err3:
 	free_irq(ssl_priv->irq, ssl_priv);
@@ -1508,6 +1557,7 @@ static int ssd2533_ts_remove(struct i2c_client *client)
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	unregister_early_suspend(&ssl_priv->early_suspend);
 #endif
+	ssd_debug_sysfs_deinit();
 	remove_proc_entry(PROCFS_NAME, &proc_root);
 	kfree(ssl_priv);
 	dev_set_drvdata(&client->dev, NULL);

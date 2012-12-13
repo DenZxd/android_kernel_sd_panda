@@ -12,7 +12,10 @@
 #define CFG_NUMOFKEYS                    0x4    //number of touch keys
 
 #define CONFIG_FTS_CUSTOME_ENV
-#if defined(CONFIG_FTS_CUSTOME_ENV)  && !defined(CONFIG_PANEL_CLAA070WP03)
+#ifdef CONFIG_SMARTQ_T15
+#define SCREEN_MAX_X           1024
+#define SCREEN_MAX_Y           768
+#elif defined(CONFIG_FTS_CUSTOME_ENV)  && !defined(CONFIG_PANEL_CLAA070WP03)
 #define SCREEN_MAX_X           1024
 #define SCREEN_MAX_Y           600
 #else

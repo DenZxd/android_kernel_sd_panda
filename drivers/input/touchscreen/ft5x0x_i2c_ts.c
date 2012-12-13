@@ -45,6 +45,8 @@ static void fts_ts_early_suspend(struct early_suspend *h);
 static void fts_ts_late_resume(struct early_suspend *h);
 #endif
 
+#define CONFIG_FT5606	// XXX:
+
 int tsp_keycodes[CFG_NUMOFKEYS] ={
 
         KEY_MENU,
@@ -194,6 +196,9 @@ static void fts_ts_release(void)
 #if defined(CONFIG_SMARTQ_X7)
         input_report_abs(data->input_dev, ABS_MT_POSITION_X, _st_finger_infos[i].i2_y);
         input_report_abs(data->input_dev, ABS_MT_POSITION_Y, 1280 - _st_finger_infos[i].i2_x);
+#elif defined(CONFIG_SMARTQ_T15)
+        input_report_abs(data->input_dev, ABS_MT_POSITION_X, 1023-_st_finger_infos[i].i2_x);
+        input_report_abs(data->input_dev, ABS_MT_POSITION_Y, 767-_st_finger_infos[i].i2_y);
 #else
         input_report_abs(data->input_dev, ABS_MT_POSITION_X, _st_finger_infos[i].i2_x);
         input_report_abs(data->input_dev, ABS_MT_POSITION_Y, _st_finger_infos[i].i2_y);
@@ -582,7 +587,7 @@ int fts_read_data(void)
 					temp = temp<<8;
 					temp = temp | buf[j*6+1];
 					x = temp;
-#if !defined(CONFIG_SMARTQ_X7)
+#if !defined(CONFIG_SMARTQ_X7) && !defined(CONFIG_SMARTQ_T15)
 					if(x >= 300 && x < 800) {
 						x -= 10;
 					} else if(x >= 800 && x <= 1045) {
@@ -617,6 +622,9 @@ int fts_read_data(void)
 #if defined(CONFIG_SMARTQ_X7)
 							input_report_abs(data->input_dev, ABS_MT_POSITION_X, _st_finger_infos[i].i2_y);
 							input_report_abs(data->input_dev, ABS_MT_POSITION_Y, 1280 -_st_finger_infos[i].i2_x);
+#elif defined(CONFIG_SMARTQ_T15)
+							input_report_abs(data->input_dev, ABS_MT_POSITION_X, 1023-_st_finger_infos[i].i2_x);
+							input_report_abs(data->input_dev, ABS_MT_POSITION_Y, 767-_st_finger_infos[i].i2_y);
 #else
 							input_report_abs(data->input_dev, ABS_MT_POSITION_X, _st_finger_infos[i].i2_x);
 							input_report_abs(data->input_dev, ABS_MT_POSITION_Y, _st_finger_infos[i].i2_y);
@@ -808,9 +816,16 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_fw_upgrade(u8* pbt_buf, int dw_lenth)
     }
 
     /********Step 3:check READ-ID********/        
+    mdelay(100);
     cmd_write(0x90,0x00,0x00,0x00,4);
     byte_read(reg_val,2);
+#if define CONFIG_FT5606
+    if (reg_val[0] == 0x79 && reg_val[1] == 0x6)
+#elif defined CONFIG_FT5406
     if (reg_val[0] == 0x79 && reg_val[1] == 0x3)
+#else
+    if (reg_val[0] == 0x79 && reg_val[1] == 0x3)    //XXX
+#endif
     {
         printk("[TSP] Step 3: CTPM ID,ID1 = 0x%x,ID2 = 0x%x\n",reg_val[0],reg_val[1]);
     }
@@ -830,7 +845,7 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_fw_upgrade(u8* pbt_buf, int dw_lenth)
     {
         cmd_write(0x60,0x00,0x00,0x00,1);
     }
-    mdelay(1500);
+    mdelay(2000);
     printk("[TSP] Step 4: erase. \n");
 
 
@@ -945,6 +960,42 @@ unsigned char fts_ctpm_get_upg_ver(void)
 }
 
 #endif
+
+static ssize_t ft_debug_version_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return 0;
+}
+
+static DEVICE_ATTR(version, S_IRUGO, ft_debug_version_show, NULL);
+
+static struct attribute *ft_touch_attrs[] = {
+	&dev_attr_version.attr,
+	NULL
+};
+
+static const struct attribute_group ft_touch_attr_group = {
+	.attrs = ft_touch_attrs,
+};
+
+static int ft_debug_sysfs_init(void)
+{
+	int ret ;
+
+	ret = sysfs_create_group(&this_client->dev.kobj, &ft_touch_attr_group);
+	if (ret)
+	{
+		dev_err(&this_client->dev, "%s: sysfs_create_group failed\n", __func__);
+		return ret;
+	}
+
+	return 0 ;
+}
+
+static void ft_debug_sysfs_deinit(void)
+{
+	sysfs_remove_group(&this_client->dev.kobj, &ft_touch_attr_group);
+}
 
 static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
@@ -1090,6 +1141,7 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	register_early_suspend(&pdata->early_suspend);
 #endif
 
+    ft_debug_sysfs_init();
     printk("[TSP] file(%s), function (%s), line =%d --------------------------------------------- end\n", __FILE__, __func__, __LINE__);
     return 0;
 
@@ -1118,6 +1170,7 @@ static int __devexit fts_ts_remove(struct i2c_client *client)
     ft5x0x_ts = (struct FTS_TS_DATA_T *)i2c_get_clientdata(client);
     free_irq(_sui_irq_num, ft5x0x_ts);
     input_unregister_device(ft5x0x_ts->input_dev);
+    ft_debug_sysfs_deinit();
     kfree(ft5x0x_ts);
     cancel_work_sync(&ft5x0x_ts->pen_event_work);
     destroy_workqueue(ft5x0x_ts->ts_workqueue);
