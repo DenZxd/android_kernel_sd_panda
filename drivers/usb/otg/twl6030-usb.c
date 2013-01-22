@@ -320,6 +320,11 @@ static irqreturn_t twl6030_usb_irq(int irq, void *_twl)
 		atomic_notifier_call_chain(&twl->otg.notifier,
 				status, &charger_type);
 	}
+#ifdef CONFIG_SMARTQ_X7
+	else if ((!vbus_state) &&  (hw_state & STS_USB_ID)) {
+		vbus_state = 0x4;
+	} else
+#endif
 	if (!vbus_state) {
 		status = USB_EVENT_NONE;
 		twl->linkstat = status;

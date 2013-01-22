@@ -401,7 +401,11 @@ static int hhtech_phy_init(struct device *dev)
 	omap_mux_init_gpio(GPIO_USB_POWER, OMAP_PIN_OUTPUT);
 	if (gpio_request(GPIO_USB_POWER, "USB power"))
 		pr_err("Fail to request GPIO %d\n", GPIO_USB_POWER);
+#ifdef CONFIG_SMARTQ_X7
+	else gpio_direction_output(GPIO_USB_POWER, 0);
+#else
 	else gpio_direction_output(GPIO_USB_POWER, 1);
+#endif
 
 	if (0) omap_mux_init_signal("mcspi4_simo.gpio_152",
 		OMAP_PIN_OUTPUT | OMAP_MUX_MODE3); else
@@ -464,7 +468,9 @@ OUT:	    ;
 #endif
 
 	gpio_set_value(GPIO_USB_VBUS, value);
+#ifndef CONFIG_SMARTQ_X7
 	gpio_set_value(GPIO_USB_POWER, !value);
+#endif
 
 	return omap4430_phy_power(dev, ID, on);
 }
