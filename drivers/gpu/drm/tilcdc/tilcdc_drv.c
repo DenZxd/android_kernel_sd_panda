@@ -165,10 +165,12 @@ static int tilcdc_load(struct drm_device *dev, unsigned long flags)
 	struct platform_device *pdev = dev->platformdev;
 	struct device_node *node = pdev->dev.of_node;
 	struct tilcdc_drm_private *priv;
+	struct tilcdc_module *mod;
 	struct resource *res;
 	enum of_gpio_flags ofgpioflags;
 	unsigned long gpioflags;
 	int gpio, ret;
+	u32 bpp = 0;
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
@@ -312,7 +314,15 @@ static int tilcdc_load(struct drm_device *dev, unsigned long flags)
 
 	platform_set_drvdata(pdev, dev);
 
-	priv->fbdev = drm_fbdev_cma_init(dev, 16,
+
+	list_for_each_entry(mod, &module_list, list) {
+		DBG("%s: preferred_bpp: %d", mod->name, mod->preferred_bpp);
+		bpp = mod->preferred_bpp;
+		if (bpp > 0)
+			break;
+	}
+
+	priv->fbdev = drm_fbdev_cma_init(dev, bpp,
 			dev->mode_config.num_crtc,
 			dev->mode_config.num_connector);
 

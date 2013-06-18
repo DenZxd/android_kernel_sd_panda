@@ -469,6 +469,8 @@ static int slave_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	mod->preferred_bpp = slave_mod->info->bpp;
+
 	tilcdc_slave_probedefer(false);
 
 	return 0;
