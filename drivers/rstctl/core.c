@@ -328,6 +328,7 @@ struct rstctl_dev *rstctl_register(struct device *dev,
 
 	return rdev;
 }
+EXPORT_SYMBOL(rstctl_register);
 
 int rstctl_unregister(struct rstctl_dev *rdev)
 {
@@ -357,6 +358,7 @@ out:
 	mutex_unlock(&rstctl_lock);
 	return err;
 }
+EXPORT_SYMBOL(rstctl_unregister);
 
 static int __init rstctl_init(void)
 {

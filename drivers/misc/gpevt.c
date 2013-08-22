@@ -41,6 +41,11 @@ static void gpevt_callback(void *data)
 		dev_info(dev, "*** DMA transfer failed ***\n");
 }
 
+static irqreturn_t gpevt_no_action(int cpl, void *dev_id)
+{
+	return IRQ_NONE;
+}
+
 static int gpevt_probe (struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -83,7 +88,7 @@ static int gpevt_probe (struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = request_irq(gpio_to_irq(gpio_evt), no_action,
+	ret = request_irq(gpio_to_irq(gpio_evt), gpevt_no_action,
 			  IRQ_TYPE_EDGE_FALLING, "gpevt", &pdev->dev);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to request falling edge irq/event\n");
@@ -139,6 +144,7 @@ static int gpevt_remove(struct platform_device *pdev)
 
 static const struct of_device_id gpevt_dt_ids[] = {
 	{ .compatible = "gpevt", .data = (void *) NULL, },
+	{ },
 };
 MODULE_DEVICE_TABLE(of, gpevt_dt_ids);
 

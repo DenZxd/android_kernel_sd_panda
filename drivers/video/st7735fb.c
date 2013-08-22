@@ -423,6 +423,7 @@ MODULE_DEVICE_TABLE(spi, st7735fb_device_id);
 static const struct of_device_id st7735fb_dt_ids[] = {
 	{ .compatible = "adafruit,tft-lcd-1.8-green", .data = (void *) ST7735_AF_TFT18_GREEN, },
 	{ .compatible = "adafruit,tft-lcd-1.8-red", .data = (void *) ST7735_AF_TFT18_RED, },
+	{ },
 };
 MODULE_DEVICE_TABLE(of, st7735fb_dt_ids);
 

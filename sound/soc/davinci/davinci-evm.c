@@ -364,7 +364,7 @@ static const struct of_device_id davinci_evm_dt_ids[] = {
 	},
 	{ /* sentinel */ }
 };
-MODULE_DEVICE_TABLE(of, davinci_mcasp_dt_ids);
+MODULE_DEVICE_TABLE(of, davinci_evm_dt_ids);
 
 /*
  * This struct is just used as place holder. It will be filled with

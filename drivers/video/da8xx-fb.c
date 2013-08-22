@@ -1488,7 +1488,7 @@ static int fb_probe(struct platform_device *device)
 
 	da8xx_fb_lcd_reset();
 
-#ifdef	CONFIG_COMMON_CLK
+#if 0//def	CONFIG_COMMON_CLK	// XXX: mhfan
 	/* set sane divisor value to begin along with the mode */
 	lcdc_write(LCD_RASTER_MODE | LCD_CLK_DIVISOR(LCD_CLK_MIN_DIV),
 		   LCD_CTRL_REG);

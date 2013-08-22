@@ -2805,7 +2805,7 @@ static const struct of_device_id pru_rproc_dt_ids[] = {
 	{ .compatible = "ti,pru-rproc", .data = NULL, },
 	{},
 };
-MODULE_DEVICE_TABLE(of, pruss_dt_ids);
+MODULE_DEVICE_TABLE(of, pru_rproc_dt_ids);
 
 static struct platform_driver pruproc_driver = {
 	.driver	= {

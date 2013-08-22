@@ -57,7 +57,7 @@ static int nxp_hdmi_codec_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver nxp_hdmi_codec_driver = {
+/*static */struct platform_driver nxp_hdmi_codec_driver = {
 	.driver		= {
 		.name	= DRV_NAME,
 		.owner	= THIS_MODULE,
@@ -68,7 +68,7 @@ static struct platform_driver nxp_hdmi_codec_driver = {
 	.remove		= nxp_hdmi_codec_remove,
 };
 
-module_platform_driver(nxp_hdmi_codec_driver);
+//module_platform_driver(nxp_hdmi_codec_driver);
 
 MODULE_AUTHOR("Darren Etheridge <detheridge@ti.com>");
 MODULE_DESCRIPTION("ASoC NXP Dummy HDMI codec driver");

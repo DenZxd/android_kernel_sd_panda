@@ -1132,10 +1132,13 @@ static struct drm_i2c_encoder_driver tda998x_driver = {
 
 /* Module initialization */
 
+extern struct platform_driver nxp_hdmi_codec_driver;
+
 static int __init
 tda998x_init(void)
 {
 	DBG("");
+	platform_driver_register(&nxp_hdmi_codec_driver);
 	return drm_i2c_encoder_register(THIS_MODULE, &tda998x_driver);
 }
 
@@ -1144,6 +1147,7 @@ tda998x_exit(void)
 {
 	DBG("");
 	drm_i2c_encoder_unregister(&tda998x_driver);
+	platform_driver_unregister(&nxp_hdmi_codec_driver);
 }
 
 MODULE_AUTHOR("Rob Clark <robdclark@gmail.com");
