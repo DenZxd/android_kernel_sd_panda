@@ -22,6 +22,7 @@
 #include "common.h"
 #include "common-board-devices.h"
 #include "dss-common.h"
+#include "soc.h"
 
 #if !(defined(CONFIG_ARCH_OMAP2) || defined(CONFIG_ARCH_OMAP3))
 #define intc_of_init	NULL
@@ -50,6 +51,8 @@ static void __init omap_generic_init(void)
 		omap4_panda_display_init_of();
 	else if (of_machine_is_compatible("ti,omap4-sdp"))
 		omap_4430sdp_display_init_of();
+	if (omap3_has_sgx())
+		omap_sgx_init_of();
 }
 
 #ifdef CONFIG_SOC_OMAP2420
