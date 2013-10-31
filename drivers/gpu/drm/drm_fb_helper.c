@@ -653,6 +653,15 @@ int drm_fb_helper_check_var(struct fb_var_screeninfo *var,
 	default:
 		return -EINVAL;
 	}
+
+	if (0) {	// XXX:
+	    depth = var->red.offset;
+	    var->red.offset = var->blue.offset;
+	    var->blue.offset = depth;
+	}
+
+	//var->width = 162, var->height = 122;	// XXX:
+
 	return 0;
 }
 EXPORT_SYMBOL(drm_fb_helper_check_var);

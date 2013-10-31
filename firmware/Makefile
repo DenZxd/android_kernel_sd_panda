@@ -198,6 +198,8 @@ fw-shipped-$(CONFIG_CAPE_BEAGLEBONE) += \
 	cape-bone-replicape-00A2.dtbo \
 	cape-bone-replicape-00A3.dtbo
 
+fw-shipped-$(CONFIG_CAPE_BEAGLEBONE) += BB-LXD-00A0.dtbo
+
 # the geiger cape
 fw-shipped-$(CONFIG_CAPE_BEAGLEBONE_GEIGER) += \
 	cape-bone-geiger-00A0.dtbo

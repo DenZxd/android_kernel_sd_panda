@@ -1,0 +1,300 @@
+/*#!/usr/bin/tcc -run */
+/****************************************************************
+ * $ID: BB-LXD-00A0.dts Wed, 30 Oct 2013 17:59:59 +0800  mhfan $ *
+ *                                                              *
+ * Description:                                                 *
+ *                                                              *
+ * Maintainer:  ·¶Ã;Ô(MeiHui FAN)  <mhfan@ustc.edu>            *
+ *                                                              *
+ * CopyLeft (c)  2013  M.H.Fan                                  *
+ *   All rights reserved.                                       *
+ *                                                              *
+ * This file is free software;                                  *
+ *   you are free to modify and/or redistribute it   	        *
+ *   under the terms of the GNU General Public Licence (GPL).   *
+ ****************************************************************/
+
+/dts-v1/;
+/plugin/;
+
+/*
+    echo BB-LXD > /sys/devices/bone_capemgr* /slots
+
+    capemgr.disable_partno=BB-BONELT-HDMI,BB-BONELT-HDMIN,BB-BONE-EMMC-2G
+    capemgr.enable_partno=BB-LXD,BB-UART1,BB-I2C1,BB-UART2,BB-SPIDEV1
+    #capemgr.extra_override=BB-LXD:00A0
+ */
+
+/ {
+	compatible = "ti,beaglebone", "ti,beaglebone-black";
+
+	/* identification */
+	part-number = "BB-LXD";
+	version = "00A0";
+
+	/* state the resources this cape uses */
+	exclusive-use =
+		/* the pin header uses */
+		"P8.45",	/* lcd: lcd_data0 */
+		"P8.46",	/* lcd: lcd_data1 */
+		"P8.43",	/* lcd: lcd_data2 */
+		"P8.44",	/* lcd: lcd_data3 */
+		"P8.41",	/* lcd: lcd_data4 */
+		"P8.42",	/* lcd: lcd_data5 */
+		"P8.39",	/* lcd: lcd_data6 */
+		"P8.40",	/* lcd: lcd_data7 */
+		"P8.37",	/* lcd: lcd_data8 */
+		"P8.38",	/* lcd: lcd_data9 */
+		"P8.36",	/* lcd: lcd_data10 */
+		"P8.34",	/* lcd: lcd_data11 */
+		"P8.35",	/* lcd: lcd_data12 */
+		"P8.33",	/* lcd: lcd_data13 */
+		"P8.31",	/* lcd: lcd_data14 */
+		"P8.32",	/* lcd: lcd_data15 */
+
+		"P8.27",	/* lcd: lcd_vsync */
+		"P8.29",	/* lcd: lcd_hsync */
+		"P8.28",	/* lcd: lcd_pclk */
+		"P8.30",	/* lcd: lcd_ac_bias_en */
+
+		"P8.15",	/* lcd: lcd_data16 */
+		"P8.16",	/* lcd: lcd_data17 */
+		"P8.11",	/* lcd: lcd_data18 */
+		"P8.12",	/* lcd: lcd_data19 */
+		"P8.17",	/* lcd: lcd_data20 */
+		"P8.14",	/* lcd: lcd_data21 */
+		"P8.13",	/* lcd: lcd_data22 */
+		"P8.19",	/* lcd: lcd_data23 */
+
+		"P8.7",		/* lvds/pdwn: gpio2_2 */
+		"P8.8",		/* lcd/vdd: gpio2_3 */
+		"P9.16",	/* pwm: ehrpwm1b */
+		"P9.33",	/* AIN4 */
+
+		"P9.42",	/*   auto: gpio0_7 */
+		"P9.20",	/* status: gpio0_12 */
+		"P9.19",	/*  close: gpio0_13 */
+		"P9.41",	/*   open: gpio0_20 */
+		"P9.11",	/* chsel0: gpio0_30 */
+		"P9.13",	/* chsel1: gpio0_31 */
+		"P9.30",	/*  x-ray: gpio3_16 XXX: change to tone */
+		"P9.27",	/*  alarm: gpio3_19 */
+		"P9.25",	/*   safe: gpio3_21 */
+
+		"P8.9",		/* ad9649/mode: gpio2_5 */
+		"P9.14",	/* ad9649/dco: gpio1_18 */
+		"P9.23",	/* ad9649/d0: gpio1_17 */
+		"P9.15",	/* ad9649/d1: gpio1_16 */
+		"P8.20",	/* ad9649/d2: gpio1_31 */
+		"P8.21",	/* ad9649/d3: gpio1_30 */
+		"P8.26",	/* ad9649/d4: gpio1_29 */
+		"P9.12",	/* ad9649/d5: gpio1_28 */
+		"P8.4",		/* ad9649/d6: gpio1_7 */
+		"P8.3",		/* ad9649/d7: gpio1_6 */
+		"P8.22",	/* ad9649/d8: gpio1_5 */
+		"P8.23",	/* ad9649/d9: gpio1_4 */
+		"P8.6",		/* ad9649/d10: gpio1_3 */
+		"P8.5",		/* ad9649/d11: gpio1_2 */
+		"P8.24",	/* ad9649/d12: gpio1_1 */
+		"P8.25",	/* ad9649/d13: gpio1_0 */
+
+		/* the hardware IP uses */
+		"tscadc",
+
+		"lcd",
+		"gpio2_2",
+		"gpio2_3",
+		"ehrpwm1b";
+
+	fragment@0 {
+		target = <&am33xx_pinmux>;
+		__overlay__ {
+
+			gpio_keys_pins: pinmux_gpio_keys_pins {
+				pinctrl-single,pins = <
+					0x178 0x2f 	/* uart1_ctsn.gpio0_12, MODE7 | INPUT | PULLDIS */
+				>;
+			};
+
+			gpio_helper_pins: pinmux_gpio_helper_pins {
+				pinctrl-single,pins = <
+					0x164 0x0f 	/* ecap0_in_pwm0_out.gpio0_7, MODE7 | OUTPUT | PULLDIS */
+					0x17c 0x0f 	/* uart1_rtsn.gpio0_13, MODE7 | OUTPUT | PULLDIS */
+					0x1b4 0x0f 	/* xdma_event_intr1.gpio0_20, MODE7 | OUTPUT | PULLDIS */
+					0x070 0x0f 	/* gpmc_wait0.gpio0_30, MODE7 | OUTPUT | PULLDIS */
+					0x074 0x0f 	/* gpmc_wpn.gpio0_31, MODE7 | OUTPUT | PULLDIS */
+
+					/* 0x198 0x17 	mcasp0_axr0.gpio3_16, MODE7 | OUTPUT | PULLUP */
+				>;
+			};
+
+			gpio_leds_pins: pinmux_gpio_leds_pins {
+				pinctrl-single,pins = <
+					0x1ac 0x0f 	/* mcasp0_ahclkx.gpio3_21, MODE7 | OUTPUT | PULLDIS */
+					0x1a4 0x0f 	/* mcasp0_fsr.gpio3_19, MODE7 | OUTPUT | PULLDIS */
+
+					0x198 0x0f 	/* mcasp0_axr0.gpio3_16, MODE7 | OUTPUT | PULLDIS */
+				>;
+			};
+
+			eadc_pins: pinmux_eadc_pins {
+				pinctrl-single,pins = <
+					0x09c 0x2f 	/* gpmc_ben0_cle.gpio2_5, MODE7 | INPUT | PULLDIS */
+
+					0x048 0x2f 	/* gpmc_a2.gpio1_18, MODE7 | INPUT | PULLDIS */
+					0x044 0x2f 	/* gpmc_a1.gpio1_17, MODE7 | INPUT | PULLDIS */
+					0x040 0x2f 	/* gpmc_a0.gpio1_16, MODE7 | INPUT | PULLDIS */
+					0x084 0x2f 	/* gpmc_csn2.gpio1_31, MODE7 | INPUT | PULLDIS */
+					0x080 0x2f 	/* gpmc_csn1.gpio1_30, MODE7 | INPUT | PULLDIS */
+					0x07c 0x2f 	/* gpmc_csn0.gpio1_29, MODE7 | INPUT | PULLDIS */
+					0x078 0x2f 	/* gpmc_ben1.gpio1_28, MODE7 | INPUT | PULLDIS */
+					0x01c 0x2f 	/* gpmc_ad7.gpio1_7, MODE7 | INPUT | PULLDIS */
+					0x018 0x2f 	/* gpmc_ad6.gpio1_6, MODE7 | INPUT | PULLDIS */
+					0x014 0x2f 	/* gpmc_ad5.gpio1_5, MODE7 | INPUT | PULLDIS */
+					0x010 0x2f 	/* gpmc_ad4.gpio1_4, MODE7 | INPUT | PULLDIS */
+					0x00c 0x2f 	/* gpmc_ad3.gpio1_3, MODE7 | INPUT | PULLDIS */
+					0x008 0x2f 	/* gpmc_ad2.gpio1_2, MODE7 | INPUT | PULLDIS */
+					0x004 0x2f 	/* gpmc_ad1.gpio1_1, MODE7 | INPUT | PULLDIS */
+					0x000 0x2f 	/* gpmc_ad0.gpio1_0, MODE7 | INPUT | PULLDIS */
+				>;
+			};
+		};
+	};
+
+	fragment@3 {
+		target = <&ocp>;
+
+		__overlay__ {
+
+			/* avoid stupid warning */
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			tscadc {
+				compatible = "ti,ti-tscadc";
+				reg = <0x44e0d000 0x1000>;
+
+				interrupt-parent = <&intc>;
+				interrupts = <16>;
+				ti,hwmods = "adc_tsc";
+				status = "okay";
+
+				tsc {
+					ti,wires = <4>;
+					ti,x-plate-resistance = <550>;
+					ti,coordinate-readouts = <5>;
+					ti,wire-config = <0x01 0x10 0x22 0x33>;
+				};
+
+				adc {
+					ti,adc-channels = <4 7>;
+				};
+			};
+
+			iio_helper: helper {
+				compatible = "bone-iio-helper";
+				vsense-name  = "AIN4", "AIN7";
+				vsense-scale = <100 100>;
+				status = "okay";
+			};
+
+			gpio_keys {
+				compatible = "gpio-keys";
+				pinctrl-names = "default";
+				pinctrl-0 = <&gpio_keys_pins>;
+
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				button@1 {
+					debounce_interval = <50>;
+					linux,code = <160>;
+					label = "closed";
+					gpios = <&gpio1 12 0x1>;
+					gpio-key,wakeup;
+				};
+			};
+
+			gpio_helper {
+				compatible = "gpio-of-helper";
+				status = "okay";
+				pinctrl-names = "default";
+				pinctrl-0 = <&gpio_helper_pins>;
+
+				/* declare your gpios */
+				channel_sel0 {
+					gpio-name = "channel_sel0";
+					gpio = <&gpio1 30 0x00>;
+					output;
+					init-low;
+				};
+
+				channel_sel1 {
+					gpio-name = "channel_sel1";
+					gpio = <&gpio1 31 0x00>;
+					output;
+					init-low;
+				};
+
+				mechanic_open {
+					gpio-name = "mechanic_open";
+					gpio = <&gpio1 20 0x00>;
+					output;
+					init-low;
+				};
+
+				mechanic_close {
+					gpio-name = "mechanic_close";
+					gpio = <&gpio1 13 0x00>;
+					output;
+					init-low;
+				};
+
+				mechanic_auto {
+					gpio-name = "mechanic_auto";
+					gpio = <&gpio1 7 0x00>;
+					output;
+					init-low;
+				};
+			};
+
+			gpio-leds {
+				compatible = "gpio-leds";
+				pinctrl-names = "default";
+
+				pinctrl-0 = <&gpio_leds_pins>;
+
+				light_safe {
+					label = "light_safe";
+					gpios = <&gpio4 21 0>;
+					linux,default-trigger = "oneshot";
+					default-state = "off";
+				};
+
+				light_alarm {
+					label = "light_alarm";
+					gpios = <&gpio4 19 0>;
+					linux,default-trigger = "oneshot";
+					default-state = "off";
+				};
+
+				alarm_tone {
+					label = "alarm_tone";
+					gpios = <&gpio4 16 0>;
+					linux,default-trigger = "oneshot";
+					default-state = "off";
+				};
+			};
+
+			bone_pinmux_helper {
+				compatible = "bone-pinmux-helper";
+				status = "okay";
+
+				pinctrl-names = "default";
+				pinctrl-0 = <&eadc_pins>;
+			};
+		};
+	};
+};
+
+/* vim:sts=4:ts=8: */

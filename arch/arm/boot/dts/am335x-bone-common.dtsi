@@ -27,6 +27,50 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&userled_pins>;
 
+		lcd_pins: pinmux_lcd_pins {
+			pinctrl-single,pins = <
+				0x90 0x17	/* gpmc_advn_ale.gpio2_2, OUTPUT | PULLUP | MODE7 - PDWN */
+				0x94 0x17	/* gpmc_oen_ren.gpio2_3, OUTPUT | PULLUP | MODE7 - AVDD_EN */
+
+				0x20 0x01	/* gpmc_ad8.lcd_data16, OUTPUT | MODE1 */
+				0x24 0x01	/* gpmc_ad9.lcd_data17, OUTPUT | MODE1 */
+				0x28 0x01	/* gpmc_ad10.lcd_data18, OUTPUT | MODE1 */
+				0x2c 0x01	/* gpmc_ad11.lcd_data19, OUTPUT | MODE1 */
+				0x30 0x01	/* gpmc_ad12.lcd_data20, OUTPUT | MODE1 */
+				0x34 0x01	/* gpmc_ad13.lcd_data21, OUTPUT | MODE1 */
+				0x38 0x01	/* gpmc_ad14.lcd_data22, OUTPUT | MODE1 */
+				0x3c 0x01	/* gpmc_ad15.lcd_data23, OUTPUT | MODE1 */
+
+				0xa0 0x08	/* lcd_data0.lcd_data0, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+				0xa3 0x08	/* lcd_data1.lcd_data1, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+				0xa8 0x08	/* lcd_data2.lcd_data2, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+				0xac 0x08	/* lcd_data3.lcd_data3, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+				0xb0 0x08	/* lcd_data3.lcd_data3, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+				0xb4 0x08	/* lcd_data5.lcd_data5, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+				0xb8 0x08	/* lcd_data6.lcd_data6, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+				0xbc 0x08	/* lcd_data7.lcd_data7, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+				0xc0 0x08	/* lcd_data8.lcd_data8, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+				0xc4 0x08	/* lcd_data9.lcd_data9, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+				0xc8 0x08	/* lcd_data10.lcd_data10, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+				0xcc 0x08	/* lcd_data11.lcd_data11, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+				0xd0 0x08	/* lcd_data12.lcd_data12, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+				0xd4 0x08	/* lcd_data13.lcd_data13, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+				0xd8 0x08	/* lcd_data14.lcd_data14, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+				0xdc 0x08	/* lcd_data15.lcd_data15, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
+
+				0xe0 0x00	/* lcd_vsync.lcd_vsync, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT */
+				0xe4 0x00	/* lcd_hsync.lcd_hsync, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT */
+				0xe8 0x00	/* lcd_pclk.lcd_pclk, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT */
+				0xec 0x00	/* lcd_ac_bias_en.lcd_ac_bias_en, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT */
+			>;
+		};
+
+		pwm_bl_pins: pinmux_pwm_bl_pins {
+			pinctrl-single,pins = <
+				0x4c 0x06       /* gpmc_a3.ehrpwm1b, OMAP_MUX_MODE6 | AM33XX_PIN_OUTPUT */
+			>;
+		};
+
 		userled_pins: pinmux_userled_pins {
 			pinctrl-single,pins = <
 				0x54 0x7	/* gpmc_a5.gpio1_21, OUTPUT | MODE7 */
@@ -55,6 +99,70 @@
 	};
 
 	ocp: ocp {
+
+		/* Settings for CHIMEI InnoLux HJ080IA-01E: */
+		panel {
+			compatible = "tilcdc,panel";
+			pinctrl-names = "default";
+			pinctrl-0 = <&lcd_pins>;
+
+			ti,power-gpio = <&gpio3 3 0x0>;
+
+			panel-info {
+				ac-bias           = <255>;
+				ac-bias-intrpt    = <0>;
+				dma-burst-sz      = <16>;
+				bpp               = <32>;   /* 16,24,32 */
+				fdd               = <0x80>;
+				tft-alt-mode      = <0>;
+				stn-565-mode      = <0>;
+				mono-8bit-mode    = <0>;
+				sync-edge         = <0>;
+				sync-ctrl         = <1>;
+				raster-order      = <0>;
+				fifo-th           = <0>;
+			};
+
+			display-timings {
+				native-mode = <&timing0>;
+				timing0: 1024x768 {
+					hactive         = <1024>;
+					vactive         = <768>;
+					hback-porch     = <300>;
+					hfront-porch    = <18>;
+					hsync-len       = <2>;
+					vback-porch     = <30>;
+					vfront-porch    = <6>;
+					vsync-len       = <2>;
+					clock-frequency = <65000000>;
+					hsync-active    = <0>;
+					vsync-active    = <0>;
+					/* XXX: 162x122 mm */
+				};
+			};
+		};
+
+		backlight {
+			compatible      = "pwm-backlight";
+			pinctrl-names   = "default";
+			pinctrl-0       = <&pwm_bl_pins>;
+			status = "okay";
+
+			pwms = <&ehrpwm1 1 500000 0>;
+			pwm-names = "LCD-BL";
+			brightness-levels = <0 1 4 9 16 25 36 49 64 81 100>;
+			default-brightness-level = <10>; /* index to the array above */
+		};
+
+		fb {
+			compatible = "ti,am33xx-tilcdc";
+			reg = <0x4830e000 0x1000>;
+			interrupt-parent = <&intc>;
+			interrupts = <36>;
+			ti,hwmods = "lcdc";
+			ti,power-gpio = <&gpio3 2 0x0>;
+			ti,allow-non-reduced-blanking-modes;
+		};
 
 		uart1: serial@44e09000 {
 			status = "okay";
@@ -118,6 +226,7 @@
 		};
 
 		slots {
+/*  XXX:
 			slot@0 {
 				eeprom = <&cape_eeprom0>;
 			};
@@ -133,6 +242,7 @@
 			slot@3 {
 				eeprom = <&cape_eeprom3>;
 			};
+ */
 
 			/* geiger cape version A0 without an EEPROM */
 			slot@5 {
@@ -430,6 +540,7 @@
 	};
 };
 
+/*  XXX:
 &i2c2 {
 	status = "okay";
 	pinctrl-names = "default";
@@ -457,6 +568,7 @@
 		reg = <0x57>;
 	};
 };
+ */
 
 /include/ "tps65217.dtsi"
 
@@ -539,6 +651,14 @@
 };
 
 &aes {
+	status = "okay";
+};
+
+&epwmss1 {
+	status = "okay";
+};
+
+&ehrpwm1 {
 	status = "okay";
 };
 
