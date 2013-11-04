@@ -64,6 +64,8 @@ ifeq ($(CONFIG_OF_RESOLVE),y)
 DTC_FLAGS += -@
 endif
 
+LOADADDR ?= 0x80200040
+
 ifneq ($(LOADADDR),)
   UIMAGE_LOADADDR=$(LOADADDR)
 else

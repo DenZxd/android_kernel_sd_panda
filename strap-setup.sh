@@ -13,7 +13,7 @@
  #   you are free to modify and/or redistribute it  	        #
  #   under the terms of the GNU General Public Licence (GPL).   #
  #                                                              #
- # Last modified: Thu, 14 Nov 2013 16:24:44 +0800       by root #
+ # Last modified: Tue, 26 Nov 2013 14:10:20 +0800      by mhfan #
  ################################################################
 
 #set -e
@@ -65,8 +65,7 @@ case "$1" in
   start|restart)
     echo -n "Starting LXDetector: "
     start-stop-daemon -S -b -p /var/run/$NAME.pid -m \
-	-d $LXDP -x $LXDP/$NAME -n $NAME \
-	-- -qws -display powervr #-mouse "..."
+	-d $LXDP -x $LXDP/$NAME -n $NAME -- -qws
     echo $NAME.
     done
     ;;
@@ -88,8 +87,7 @@ EOF
 F=etc/inittab; grep -q ttyO0 $F || cat >> $F <<  EOF
 
 #PVR::sysinit:/etc/init.d/rc.pvr start
-#LXD:2345:respawn:/opt/LXDetector/LXDUI -qws -display powervr #-mouse "..."
-
+#LXD:2345:respawn:/opt/LXDetector/LXDUI -qws
 T0:2345:respawn:/sbin/getty -L ttyO0 115200 vt102
 
 EOF
@@ -97,10 +95,18 @@ EOF
 F=etc/rc.local; if ! grep -q mmcblk0 $F; then
 sed -i -e 's/^exit 0/#\1/' $F && cat >> $F << EOF
 
+#echo BB-UART2 > /sys/devices/bone_capemgr.*/slots
+/opt/LXDetector/init_gpio.sh
 /etc/init.d/rc.pvr start
+
 while true; do
-    #cd /opt/LXDetector && #stdsyslog \
-    /opt/LXDetector/LXDUI -qws -display powervr #-mouse "..."
+    TSLIB_TSDEVICE=/dev/input/event1 \
+    TSLIB_CALIBFILE=/opt/LXDetector/pointercal \
+    POINTERCAL_FILE=/opt/LXDetector/pointercal \
+    QWS_MOUSE_PROTO=Tslib:/dev/input/event1 \
+    stdsyslog /opt/LXDetector/LXDUI -qws \
+	-display powervr:mmWidth=240:mmHeight=180 \
+    #logread > system.log	#logread -f
 done &
 
 [ -e /dev/mmcblk0p1 ] && modprobe g_mass_storage file=/dev/mmcblk0p1
@@ -112,20 +118,19 @@ fi
 
 cat > etc/environment << EOF
 
-#TSLIB_CALIBFILE=/media/mmcblk0p1/pointercal
 TSLIB_TSDEVICE=/dev/input/event1
-
-QWS_DISPLAY=powervr
-#POINTERCAL_FILE=\$TSLIB_CALIBFILE
-#QWS_DISPLAY=LinuxFb:mmWidth=162:mmHeight=122:0	# XXX:
-#QWS_MOUSE_PROTO=LinuxTP:/dev/input/event1:MouseMan:/dev/input/mice:Tslib:/dev/input/event1:LinuxInput:/dev/input/event1
-
-# XXX: -qws -display "..." -mouse "..."
+TSLIB_CALIBFILE=/opt/LXDetector/pointercal
+POINTERCAL_FILE=/opt/LXDetector/pointercal
+QWS_MOUSE_PROTO=Tslib:/dev/input/event1
+#:MouseMan:/dev/input/mice:Auto
+#:LinuxTP:/dev/input/event1:LinuxInput:/dev/input/event1
+QWS_DISPLAY=powervr:mmWidth=240:mmHeight=180
+# -qws -display ...
 
 EOF
 
 mkdir -p media/mmcblk0p1 #boot/u-boot
-cat > etc/fstab << EOF
+true && cat > etc/fstab << EOF
 # <file system> <mount point> <type> <options> <dump> <pass>
 /dev/mmcblk0p2 / ext4 noatime,errors=remount-ro 0 1
 
@@ -257,6 +262,7 @@ for S in networking mountnfs.sh mountnfs-bootclean.sh; do
     update-rc.d \$S disable S;
 done
 for S in 2 3 4 5; do update-rc.d dropbear disable \$S; done
+for S in 2 3 4 5; do update-rc.d bootlogs disable \$S; done
 
 #passwd -d root
 echo 'root:!@#\$hjkl' | chpasswd
@@ -291,7 +297,7 @@ find {,usr/,usr/local/}{bin,sbin} -type f -exec \
     strip -s -R .comment -R .note '{}' ';' > /dev/null 2>&1
 
 false &&
-sudo tar czf ../rootfs.tgz --exclude dev/* --exclude proc/* --exclude sys/* .
+sudo tar czf ../rootfs.tgz --exclude dev/\* --exclude proc/\* --exclude sys/\* .
 #sudo tar zxf /path/to/rootfs.tgz --numeric-owner --preserve-permissions
 
  # vim:sts=4:ts=8:
