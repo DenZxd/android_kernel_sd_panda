@@ -286,6 +286,10 @@ void __init omap4xxx_check_features(void)
 void __init ti81xx_check_features(void)
 {
 	omap_features = OMAP3_HAS_NEON;
+
+	if (soc_is_am33xx()) omap_features |= OMAP3_HAS_SGX;	// XXX:
+	    //if (omap_ctrl_readl(AM33XX_DEV_FEATURE) & AM33XX_SGX_MASK)
+
 	omap3_cpuinfo();
 }
 
