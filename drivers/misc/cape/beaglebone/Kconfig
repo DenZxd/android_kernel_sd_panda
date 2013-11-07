@@ -16,17 +16,24 @@ config BEAGLEBONE_IIO_HELPER
 	help
 	  Say Y here to include support for the IIO helper
 
-config CAPE_BEAGLEBONE
-	tristate "Beaglebone cape support"
-	depends on ARCH_OMAP2PLUS && OF && I2C
+config CAPE_MANAGER
+	tristate "Beaglebone cape manager"
+	depends on ARCH_OMAP2PLUS && OF && EEPROM_AT24
 	default n
 	select OF_PLUGIN
 	help
 	  Say Y here to include support for beaglebone capes
 
+config CAPE_BEAGLEBONE
+	tristate "Beaglebone cape support"
+	depends on CAPE_MANAGER
+	default n
+	help
+	  Say Y here to include support for beaglebone capes
+
 config CAPE_BEAGLEBONE_GEIGER
 	tristate "Beaglebone Geiger Cape"
-	depends on CAPE_BEAGLEBONE
+	depends on CAPE_MANAGER
 	default n
 	help
 	  Say Y here to include support for the Geiger Cape
@@ -34,7 +41,7 @@ config CAPE_BEAGLEBONE_GEIGER
 
 config CAPE_BEAGLEBONE_NIXIE
 	tristate "Beaglebone Nixie Cape"
-	depends on CAPE_BEAGLEBONE
+	depends on CAPE_MANAGER
 	default n
 	help
 	  Say Y here to include support for the Nixie Cape
