@@ -125,7 +125,7 @@ static void titsc_step_config(struct titsc *ts_dev)
 	int end_step;
 	u32 stepenable;
 
-	config = STEPCONFIG_MODE_HWSYNC |
+	config = STEPCONFIG_MODE_HWSYNC | STEPCONFIG_INM_ADCREFM |
 			STEPCONFIG_AVG_16 | ts_dev->bit_xp;
 	switch (ts_dev->wires) {
 	case 4:
@@ -183,15 +183,15 @@ static void titsc_step_config(struct titsc *ts_dev)
 	/* coordinate_readouts * 2 … coordinate_readouts * 2 + 2 is for Z */
 	config = STEPCONFIG_MODE_HWSYNC |
 			STEPCONFIG_AVG_16 | ts_dev->bit_yp |
-			ts_dev->bit_xn | STEPCONFIG_INM_ADCREFM |
-			STEPCONFIG_INP(ts_dev->inp_xp);
-	titsc_writel(ts_dev, REG_STEPCONFIG(end_step), config);
+			ts_dev->bit_xn | STEPCONFIG_INM_ADCREFM;
+	titsc_writel(ts_dev, REG_STEPCONFIG(end_step),
+		config | STEPCONFIG_INP(ts_dev->inp_xp));
 	titsc_writel(ts_dev, REG_STEPDELAY(end_step),
 			STEPCONFIG_OPENDLY);
 
 	end_step++;
-	config |= STEPCONFIG_INP(ts_dev->inp_yn);
-	titsc_writel(ts_dev, REG_STEPCONFIG(end_step), config);
+	titsc_writel(ts_dev, REG_STEPCONFIG(end_step),
+		config |= STEPCONFIG_INP(ts_dev->inp_yn));
 	titsc_writel(ts_dev, REG_STEPDELAY(end_step),
 			STEPCONFIG_OPENDLY);
 
@@ -288,7 +288,7 @@ static irqreturn_t titsc_irq(int irq, void *dev)
 			z /= z2;
 			z = (z + 2047) >> 12;
 
-			if (z <= MAX_12BIT) {
+			if (z < (1 << 12)) {
 				input_report_abs(input_dev, ABS_X, x);
 				input_report_abs(input_dev, ABS_Y, y);
 				input_report_abs(input_dev, ABS_PRESSURE, z);
@@ -469,7 +469,7 @@ static int titsc_remove(struct platform_device *pdev)
 	free_irq(ts_dev->irq, ts_dev);
 
 	/* total steps followed by the enable mask */
-	steps = 2 * ts_dev->coordinate_readouts + 2;
+	steps = 2 * ts_dev->coordinate_readouts + 2 + 1;
 	steps = (1 << steps) - 1;
 	am335x_tsc_se_clr(ts_dev->mfd_tscadc, steps);
 

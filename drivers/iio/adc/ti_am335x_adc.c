@@ -157,26 +157,9 @@ static int tiadc_buffer_postenable(struct iio_dev *indio_dev)
 {
 	struct tiadc_device *adc_dev = iio_priv(indio_dev);
 	struct iio_buffer *buffer = indio_dev->buffer;
-	unsigned int enb, stepnum;
-	u8 bit;
 
 	tiadc_step_config(indio_dev);
-	tiadc_writel(adc_dev, REG_SE, 0x00);
-	for_each_set_bit(bit, buffer->scan_mask,
-			adc_dev->channels) {
-		struct iio_chan_spec const *chan = indio_dev->channels + bit;
-		/*
-		 * There are a total of 16 steps available
-		 * that are shared between ADC and touchscreen.
-		 * We start configuring from step 16 to 0 incase of
-		 * ADC. Hence the relation between input channel
-		 * and step for ADC would be as below.
-		 */
-		stepnum = chan->channel + 9;
-		enb = tiadc_readl(adc_dev, REG_SE);
-		enb |= (1 << stepnum);
-		tiadc_writel(adc_dev, REG_SE, enb);
-	}
+	am335x_tsc_se_set(adc_dev->mfd_tscadc, get_adc_step_mask(adc_dev));
 
 	return iio_triggered_buffer_postenable(indio_dev);
 }
@@ -191,7 +174,7 @@ static int tiadc_buffer_predisable(struct iio_dev *indio_dev)
 	tiadc_writel(adc_dev, REG_CTRL, config);
 	tiadc_writel(adc_dev, REG_IRQCLR, (IRQENB_FIFO1THRES |
 				IRQENB_FIFO1OVRRUN | IRQENB_FIFO1UNDRFLW));
-	tiadc_writel(adc_dev, REG_SE, STPENB_STEPENB_TC);
+	am335x_tsc_se_clr(adc_dev->mfd_tscadc, get_adc_step_mask(adc_dev));
 
 	/* Flush FIFO of any leftover data */
 	fifo1count = tiadc_readl(adc_dev, REG_FIFO1CNT);
@@ -323,7 +306,7 @@ static int tiadc_channel_init(struct iio_dev *indio_dev, int channels)
 		chan->scan_index = i;
 		chan->scan_type.sign = 'u';
 		chan->scan_type.realbits = 12;
-		chan->scan_type.storagebits = 32;
+		chan->scan_type.storagebits = 16;
 	}
 
 	indio_dev->channels = chan_array;
@@ -378,17 +361,19 @@ static int tiadc_read_raw(struct iio_dev *indio_dev,
 	if (iio_buffer_enabled(indio_dev))
 		return -EBUSY;
 	else {
-		unsigned long timeout = jiffies + usecs_to_jiffies
-					(IDLE_TIMEOUT * adc_dev->channels);
+		unsigned long timeout;
 		step_en = get_adc_step_mask(adc_dev);
+
 		am335x_tsc_se_set(adc_dev->mfd_tscadc, step_en);
 
+		timeout = jiffies + usecs_to_jiffies
+					(IDLE_TIMEOUT * adc_dev->channels);
 		/* Wait for ADC sequencer to complete sampling */
 		while (tiadc_readl(adc_dev, REG_ADCFSM) & SEQ_STATUS) {
 			if (time_after(jiffies, timeout))
 				return -EAGAIN;
-			}
-		map_val = chan->channel + TOTAL_CHANNELS;
+		}
+		map_val = adc_dev->channel_step[chan->scan_index];	// XXX:
 
 		/*
 		 * When the sub-system is first enabled,
@@ -460,7 +445,6 @@ static int tiadc_probe(struct platform_device *pdev)
 		}
 		adc_dev->channels = channels;
 	}
-	adc_dev->channels = channels;
 	adc_dev->irq = adc_dev->mfd_tscadc->irq;
 
 	indio_dev->dev.parent = &pdev->dev;
