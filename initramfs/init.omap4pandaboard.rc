@@ -1,0 +1,386 @@
+import init.omap4pandaboard.usb.rc
+import init.omap4pandaboard.wlan.rc
+
+on init
+    # See storage config details at http://source.android.com/tech/storage/
+    mkdir /mnt/shell/emulated 0700 shell shell
+    mkdir /storage/emulated 0555 root root
+
+    export EXTERNAL_STORAGE /storage/emulated/legacy
+    export EMULATED_STORAGE_SOURCE /mnt/shell/emulated
+    export EMULATED_STORAGE_TARGET /storage/emulated
+
+    # Support legacy paths
+    symlink /storage/emulated/legacy /sdcard
+    symlink /storage/emulated/legacy /mnt/sdcard
+    symlink /storage/emulated/legacy /storage/sdcard0
+    symlink /mnt/shell/emulated/0 /storage/emulated/legacy
+
+# create Ext SDcard mountpoint
+    export SECONDARY_STORAGE /storage/sdcard1
+    mkdir /storage/sdcard1 0000 system system
+    symlink /storage/sdcard1 /mnt/ext_sdcard
+
+# create removable USB Mass Storage mountpoints
+    #mkdir /storage/usb0 0000 system system
+    #mkdir /storage/usb1 0000 system system
+
+# create dir for auto mount multi partitions
+    mkdir /storage/usb 0000 system system
+    mount tmpfs tmpfs /storage/usb mode=0755,gid=1000
+    symlink /storage/usb /mnt/usb_storage
+
+    symlink /dev/block/platform /dev/block/platform/omap
+
+on post-fs-data
+# we will remap this as /mnt/sdcard with the sdcard fuse tool
+    mkdir /data/media 0775 media_rw media_rw
+    #chown media_rw media_rw /data/media
+
+    chown system system /data/system
+    chmod 0771 /data/system
+
+#    mkdir /data/smc 0770 drmrpc drmrpc
+#    chown drmrpc drmrpc /data/smc/counter.bin
+#    chown drmrpc drmrpc /data/smc/storage.bin
+#    chown drmrpc drmrpc /data/smc/system.bin
+
+# camera calibration - DCC folder permission
+    chown media media /data/misc/camera
+    #chown media media /data/misc/camera/R12_MVEN001_LD1_ND0_IR0_SH0_FL0_SVEN001_DCCID43
+    #chown media media /data/misc/camera/R12_MVEN002_LD2_ND0_IR0_SH0_FL0_SVEN002_DCCID42
+    chown media media /data/misc/camera/R8_MVEN002_LD2_ND0_IR0_SH0_FL1_SVEN003_DCCID1042
+
+# wi-fi
+    mkdir /data/misc/wifi 0770 wifi wifi
+    mkdir /data/misc/wifi/sockets 0770 wifi wifi
+    mkdir /data/misc/dhcp 0770 dhcp dhcp
+    chown dhcp dhcp /data/misc/dhcp
+
+    mkdir /data/misc/eth 0770 eth wifi
+
+    mkdir /data/radio 0775 radio radio
+    mkdir /data/radio/log 0775 radio radio
+
+    mkdir /data/misc/run 0775 root inet
+    mkdir /data/local/run 0775 root inet
+
+#    insmod /system/lib/modules/compat.ko
+#    insmod /system/lib/modules/cfg80211.ko
+#    insmod /system/lib/modules/mac80211.ko
+#    insmod /system/lib/modules/wlcore.ko
+#    insmod /system/lib/modules/wl12xx.ko
+#    insmod /system/lib/modules/wl18xx.ko
+
+## GPS
+#    insmod /system/lib/modules/gps_drv.ko
+
+    setprop vold.post_fs_data_done 1
+
+on boot
+    #mount debugfs /sys/kernel/debug /sys/kernel/debug
+
+#    chmod 0444 /system/usr/keychars/omap4-keypad.kcm.bin
+
+# Change permissions on the governor (this is for debug only)
+    chmod 444 /proc/cmdline
+
+# H264 Encoder Profile setting
+# 1 - Base Profile, 2 - Main Profile, 8 - High Profile
+    setprop video.h264enc.profile 1
+
+on property:kernel.module.status=ok
+    chmod 0644 /dev/xt_qtaguid
+    chmod 0666 /proc/net/xt_qtaguid/ctrl
+
+    chown shell shell /proc/driver/bq27410
+    chown system system /sys/class/timed_output/vibrator/enable
+
+# Lower maximum frequency when screen is off
+#    write /sys/devices/system/cpu/cpu0/cpufreq/screen_off_max_freq 700000
+
+# cpufreq interactive governor: timer 20ms, min sample 20ms, hispeed 700MHz
+#    write /sys/devices/system/cpu/cpufreq/interactive/timer_rate 20000
+#    write /sys/devices/system/cpu/cpufreq/interactive/min_sample_time 20000
+#    write /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq 700000
+
+# configure APM timer
+#    write /sys/module/pvrsrvkm/parameters/sgx_apm_latency 2
+
+# autosuspend root hubs immediatly after attached devices
+    write /sys/bus/usb/devices/usb1/power/autosuspend_delay_ms 0
+    write /sys/bus/usb/devices/usb2/power/autosuspend_delay_ms 0
+
+# ril control auto-suspend
+    chmod 0660 /sys/bus/usb/devices/usb1/power/control
+    chown radio radio /sys/bus/usb/devices/usb1/power/control
+
+## Remove the Ultra Fast Media Card Reader on EHCI bus
+#    write /sys/bus/usb/devices/1-1.1/remove 1
+#    write /sys/bus/usb/devices/1-2.1/remove 1
+#
+## Set Remote wakeup flag for the two Hubs on the Tablet board
+#    write /sys/bus/usb/devices/1-1/power/wakeup enabled
+#    write /sys/bus/usb/devices/1-1.2/power/wakeup enabled
+#    write /sys/bus/usb/devices/1-2/power/wakeup enabled
+#    write /sys/bus/usb/devices/1-2.2/power/wakeup enabled
+
+# change permissions for S3D hardware
+    #chown system system /sys/devices/platform/omapdss/display0/s3d_enable
+    chown system system /sys/devices/platform/omapdss/display1/s3d_enable
+    chown system system /sys/devices/platform/omapdss/display1/s3d_type
+
+    chown system system /sys/devices/platform/pwm-backlight.0/backlight/pwm-backlight.0/bl_power
+    chown system system /sys/devices/platform/pwm-backlight.0/backlight/pwm-backlight.0/brightness
+
+    chown system system /sys/devices/platform/pwm-backlight.0/backlight/pwm-backlight.0/scale
+    chmod 0664 /sys/devices/platform/pwm-backlight.0/backlight/pwm-backlight.0/scale
+
+    write /sys/class/android_usb/android0/iManufacturer ${ro.product.manufacturer}
+    write /sys/class/android_usb/android0/iProduct ${ro.product.model}
+    write /sys/class/android_usb/f_mass_storage/inquiry_string "SmartQ  Tablet          0100"
+    write /sys/class/android_usb/android0/idVendor 0451
+    write /sys/class/android_usb/android0/idProduct D101
+
+    chown system system /sys/class/android_usb/android0/f_mass_storage/lun/file
+    chmod 0660 /sys/class/android_usb/android0/f_mass_storage/lun/file
+    chown system system /sys/class/android_usb/android0/f_rndis/ethaddr
+    chmod 0660 /sys/class/android_usb/android0/f_rndis/ethaddr
+
+#for Bluetooth HID
+    chmod 0666 /dev/uhid
+
+# change permissions for Bluetooth/FM/GPS
+    setprop ro.bt.bdaddr_path "/proc/bt_addr"
+    chmod 0660 /sys/class/rfkill/rfkill0/state
+    chown bluetooth net_bt /sys/class/rfkill/rfkill0/state
+    chown bluetooth net_bt /sys/class/rfkill/rfkill0/type
+
+## change permissions for Sensors
+#    chown system system /sys/bus/i2c/drivers/cma3000_accl/4-001c
+#    chown system system /sys/bus/i2c/drivers/cma3000_accl/4-001c/enable
+#    chown system system /sys/bus/i2c/drivers/cma3000_accl/4-001c/delay
+#    chown system system /sys/bus/i2c/drivers/tsl2771/4-0039
+#    chown system system /sys/bus/i2c/drivers/tsl2771/4-0039/als_enable
+#    chown system system /sys/bus/i2c/drivers/tsl2771/4-0039/prox_enable
+#    chown system system /sys/bus/i2c/drivers/bma180_accel/4-0040
+#    chown system system /sys/bus/i2c/drivers/bma180_accel/4-0040/enable
+#    chown system system /sys/bus/i2c/drivers/bma180_accel/4-0040/delay
+#    chown system system /sys/bus/i2c/drivers/mpu3050_gyro/4-0068
+#    chown system system /sys/bus/i2c/drivers/mpu3050_gyro/4-0068/enable
+#    chown system system /sys/bus/i2c/drivers/mpu3050_gyro/4-0068/delay
+#    chown system system /sys/bus/i2c/drivers/bmp085/4-0077
+#    chown system system /sys/bus/i2c/drivers/bmp085/4-0077/enable
+#    chown system system /sys/bus/i2c/drivers/hmc5843/4-001e
+#    chown system system /sys/bus/i2c/drivers/hmc5843/4-001e/enable
+#    chown system system /sys/bus/i2c/drivers/hmc5843/4-001e/rate
+
+    chown system system /sys/bus/i2c/drivers/bma250/2-001c/
+    chown system system /sys/bus/i2c/drivers/bma250/2-001c/delay
+    chown system system /sys/bus/i2c/drivers/bma250/2-001c/enable
+    chown system system /sys/bus/i2c/drivers/mma8452/2-001c/
+    chown system system /sys/bus/i2c/drivers/mma8452/2-001c/delay
+    chown system system /sys/bus/i2c/drivers/mma8452/2-001c/enable
+    chown system system /sys/bus/i2c/drivers/isl29023/2-0044/
+    chown system system /sys/bus/i2c/drivers/isl29023/2-0044/delay
+    chown system system /sys/bus/i2c/drivers/isl29023/2-0044/als_enable
+
+## nfc
+#    setprop ro.nfc.port "COM4"
+#    chmod 0600 /sys/devices/platform/nfc-power/nfc_power
+#    chown nfc nfc /sys/devices/platform/nfc-power/nfc_power
+
+#on property:wlan.driver.status=ok
+    chown wifi wifi /sys/devices/platform/wl1271/bt_coex_state
+
+on fs
+    write /sys/devices/system/cpu/cpufreq/interactive/boost_timeout 20000000
+    write /sys/devices/system/cpu/cpu0/cpufreq/boost_cpufreq 1
+
+    #mount_all /fstab.omap4pandaboard
+
+#    mount ext4 /dev/block/mmcblk1p2 /system wait ro noatime nodiratime discard
+#    mount ext4 /dev/block/mmcblk1p4 /data wait noatime nosuid nodev nomblk_io_submit nodiratime discard
+#    mount ext4 /dev/block/mmcblk1p3 /cache noatime nosuid nodev nomblk_io_submit nodiratime discard
+
+    mount ext4 /dev/block/mmcblk0p7 /system wait ro noatime
+
+    insmod /system/lib/modules/kernel/drivers/staging/android/logger.ko
+    start load_modules
+
+    mount ext4 /dev/block/mmcblk0p9 /data wait noatime nosuid nodev nomblk_io_submit
+    mount ext4 /dev/block/mmcblk0p8 /cache noatime nosuid nodev nomblk_io_submit
+
+    chown system system /dev/block/mmcblk0p3
+    chmod 0660 /dev/block/mmcblk0p3
+
+#    mkdir /factory 0775 radio radio
+#    mount ext4 /dev/block/platform/omap/omap_hsmmc.1/by-name/efs /factory wait ro
+
+#    setprop ro.crypto.keyfile.userdata /dev/block/platform/omap/omap_hsmmc.1/by-name/crypto
+#    setprop ro.crypto.tmpfs_options size=128m,mode=0771,uid=1000,gid=1000
+#    setprop ro.crypto.fuse_sdcard true
+
+## We chown/chmod /factory because mount is run as root + defaults
+#    chown radio radio /factory
+#    chmod 0775 /factory
+#
+## add symlink for HDCP key
+#    symlink /factory/hdcp.keys /system/vendor/firmware/hdcp.keys
+
+
+service pvrsrvinit /vendor/bin/pvrsrvinit
+    class core
+    user root
+    group root
+    oneshot
+
+# create filesystems if necessary
+#service setup_fs /system/bin/setup_fs \
+#	/dev/block/platform/omap/omap_hsmmc.1/by-name/cache \
+#	/dev/block/platform/omap/omap_hsmmc.1/by-name/userdata
+#    class core
+#    user root
+#    group root
+#    oneshot
+
+###################################################
+# MSHIELD SMC Daemon - component required to store persistent data coming
+#   from the SMC PA to the device persistent storage
+###################################################
+##service tf_daemon /system/bin/tf_daemon \
+#	-d -c /vendor/etc/smc_normal_world_android_cfg.ini
+#    class main
+#    user root
+#    group root
+#
+###################################################
+# MSHIELD SMC PA Control - installs the SMC PA into the Secure Environment
+###################################################
+##service smc_pa /system/bin/smc_pa_ctrl \
+#	-c /vendor/etc/smc_normal_world_android_cfg.ini \
+#    start /vendor/firmware/smc_pa.ift
+#    class core
+#    user root
+#    group root
+#    oneshot
+#
+#service devproxy /system/bin/devproxy
+#    class main
+#    disabled
+#    oneshot
+#
+#service agnss_connect /system/bin/agnss_connect -p
+#    class main
+#    disabled
+#    oneshot
+#
+#service RXN_IntApp /system/bin/RXN_IntApp /system/etc/gnss/RXN/MSLConfig.txt
+#    class main
+#    disabled
+#    oneshot
+#service cplc_main /system/bin/cplc_main XML
+#    class main
+#    disabled
+#    oneshot
+#
+#service supl20clientd /system/bin/supl20clientd
+#    class main
+#    oneshot
+#
+#on property:init.svc.smc_pa=stopped
+#    start tf_daemon
+#
+## Texas Instruments Shared Memory Service
+#service shm_service /system/bin/shm_service --no-fork
+#    class core
+#    user system
+#    group system
+#
+## Texas Instruments Augmented Reality X-celerator Daemon
+#service arxd /system/bin/arxd
+#    class main
+#    user system
+#    group drmrpc
+#    ioprio rt 4
+
+# virtual sdcard daemon running as media_rw (1023)
+service sdcard /system/bin/sdcard /data/media /mnt/shell/emulated 1023 1023
+    #class late_start
+    class main
+
+service dhcpcd_wlan0 /system/bin/dhcpcd -ABDKL
+    class main
+    disabled
+    oneshot
+
+service iprenew_wlan0 /system/bin/dhcpcd -n
+    class main
+    disabled
+    oneshot
+
+service dhcpcd_p2p /system/bin/dhcpcd -aABDKL
+    class main
+    disabled
+    oneshot
+
+service iprenew_p2p /system/bin/dhcpcd -n
+    class main
+    disabled
+    oneshot
+
+service dhcpcd_eth0 /system/bin/dhcpcd -ABKL
+    class main
+    disabled
+    oneshot
+
+service dhcpcd_bnep0 /system/bin/dhcpcd -ABKL
+    class main
+    disabled
+    oneshot
+
+service iprenew_bnep0 /system/bin/dhcpcd -n
+    class main
+    disabled
+    oneshot
+
+service hostapd_bin /system/bin/hostapd -d /data/misc/wifi/hostapd.conf
+    socket wpa_wlan0 dgram 660 wifi wifi
+    class main
+    disabled
+    oneshot
+
+service battery_charger /charger
+    class charger
+
+service load_modules /system/bin/logwrapper /system/bin/load-modules.sh
+    class main
+    group root
+    user root
+    disabled
+    oneshot
+
+service cryptomem /system/bin/cryptomem
+    class main
+    group root
+    user root
+    disabled
+    oneshot
+
+# bugreport is triggered by holding down volume down, volume up and home
+# it's easy to trigger when wanting to take screenshots. let's disable it
+#service bugreport /system/bin/bugmailer.sh -v
+#       class main
+#       disabled
+#       oneshot
+#       keycodes 114 115 102
+
+service avahi-daemon /system/bin/avahi-daemon -f /system/etc/avahi-daemon.conf
+    class main
+    group root
+    user root
+    disabled
+
+on property:net.hostname=*
+    write /proc/sys/kernel/hostname ${net.hostname}
+
